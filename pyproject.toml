@@ -1,0 +1,107 @@
+[tool.poetry]
+name = "spice_segmenter"
+version = "0.0.1"
+description = "Spice-based segmenter, wrapping event finding routines within spice toolkit"
+authors = [
+    "luca penasa <luca.penasa@gmail.com>",
+]
+license = "MIT"
+readme = "README.md"
+
+documentation = "https://luca.penasa.github.io/spice_segmenter"
+homepage = "https://luca.penasa.github.io/spice_segmenter"
+repository = "https://github.com/luca.penasa/spice_segmenter"
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+
+packages = [
+    { include = "spice_segmenter", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8.0, <4.0"
+anytree = "^2.8.0"
+attrs = ">20.0.0"
+spiceypy = "^5.1.2"
+planetary-coverage = "^1.0.0"
+pint = "^0.20.1"
+loguru = "^0.7.0"
+tqdm = "^4.65.0"
+datetimerange = "^2.1.0"
+
+[tool.poetry.dev-dependencies]
+autoflake = "*"
+black = "*"
+flake8 = "*"
+flake8-bugbear = "*"
+flake8-builtins = "*"
+flake8-comprehensions = "*"
+flake8-debugger = "*"
+flake8-eradicate = "*"
+flake8-logging-format = "*"
+isort = "*"
+mkdocstrings = {version = ">=0.18", extras = ["python"]}
+mkdocs-material = "*"
+mypy = "*"
+pep8-naming = "*"
+pre-commit = "*"
+pymdown-extensions = "*"
+pytest = "*"
+pytest-github-actions-annotate-failures = "*"
+pytest-cov = "*"
+python-kacl = "*"
+pyupgrade = "*"
+tryceratops = "*"
+
+[tool.poetry.group.dev.dependencies]
+types-tqdm = "^4.65.0.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+src_paths = ["src", "tests"]
+
+[tool.black]
+target-version = ["py37", "py38", "py39"]
+include = '\.pyi?$'
+
+[tool.pytest.ini_options]
+addopts = """\
+    --cov spice_segmenter \
+    --cov tests \
+    --cov-report term-missing \
+    --no-cov-on-fail \
+"""
+
+[tool.coverage.report]
+fail_under = 100
+exclude_lines = [
+    'if TYPE_CHECKING:',
+    'pragma: no cover'
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+disallow_any_unimported = false
+disallow_untyped_defs = false
+no_implicit_optional = true
+strict_equality = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+check_untyped_defs = true
+show_error_codes = true
