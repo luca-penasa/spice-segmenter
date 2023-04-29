@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, Protocol, Type
+from typing import Iterable, Protocol, Type
 
 import pint
 import spiceypy
@@ -9,14 +9,18 @@ from spiceypy import gfrefn, gfstep
 from .occultation import OccultationTypes
 from .search_reporter import SearchReporter
 from .spice_window import SpiceWindow
-from .trajectory_properties import Constraint, ConstraintTypes
+from .trajectory_properties import Constant, Constraint, ConstraintTypes
 
 
 class Solver(Protocol):
+    def __init__(self, constraint: Constraint, step: float) -> None:
+        ...
+
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         ...
 
-    def can_solve(self, constraint: Constraint) -> bool:
+    @staticmethod
+    def can_solve(constraint: Constraint) -> bool:
         ...
 
 
@@ -31,25 +35,7 @@ class GfevntSolverConfigurator:
     refval: float = 0.0
     quantity: str = ""
 
-    # def get_appropriate_list(self, vtype: Type) -> list:
-    #     if vtype is str:
-    #         return self.strings
-    #     elif vtype is float:
-    #         return self.floats
-    #     elif vtype is int:
-    #         return self.integers
-    #     elif vtype is bool:
-    #         return self.booleans
-    #     else:
-    #         raise ValueError(f"Unknown type {vtype}")
-    #
-    # def get_lists(self):
-    #     return [self.strings, self.floats, self.integers, self.booleans]
-    #
-    # def get_list_types(self):
-    #     return [str, float, int, bool]
-
-    def add_str_parameter(self, name, value):
+    def add_str_parameter(self, name: str, value: str) -> None:
         log.debug(f"adding str parameter {name} with value {value}")
         if name in self.names:
             raise ValueError(f"Parameter {name} already exists")
@@ -57,7 +43,7 @@ class GfevntSolverConfigurator:
         self.names.append(name)
         self.strings.append(value)
 
-    def add_vector_parameter(self, name: str, vector: Iterable[float]):
+    def add_vector_parameter(self, name: str, vector: Iterable[float]) -> None:
         log.debug(f"adding vector parameter {name} with value {vector}")
         if name in self.names:
             raise ValueError(f"Parameter {name} already exists")
@@ -66,7 +52,7 @@ class GfevntSolverConfigurator:
         for value in vector:
             self.floats.append(value)
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
         return dict(
             qpnams=self.names,
             qcpars=self.strings,
@@ -79,34 +65,34 @@ class GfevntSolverConfigurator:
             gquant=self.quantity,
         )
 
-    def set_from_dict(self, pars):
-        log.debug(f"Setting config from pars {pars}")
+    def set_from_dict(self, pars) -> None:
+        log.debug("Setting config from pars %s", pars)
 
-        property = pars["property"]
+        quantity = pars["property"]
 
-        log.debug(f"setting parameters for a property {property}")
+        log.debug("setting parameters for a property %s", quantity)
 
-        if property not in self.known_properties:
-            raise ValueError(f"Unknown property {property}")
+        if quantity not in self.known_properties():
+            raise ValueError("Unknown property %s", quantity)
 
-        if property.lower() == "distance":
+        if quantity.lower() == "distance":
             self.set_distance_from_dict(pars)
 
-        elif property.lower() == "phase_angle":
+        elif quantity.lower() == "phase_angle":
             self.set_phase_angle_from_dict(pars)
 
-        elif property.lower() == "coordinate":
+        elif quantity.lower() == "coordinate":
             self.set_coordinate_from_dict(pars)
 
         else:
-            raise ValueError(f"unsupported property {property}")
+            raise ValueError(f"unsupported property {quantity}")
 
-        self.quantity = property.replace("_", " ").upper()
+        self.quantity = quantity.replace("_", " ").upper()
 
         operator = pars["operator"]
 
         log.debug(f"Operator {operator} ")
-        if operator not in self.known_operators:
+        if operator not in self.known_operators():
             raise ValueError(f"Unknown operator {operator}")
 
         self.operator = operator
@@ -162,7 +148,8 @@ class GfevntSolverConfigurator:
         if pars["vector_definition"] == "SURFACE INTERCEPT POINT".lower().replace(
             " ", "_"
         ):
-            raise NotImplementedError("Please implement dref and dvec insertion")
+            log.error("Surface intercept point not implemented")
+            raise NotImplementedError
 
         else:
             self.add_str_parameter("DREF", "")
@@ -170,33 +157,28 @@ class GfevntSolverConfigurator:
         # "DREF",
         # "DVEC"
 
-    @classmethod
-    @property
-    def known_properties(cls):
-        p = [
-            "ANGULAR_SEPARATION",
-            "COORDINATE",
-            "DISTANCE",
-            "ILLUMINATION_ANGLE",
-            "PHASE_ANGLE",
-            "RANGE_RATE",
+    @staticmethod
+    def known_properties() -> list[str]:
+        return [
+            "angular_separation",
+            "coordinate",
+            "distance",
+            "illumination_angle",
+            "phase_angle",
+            "range_rate",
         ]
 
-        return [a.lower() for a in p]
-
-    @classmethod
-    @property
-    def known_operators(cls):
-        p = [">", "=", "<", "ABSMAX", "ABSMIN", "LOCMAX", "LOCMIN"]
-        return [a.lower() for a in p]
+    @staticmethod
+    def known_operators():
+        return [">", "=", "<", "absmax", "absmin", "locmax", "locmin"]
 
 
 @define(repr=False, order=False, eq=False)
 class GfevntSolver:
-    constraint: Constraint = None
+    constraint: Constraint | None = None
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
-    result: SpiceWindow = None
+    result: SpiceWindow | None = None
     reporter: SearchReporter = field(factory=SearchReporter)
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -232,33 +214,43 @@ class GfevntSolver:
     def configure(self) -> None:
         log.debug("Configuring solver")
 
-        config = {}
+        config: dict = {}
+        if not self.constraint:
+            log.error("You need to provide a valid constraint")
+            raise ValueError
+
         self.constraint.config(config)
 
-        log.debug(f"Constraint full config {config} ")
+        log.debug("Constraint full config %s", config)
 
         pars_composer = GfevntSolverConfigurator()
         pars_composer.set_from_dict(config)
         self.config = pars_composer.as_dict()
 
-        log.debug(f"config: \n {self.config}")
+        log.debug("config: \n %s", self.config)
 
     @staticmethod
     def can_solve(constraint: Constraint) -> bool:
         log.debug(
-            f"Checking if GfevntSolver can solve {type(constraint)} with left {constraint.left.name}"
+            "Checking if GfevntSolver can solve %s with left %s",
+            type(constraint),
+            constraint.left.name,
         )
 
         if constraint.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
             return False
 
-        conf = {}
+        conf: dict = {}
         constraint.config(conf)
 
-        if (
-            conf["property"].replace("_", " ").lower()
-            in GfevntSolverConfigurator.known_properties
-        ):
+        quantity = conf.get("property", None)
+        if not quantity:
+            log.warning(
+                "No property keyword found in constraint, this might imply a bug"
+            )
+            return False
+
+        if quantity.lower() in GfevntSolverConfigurator.known_properties():
             return True
 
         return False
@@ -266,10 +258,12 @@ class GfevntSolver:
 
 @define(repr=False, order=False, eq=False)
 class GfocceSolver:
-    constraint: Constraint = None
+    """Occultation Solver"""
+
+    constraint: Constraint | None = None
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
-    result: SpiceWindow = None
+    result: SpiceWindow | None = None
     reporter: SearchReporter = field(factory=SearchReporter)
 
     def configure(self):
@@ -323,6 +317,10 @@ class GfocceSolver:
         log.debug(f"Configured: {self.config}")
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
+        if not self.constraint or not self.can_solve(self.constraint):
+            log.error("You need to provide a valid constraint/constraints not solvable")
+            raise ValueError
+
         self.configure()
 
         maxval = 10000
@@ -333,16 +331,22 @@ class GfocceSolver:
 
         right = self.constraint.right
 
-        if right.value.magnitude == OccultationTypes.ANY:
+        if not isinstance(right, Constant):
+            raise TypeError
+
+        right_value = right.value
+
+        if right_value == OccultationTypes.ANY:
             occtyp = "ANY"
-        elif right.value.magnitude == OccultationTypes.FULL:
+        elif right_value == OccultationTypes.FULL:
             occtyp = "FULL"
-        elif right.value.magnitude == OccultationTypes.PARTIAL:
+        elif right_value == OccultationTypes.PARTIAL:
             occtyp = "PARTIAL"
-        elif right.value.magnitude == OccultationTypes.ANNULAR:
+        elif right_value == OccultationTypes.ANNULAR:
             occtyp = "ANNULAR"
         else:
-            raise NotImplementedError
+            log.debug("Unknown occultation type %s", right_value)
+            raise ValueError
 
         self.config["occtyp"] = occtyp
         self.config["cnfine"] = cnfine
@@ -366,11 +370,24 @@ class GfocceSolver:
 
 @define(repr=False, order=False, eq=False)
 class SpiceWindowSolver:
-    constraint: Constraint = None
+    """Solves a constraints made by two constraints returing SpiceWindow objects"""
+
+    constraint: Constraint | None = None
     step: float = 60 * 60  # in seconds
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
-        solver = get_appropriate_solver(self.constraint.left)
+        if not self.constraint or not self.can_solve(self.constraint):
+            log.error("No constraint set or constraint cannot be solved")
+            raise ValueError
+
+        if not isinstance(self.constraint.left, Constraint) or not isinstance(
+            self.constraint.right, Constraint
+        ):
+            # a double check to make sure we are dealing with constraints that can be processed
+            log.error("Left or right operands not of type Constraint")
+            raise TypeError
+
+        solver: Type[Solver] = get_appropriate_solver(self.constraint.left)
 
         # solve the first constraint
         result = solver(self.constraint.left, step=self.step).solve(window)
@@ -385,6 +402,10 @@ class SpiceWindowSolver:
             log.debug("solving an OR operator")
             return result.union(result2)
 
+        else:
+            log.error("Operator %s not implemented", self.constraint.operator)
+            raise NotImplementedError
+
     @staticmethod
     def can_solve(constraint: Constraint) -> bool:
         if constraint.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
@@ -395,10 +416,14 @@ class SpiceWindowSolver:
 
 @define(repr=False, order=False, eq=False)
 class MasterSolver:
-    constraint: Constraint = None
+    constraint: Constraint | None = None
     step: float = 60 * 60
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
+        if not self.constraint or not self.can_solve(self.constraint):
+            log.error("No constraint set or constraint not solvable")
+            raise ValueError
+
         solver = get_appropriate_solver(self.constraint)
         return solver(self.constraint, step=self.step).solve(window)
 
@@ -408,23 +433,17 @@ class MasterSolver:
         return False
 
 
-solvers = [GfevntSolver, GfocceSolver, SpiceWindowSolver]
+solvers: list[Type[Solver]] = [GfevntSolver, GfocceSolver, SpiceWindowSolver]
 
 
 def get_appropriate_solver(constraint: Constraint) -> Type[Solver]:
     log.debug(
-        f"Looking for solver for constraint {constraint} of type {type(constraint)}"
+        "Looking for solver for constraint %s of type %s", constraint, type(constraint)
     )
     for solver in solvers:
-        log.debug(f"Testing solver {solver} for constraint {type(constraint)}")
+        log.debug("Testing solver %s for constraint %s", solver, type(constraint))
         if solver.can_solve(constraint):
-            log.debug(f"Found solver {solver} for constraint {constraint}")
+            log.debug("Found solver %s for constraint %s", solver, constraint)
             return solver
 
     raise NotImplementedError(f"No solver implemented for constraint {constraint}")
-
-
-@define(repr=False, order=False, eq=False)
-class ScalarSolver:
-    function: Callable = None
-    decreasing: Callable = None

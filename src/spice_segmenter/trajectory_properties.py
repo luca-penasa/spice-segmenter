@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Iterable, Type
+from typing import TYPE_CHECKING, Iterable
 
 import pint
 import spiceypy
@@ -15,6 +17,9 @@ from spiceypy.utils.callbacks import UDFUNS
 from .decorators import vectorize
 from .spice_window import SpiceWindow
 from .types import obj_type, times_types
+
+if TYPE_CHECKING:
+    from spice_segmenter.occultation import OccultationTypes
 
 
 class PropertyTypes(Enum):
@@ -79,7 +84,7 @@ class Property(ABC):
     def __repr__(self):
         return f"{self.name}"
 
-    def _handle_other_operand(self, other: "Property") -> "Property":
+    def _handle_other_operand(self, other: Property) -> Property:
         if isinstance(other, Property):
             return other
         else:
@@ -125,14 +130,19 @@ class Constant(Property):
     _value: pint.Quantity = field(converter=pint.Quantity)
 
     def __repr__(self) -> str:
-        return "{self.value}"
+        val = f"{self.value}"
+
+        if self.unit != pint.Unit(""):
+            val += f" {self.unit}"
+
+        return val
 
     @property
     def name(self) -> str:
         return "constant"
 
     @property
-    def value(self) -> float:
+    def value(self) -> float | OccultationTypes:
         return self._value.magnitude
 
     @property
@@ -144,7 +154,7 @@ class Constant(Property):
         self._value.u = unit
 
     @vectorize
-    def __call__(self, time: times_types) -> float:
+    def __call__(self, time: times_types) -> float | OccultationTypes:
         return self._value.magnitude
 
     def config(self, config: dict) -> None:
@@ -258,8 +268,8 @@ class ConstraintTypes(Enum):
 
 @define(repr=False, order=False, eq=False)
 class Constraint(Property):
-    left: Property
-    right: Property
+    left: Property | Constraint
+    right: Property | Constraint
     operator: str = field(default=None)
 
     def __attrs_post_init__(self) -> None:
@@ -299,10 +309,11 @@ class Constraint(Property):
             return ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
 
         else:
+            log.error("Cannot determine constraint type")
             raise NotImplementedError
 
     @property
-    def types(self) -> tuple[Type[Property], Type[Property]]:
+    def types(self) -> tuple[type[Property], type[Property]]:
         return type(self.left), type(self.right)
 
     @property
@@ -346,3 +357,9 @@ class Constraint(Property):
         """
         for pre, fill, node in RenderTree(self.tree()):
             print(f"{pre}{node.name}")
+
+    def solve(self, window: SpiceWindow, **kwargs) -> SpiceWindow:
+        from .constraint_solver import MasterSolver
+
+        solver = MasterSolver(self, **kwargs)
+        return solver.solve(window)

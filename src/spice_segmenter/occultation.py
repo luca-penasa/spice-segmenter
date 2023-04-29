@@ -18,6 +18,12 @@ class OccultationTypes(Enum):
     ANNULAR = 3
     ANY = 5
 
+    def __repr__(self):
+        return "%s" % (self._name_)
+
+    def __str__(self):
+        return "%s" % (self._name_)
+
 
 @define(repr=False, order=False, eq=False)
 class Occulatation(Property):
@@ -26,10 +32,14 @@ class Occulatation(Property):
     back: SpiceRef = field(converter=SpiceRef)
     light_time_correction: str = field(default="NONE")
 
+    def __repr__(self) -> str:
+        return f"Occultation({self.front}))"
+
     @property
     def name(self) -> str:
         return f"occultation"
 
+    @property
     def type(self) -> PropertyTypes:
         return PropertyTypes.DISCRETE
 

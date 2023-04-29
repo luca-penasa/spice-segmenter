@@ -29,9 +29,9 @@ class SearchReporter:
     @property
     def update_function(self) -> Callable[[float, float, float], None]:
         def update_progress_report(istart: float, iend: float, et: float) -> None:
-            range = iend - istart
+            interval_range = iend - istart
 
-            percent = (et - istart) / range * 100
+            percent = (et - istart) / interval_range * 100
             # self.bar.update(percent)
 
             progress = percent - self.last_value
