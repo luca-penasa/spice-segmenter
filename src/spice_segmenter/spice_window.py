@@ -150,18 +150,23 @@ class SpiceWindow:
     def __len__(self):
         return spiceypy.wncard(self.spice_window)
 
-    def plot(self, ax=None, **kwargs):
+    def plot(self, ax=None, **kwargs) -> list:
         import matplotlib.pyplot as plt
 
         if ax is None:
             ax = plt.gca()
 
         intervals = self.to_datetimerange()
+
+        plotted = []
         for i, inter in enumerate(intervals):
-            if "label" in kwargs:
-                add = "_" * i
-                kwargs["label"] = f"{add}{kwargs['label']}"
+            if "label" in kwargs and i == 1:
+                kwargs[
+                    "label"
+                ] = f"_{kwargs['label']}"  # not really nice, we are altering kwargs
 
             s = inter.start_datetime
             e = inter.end_datetime
-            plt.axvspan(s, e, **kwargs)
+            plotted.append(plt.axvspan(s, e, **kwargs))
+
+        return plotted

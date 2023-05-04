@@ -366,6 +366,7 @@ class Constraint(Property):
         return pint.Unit("")  # a constraint has no unit, as it returns bools
 
     def __call__(self, time: times_types) -> bool:
+        right = None
         if self.left.unit != self.right.unit:
             log.warning(
                 "Comparing {} with {}. This is not recommended. Will attempt automatic conversion.",
@@ -373,10 +374,15 @@ class Constraint(Property):
                 self.right.unit,
             )
 
-            UnitAdaptor(self.right, self.left.unit)
+            right = UnitAdaptor(self.right, self.left.unit)
 
         else:
-            self.right
+            right = self.right
+
+        if (
+            right is None
+        ):  # this is added just to make flake8 aware we are actually using it in the eval below
+            raise ValueError("Could not convert right side of constraint")
 
         q = "self.left(time)" + self.operator + "right(time)"
 
