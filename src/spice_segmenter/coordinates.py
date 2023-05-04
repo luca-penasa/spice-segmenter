@@ -21,6 +21,9 @@ class Vector(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    def __repr__(self) -> str:
+        return f"Vector from {self.origin} to {self.target} in frame {self.frame}"
+
     @property
     def name(self) -> str:
         return "coordinate"
