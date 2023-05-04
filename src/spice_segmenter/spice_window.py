@@ -3,10 +3,10 @@ from typing import Iterable
 import spiceypy
 from attr import define, field
 from datetimerange import DateTimeRange
-from planetary_coverage import et
 from spiceypy import Cell_Double
 
 from .types import times_types
+from .utils import et
 
 
 class SpiceWindowIter:
@@ -98,8 +98,14 @@ class SpiceWindow:
     def compare(self, other: "SpiceWindow", operator: str) -> bool:
         return spiceypy.wnreld(self.spice_window, operator, other.spice_window)
 
-    def complement(self, other) -> "SpiceWindow":
-        return SpiceWindow(spiceypy.wncomd(self.spice_window, other._spice_window))
+    def complement(self, other=None) -> "SpiceWindow":
+        if other is None:
+            other = self
+
+        start = other.start
+        end = other.end
+
+        return SpiceWindow(spiceypy.wncomd(start, end, self.spice_window))
 
     def includes(self, start: times_types, end: times_types) -> "SpiceWindow":
         return spiceypy.wnincd(et(start), et(end), self.spice_window)
@@ -151,7 +157,11 @@ class SpiceWindow:
             ax = plt.gca()
 
         intervals = self.to_datetimerange()
-        for inter in intervals:
+        for i, inter in enumerate(intervals):
+            if "label" in kwargs:
+                add = "_" * i
+                kwargs["label"] = f"{add}{kwargs['label']}"
+
             s = inter.start_datetime
             e = inter.end_datetime
             plt.axvspan(s, e, **kwargs)

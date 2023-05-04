@@ -1,6 +1,5 @@
-from typing import Union
+from typing import Iterable, Union
 
-import numpy as np
 from planetary_coverage.spice import (
     SpiceBody,
     SpiceInstrument,
@@ -8,5 +7,5 @@ from planetary_coverage.spice import (
     SpiceSpacecraft,
 )
 
-times_types = Union[str, float, list, tuple, np.ndarray]
+times_types = Union[str, float, int] | Iterable[Union[str, float, int]]
 obj_type = Union[SpiceBody, SpiceInstrument, SpiceSpacecraft, SpiceObserver]

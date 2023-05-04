@@ -4,11 +4,12 @@ import pint
 import spiceypy
 from attrs import define, field
 from planetary_coverage.spice import SpiceRef
-from planetary_coverage.spice.times import et
 
 from spice_segmenter.decorators import vectorize
 from spice_segmenter.trajectory_properties import Property, PropertyTypes
 from spice_segmenter.types import times_types
+
+from .utils import et
 
 
 class OccultationTypes(Enum):
@@ -18,26 +19,40 @@ class OccultationTypes(Enum):
     ANNULAR = 3
     ANY = 5
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s" % (self._name_)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%s" % (self._name_)
+
+    def __eq__(self, other: object) -> bool:
+        """Custom comparison for occultation taking into account that ANY should match any other type not None
+
+        Probably this implementation could be improved in a smarter way. we do have tests for it if needed
+        """
+        if self.__class__ is other.__class__:
+            if other.value == OccultationTypes.ANY.value:
+                return True if self.value != OccultationTypes.NONE.value else False
+
+            if self.value == OccultationTypes.ANY.value:
+                return True if other.value != OccultationTypes.NONE.value else False
+
+        return super().__eq__(other)
 
 
 @define(repr=False, order=False, eq=False)
-class Occulatation(Property):
+class Occultation(Property):
     observer: SpiceRef = field(converter=SpiceRef)
     front: SpiceRef = field(converter=SpiceRef)
     back: SpiceRef = field(converter=SpiceRef)
     light_time_correction: str = field(default="NONE")
 
     def __repr__(self) -> str:
-        return f"Occultation({self.front}))"
+        return f"Occultation of {self.back} by {self.front}, as seen by {self.observer}"
 
     @property
     def name(self) -> str:
-        return f"occultation"
+        return "occultation"
 
     @property
     def type(self) -> PropertyTypes:

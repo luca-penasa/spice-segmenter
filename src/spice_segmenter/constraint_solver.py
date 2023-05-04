@@ -184,6 +184,8 @@ class GfevntSolver:
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         self.configure()
 
+        log.debug("Solver config {}", self.config)
+
         maxval = 100000
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
@@ -302,7 +304,7 @@ class GfocceSolver:
                 bframe=left.back.frame,
                 abcorr=left.light_time_correction,
                 obsrvr=left.observer.name,
-                tol=1e-6,
+                tol=1e-12,
                 udstep=spiceypy.utils.callbacks.SpiceUDFUNS(gfstep),
                 udrefn=spiceypy.utils.callbacks.SpiceUDREFN(gfrefn),
                 rpt=True,
@@ -336,13 +338,13 @@ class GfocceSolver:
 
         right_value = right.value
 
-        if right_value == OccultationTypes.ANY:
+        if right_value.value == OccultationTypes.ANY.value:
             occtyp = "ANY"
-        elif right_value == OccultationTypes.FULL:
+        elif right_value.value == OccultationTypes.FULL.value:
             occtyp = "FULL"
-        elif right_value == OccultationTypes.PARTIAL:
+        elif right_value.value == OccultationTypes.PARTIAL.value:
             occtyp = "PARTIAL"
-        elif right_value == OccultationTypes.ANNULAR:
+        elif right_value.value == OccultationTypes.ANNULAR.value:
             occtyp = "ANNULAR"
         else:
             log.debug("Unknown occultation type %s", right_value)
@@ -351,6 +353,8 @@ class GfocceSolver:
         self.config["occtyp"] = occtyp
         self.config["cnfine"] = cnfine
         self.config["result"] = self.result.spice_window
+
+        log.debug("Configured occultation solver: {}", self.config)
 
         spiceypy.gfocce(**self.config)
 

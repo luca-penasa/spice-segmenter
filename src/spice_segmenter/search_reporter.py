@@ -5,7 +5,7 @@ import spiceypy
 import spiceypy.utils.callbacks
 from attr import define, field
 from loguru import logger as log
-from spiceypy import Cell_Double, SpiceCell
+from spiceypy import SpiceCell
 from spiceypy.utils.callbacks import UDREPF, UDREPI, UDREPU
 from tqdm.auto import tqdm
 from tqdm.std import tqdm as std_tqdm
@@ -44,33 +44,33 @@ class SearchReporter:
         return update_progress_report
 
     @property
-    def update_function_spice(self) -> UDREPU:
+    def update_function_spice(self) -> UDREPU:  # type: ignore
         return spiceypy.utils.callbacks.SpiceUDREPU(self.update_function)
 
     @property
     def init_search(self) -> Callable[[SpiceCell, str, str], None]:
-        def init_search(cell: Cell_Double, pre: str, suf: str) -> None:
+        def init_search(cell: SpiceCell, pre: str, suf: str) -> None:
             self.bar = tqdm(total=100, unit="%", desc=pre)
-            log.debug(f"Starting {pre}")
+            log.debug("Starting %s", pre)
             self.start_time = time.time()
 
         return init_search
 
     @property
-    def init_search_spice(self) -> UDREPI:
+    def init_search_spice(self) -> UDREPI:  # type: ignore
         return spiceypy.utils.callbacks.SpiceUDREPI(self.init_search)
 
     @property
     def end_search(self) -> Callable[[], None]:
         def end_search() -> None:
-            log.debug(f"Finished search!")
+            log.debug("Finished search!")
             self.end_time = time.time()
 
-            log.debug(f"Time elapsed: {round(self.end_time - self.start_time, 2)} s")
+            log.debug("Time elapsed: %s", round(self.end_time - self.start_time, 2))
             self.bar.close()
 
         return end_search
 
     @property
-    def end_search_spice(self) -> UDREPF:
+    def end_search_spice(self) -> UDREPF:  # type: ignore
         return spiceypy.utils.callbacks.SpiceUDREPF(self.end_search)
