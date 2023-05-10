@@ -51,7 +51,7 @@ class SearchReporter:
     def init_search(self) -> Callable[[SpiceCell, str, str], None]:
         def init_search(cell: SpiceCell, pre: str, suf: str) -> None:
             self.bar = tqdm(total=100, unit="%", desc=pre)
-            log.debug("Starting %s", pre)
+            log.debug("Starting {}", pre)
             self.start_time = time.time()
 
         return init_search
@@ -66,7 +66,7 @@ class SearchReporter:
             log.debug("Finished search!")
             self.end_time = time.time()
 
-            log.debug("Time elapsed: %s", round(self.end_time - self.start_time, 2))
+            log.debug("Time elapsed: {}", round(self.end_time - self.start_time, 2))
             self.bar.close()
 
         return end_search

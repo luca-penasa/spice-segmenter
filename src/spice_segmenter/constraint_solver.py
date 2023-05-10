@@ -4,12 +4,15 @@ import pint
 import spiceypy
 from attr import define, field
 from loguru import logger as log
+from planetary_coverage import SpiceRef
 from spiceypy import gfrefn, gfstep
+
+from spice_segmenter.ops import Inverted
 
 from .occultation import OccultationTypes
 from .search_reporter import SearchReporter
 from .spice_window import SpiceWindow
-from .trajectory_properties import Constant, Constraint, ConstraintTypes
+from .trajectory_properties import Constant, Constraint, ConstraintBase, ConstraintTypes
 
 
 class Solver(Protocol):
@@ -34,6 +37,7 @@ class GfevntSolverConfigurator:
     operator: str = ""
     refval: float = 0.0
     quantity: str = ""
+    adjust: float = 0.0
 
     def add_str_parameter(self, name: str, value: str) -> None:
         log.debug(f"adding str parameter {name} with value {value}")
@@ -63,17 +67,18 @@ class GfevntSolverConfigurator:
             op=self.operator,
             refval=self.refval,
             gquant=self.quantity,
+            adjust=self.adjust,
         )
 
-    def set_from_dict(self, pars) -> None:
-        log.debug("Setting config from pars %s", pars)
+    def set_from_dict(self, pars: dict) -> None:
+        log.debug("Setting config from pars {}", pars)
 
         quantity = pars["property"]
 
-        log.debug("setting parameters for a property %s", quantity)
+        log.debug("setting parameters for a property {}", quantity)
 
         if quantity not in self.known_properties():
-            raise ValueError("Unknown property %s", quantity)
+            raise ValueError("Unknown property {}", quantity)
 
         if quantity.lower() == "distance":
             self.set_distance_from_dict(pars)
@@ -90,50 +95,60 @@ class GfevntSolverConfigurator:
         self.quantity = quantity.replace("_", " ").upper()
 
         operator = pars["operator"]
+        operator = self.translate_minamx(operator)
 
-        log.debug(f"Operator {operator} ")
+        is_min_max = True if operator in self.minmax_operators() else False
+
+        log.debug("Operator {} ", operator)
         if operator not in self.known_operators():
             raise ValueError(f"Unknown operator {operator}")
 
         self.operator = operator
 
-        refval = pars.get("reference_value", None)
-        if refval is None:
-            raise ValueError("No reference value found")
+        if self.operator in ["absmin", "absmax"]:
+            self.adjust = pars["adjust"]
+            log.debug("Using {} as adjust", self.adjust)
 
-        refval_unit = pars.get("reference_value_unit", None)
-        property_unit = pars.get("property_unit", None)
+        if not is_min_max:
+            refval = pars.get("reference_value", None)
+            if refval is None:
+                raise ValueError(
+                    "No reference value found, and not a minmax constraint"
+                )
 
-        if refval_unit is None:
-            log.error("No reference value unit found")
-            raise ValueError("No reference value unit found")
+            refval_unit = pars.get("reference_value_unit", None)
+            property_unit = pars.get("property_unit", None)
 
-        if property_unit is None:
-            log.error("No property unit found")
-            raise ValueError("No property unit found")
+            if refval_unit is None:
+                log.error("No reference value unit found")
+                raise ValueError("No reference value unit found")
 
-        log.debug(f"property unit {property_unit}, refval unit {refval_unit}")
-        if refval_unit != property_unit and not refval_unit == "dimensionless":
-            log.debug(
-                f"converting refval with unit {refval_unit} to property unit {property_unit}"
-            )
+            if property_unit is None:
+                log.error("No property unit found")
+                raise ValueError("No property unit found")
 
-            refval = pint.Quantity(refval, refval_unit).to(property_unit).magnitude
+            log.debug(f"property unit {property_unit}, refval unit {refval_unit}")
+            if refval_unit != property_unit and not refval_unit == "dimensionless":
+                log.debug(
+                    f"converting refval with unit {refval_unit} to property unit {property_unit}"
+                )
 
-        self.refval = float(refval)
+                refval = pint.Quantity(refval, refval_unit).to(property_unit).magnitude
 
-    def set_distance_from_dict(self, pars):
+            self.refval = float(refval)
+
+    def set_distance_from_dict(self, pars: dict) -> None:
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["observer"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
 
-    def set_phase_angle_from_dict(self, pars):
+    def set_phase_angle_from_dict(self, pars) -> None:
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["observer"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
         self.add_str_parameter("ILLUM", pars["third_body"])
 
-    def set_coordinate_from_dict(self, pars):
+    def set_coordinate_from_dict(self, pars) -> None:
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["origin"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
@@ -172,6 +187,25 @@ class GfevntSolverConfigurator:
     def known_operators():
         return [">", "=", "<", "absmax", "absmin", "locmax", "locmin"]
 
+    @staticmethod
+    def minmax_operators():
+        return ["absmax", "absmin", "locmax", "locmin"]
+
+    @staticmethod
+    def translate_minamx(value: str) -> str:
+        conf_mapping = {
+            "local_minimum": "locmin",
+            "local_maximum": "locmax",
+            "global_minimum": "absmin",
+            "global_maximum": "absmax",
+        }
+
+        try:
+            return conf_mapping[value]
+
+        except KeyError:
+            return value
+
 
 @define(repr=False, order=False, eq=False)
 class GfevntSolver:
@@ -182,7 +216,18 @@ class GfevntSolver:
     reporter: SearchReporter = field(factory=SearchReporter)
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
-        self.configure()
+        log.debug(
+            "Solvig with gfevnt {} and type {}", self.constraint, type(self.constraint)
+        )
+        if not self.constraint:
+            log.error("You need to provide a valid constraint")
+            raise ValueError
+
+        cfg: dict = {}
+        self.constraint.config(cfg)
+        log.debug("Config {}", cfg)
+
+        constraint_config = self.configure()
 
         log.debug("Solver config {}", self.config)
 
@@ -198,7 +243,6 @@ class GfevntSolver:
             # qnpars=len(self.config["qpnams"]),
             lenvals=100,
             tol=1e-3,
-            adjust=0.0,
             rpt=True,
             udrepi=self.reporter.init_search_spice,
             udrepu=self.reporter.update_function_spice,
@@ -211,9 +255,14 @@ class GfevntSolver:
             **self.config,
         )
 
-        return self.result  # return the resulting window
+        inverted = constraint_config.get("inverted", False)
+        if inverted:
+            log.debug("INVERTING RESULT")
+            self.result = self.result.complement(window)
 
-    def configure(self) -> None:
+        return self.result
+
+    def configure(self) -> dict:
         log.debug("Configuring solver")
 
         config: dict = {}
@@ -223,22 +272,18 @@ class GfevntSolver:
 
         self.constraint.config(config)
 
-        log.debug("Constraint full config %s", config)
+        log.debug("Constraint full config {}", config)
 
         pars_composer = GfevntSolverConfigurator()
         pars_composer.set_from_dict(config)
         self.config = pars_composer.as_dict()
 
-        log.debug("config: \n %s", self.config)
+        log.debug("config: \n {}", self.config)
+
+        return config
 
     @staticmethod
-    def can_solve(constraint: Constraint) -> bool:
-        log.debug(
-            "Checking if GfevntSolver can solve %s with left %s",
-            type(constraint),
-            constraint.left.name,
-        )
-
+    def can_solve(constraint: ConstraintBase) -> bool:
         if constraint.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
             return False
 
@@ -292,19 +337,26 @@ class GfocceSolver:
         result     O   SPICE window containing results.
         """
 
-        left = self.constraint.left
+        if not self.constraint:
+            log.error("You need to provide a valid constraint")
+            raise ValueError
+
+        config = {}
+        self.constraint.config(config)  # extract the config
+
+        self.constraint.left
 
         self.config.update(
             dict(
-                front=left.front.name,
+                front=config["front"],
                 fshape="ELLIPSOID",
-                fframe=left.front.frame,
-                back=left.back.name,
+                fframe=SpiceRef(config["front"]).frame,
+                back=config["back"],
                 bshape="ELLIPSOID",
-                bframe=left.back.frame,
-                abcorr=left.light_time_correction,
-                obsrvr=left.observer.name,
-                tol=1e-12,
+                bframe=SpiceRef(config["back"]).frame,
+                abcorr=config["light_time_correction"],
+                obsrvr=config["observer"],
+                tol=1e-3,
                 udstep=spiceypy.utils.callbacks.SpiceUDFUNS(gfstep),
                 udrefn=spiceypy.utils.callbacks.SpiceUDREFN(gfrefn),
                 rpt=True,
@@ -318,12 +370,14 @@ class GfocceSolver:
 
         log.debug(f"Configured: {self.config}")
 
+        return config
+
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         if not self.constraint or not self.can_solve(self.constraint):
             log.error("You need to provide a valid constraint/constraints not solvable")
             raise ValueError
 
-        self.configure()
+        constraint_config = self.configure()
 
         maxval = 10000
         cnfine = window.spice_window  # the window
@@ -347,7 +401,7 @@ class GfocceSolver:
         elif right_value.value == OccultationTypes.ANNULAR.value:
             occtyp = "ANNULAR"
         else:
-            log.debug("Unknown occultation type %s", right_value)
+            log.debug("Unknown occultation type {}", right_value)
             raise ValueError
 
         self.config["occtyp"] = occtyp
@@ -357,6 +411,11 @@ class GfocceSolver:
         log.debug("Configured occultation solver: {}", self.config)
 
         spiceypy.gfocce(**self.config)
+
+        inverted = constraint_config.get("inverted", False)
+        if inverted:
+            log.debug("INVERTING RESULT")
+            self.result = self.result.complement(window)
 
         return self.result
 
@@ -376,7 +435,7 @@ class GfocceSolver:
 class SpiceWindowSolver:
     """Solves a constraints made by two constraints returing SpiceWindow objects"""
 
-    constraint: Constraint | None = None
+    constraint: ConstraintBase | None = None
     step: float = 60 * 60  # in seconds
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -384,8 +443,8 @@ class SpiceWindowSolver:
             log.error("No constraint set or constraint cannot be solved")
             raise ValueError
 
-        if not isinstance(self.constraint.left, Constraint) or not isinstance(
-            self.constraint.right, Constraint
+        if not isinstance(self.constraint.left, ConstraintBase) or not isinstance(
+            self.constraint.right, ConstraintBase
         ):
             # a double check to make sure we are dealing with constraints that can be processed
             log.error("Left or right operands not of type Constraint")
@@ -396,19 +455,30 @@ class SpiceWindowSolver:
         # solve the first constraint
         result = solver(self.constraint.left, step=self.step).solve(window)
 
+        assert result is not None
+
         solver = get_appropriate_solver(self.constraint.right)
         if self.constraint.operator == "&":
             log.debug("solving an AND operator")
-            return solver(self.constraint.right, step=self.step).solve(result)
+            result2 = solver(self.constraint.right, step=self.step).solve(result)
+            op_res = result.intersect(result2)
 
         elif self.constraint.operator == "|":
-            result2 = solver(self.constraint.right, step=self.step).solve(window)
             log.debug("solving an OR operator")
-            return result.union(result2)
+            result2 = solver(self.constraint.right, step=self.step).solve(
+                result.complement(window)
+            )
+            op_res = result.union(result2)
 
         else:
-            log.error("Operator %s not implemented", self.constraint.operator)
+            log.error("Operator {} not implemented", self.constraint.operator)
             raise NotImplementedError
+
+        if isinstance(self.constraint, Inverted):
+            log.debug("INVERTING RESULT")
+            op_res = op_res.complement(window)  # invert the result
+
+        return op_res
 
     @staticmethod
     def can_solve(constraint: Constraint) -> bool:
@@ -422,6 +492,7 @@ class SpiceWindowSolver:
 class MasterSolver:
     constraint: Constraint | None = None
     step: float = 60 * 60
+    minimum_interval_size: float = 0.0  # seconds
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         if not self.constraint or not self.can_solve(self.constraint):
@@ -429,7 +500,13 @@ class MasterSolver:
             raise ValueError
 
         solver = get_appropriate_solver(self.constraint)
-        return solver(self.constraint, step=self.step).solve(window)
+        result = solver(self.constraint, step=self.step).solve(window)
+
+        if self.minimum_interval_size > 0.0:
+            log.debug("Removing small intervals")
+            result.remove_small_intervals(self.minimum_interval_size)
+
+        return result
 
     def can_solve(self, constraint: Constraint) -> bool:
         if get_appropriate_solver(constraint):
@@ -441,13 +518,14 @@ solvers: list[Type[Solver]] = [GfevntSolver, GfocceSolver, SpiceWindowSolver]
 
 
 def get_appropriate_solver(constraint: Constraint) -> Type[Solver]:
-    log.debug(
-        "Looking for solver for constraint %s of type %s", constraint, type(constraint)
-    )
     for solver in solvers:
-        log.debug("Testing solver %s for constraint %s", solver, type(constraint))
         if solver.can_solve(constraint):
-            log.debug("Found solver %s for constraint %s", solver, constraint)
+            log.debug(
+                "Found solver {} for constraint {}, of type {}",
+                solver,
+                constraint,
+                type(constraint),
+            )
             return solver
 
     raise NotImplementedError(f"No solver implemented for constraint {constraint}")

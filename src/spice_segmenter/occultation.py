@@ -87,3 +87,10 @@ class Occultation(Property):
         )
 
         return self._remap_to_enum(v)
+
+    def config(self, config: dict) -> None:
+        super().config(config)
+        config["observer"] = self.observer.name
+        config["front"] = self.front.name
+        config["back"] = self.back.name
+        config["light_time_correction"] = self.light_time_correction

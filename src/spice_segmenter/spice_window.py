@@ -1,8 +1,11 @@
 from typing import Iterable
 
+import numpy as np
+import pandas as pd
 import spiceypy
 from attr import define, field
 from datetimerange import DateTimeRange
+from planetary_coverage import utc
 from spiceypy import Cell_Double
 
 from .types import times_types
@@ -65,7 +68,7 @@ class SpiceWindow:
         return window
 
     def __repr__(self) -> str:
-        return f"SpiceWindow({self.start} to {self.end}, N: {len(self)})"
+        return f"SpiceWindow({utc(self.start)} to {utc(self.end)}, N: {len(self)})"
 
     def __iter__(self) -> Iterable:
         return SpiceWindowIter(self)
@@ -170,3 +173,34 @@ class SpiceWindow:
             plotted.append(plt.axvspan(s, e, **kwargs))
 
         return plotted
+
+    def to_pandas(self, round: str = "S") -> pd.DataFrame:
+        out = []
+        for i in self:
+            out.append(
+                {"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))}
+            )
+
+        tab = pd.DataFrame(out)
+        if round:
+            tab.start = tab.start.round(round)
+            tab.end = tab.end.round(round)
+
+        return tab
+
+    def to_juice_core_csv(
+        self, filename: str, obs_id: str = "OBSERVATION", wg: str = "WG2", add_z=True
+    ) -> None:
+        t = self.to_pandas()
+
+        t["id"] = obs_id
+        t["unk"] = ""
+        t["wg"] = wg
+
+        t = t[["id", "start", "end", "unk", "wg"]]
+
+        format = "%Y-%m-%dT%H:%M:%S"
+        if add_z:
+            format += "Z"
+
+        t.to_csv(filename, date_format=format, header=False, index=False)

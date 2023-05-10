@@ -3,7 +3,7 @@ from pathlib import Path
 
 from planetary_coverage import TourConfig
 
-kdir = Path(tempfile.tempdir).joinpath("kernels")
+kdir = Path(tempfile.gettempdir()).joinpath("kernels")
 
 config = TourConfig(
     kernels_dir=kdir,

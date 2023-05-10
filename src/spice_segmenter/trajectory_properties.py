@@ -46,6 +46,13 @@ class PropertyTypes(Enum):
     DISCRETE = auto()
 
 
+class MinMaxConditionTypes(Enum):
+    LOCAL_MINIMUM = "local_minimum"
+    LOCAL_MAXIMUM = "local_maximum"
+    GLOBAL_MINIMUM = "global_minimum"
+    GLOBAL_MAXIMUM = "global_maximum"
+
+
 @define(repr=False, order=False, eq=False)
 class Property(ABC):
     @abstractmethod
@@ -145,7 +152,7 @@ class Property(ABC):
         return Constraint(self, self._handle_other_operand(other), "|")
 
     def config(self, config: dict) -> None:
-        log.debug("adding prop unit for %s", self.unit)
+        log.debug("adding prop unit for {}", self.unit)
         config["property_unit"] = str(self.unit)
 
 
@@ -156,7 +163,7 @@ class Constant(Property):
     def __repr__(self) -> str:
         val = f"{self.value}"
 
-        if str(self.unit):
+        if str(self.unit) != "dimensionless":
             val += f" {self.unit}"
 
         return val
@@ -217,7 +224,7 @@ class TargetedProperty(Property, ABC):
 
     def config(self, config: dict) -> None:
         log.debug(
-            "targeted property config here with instnace of %s", self.__class__.__name__
+            "targeted property config here with instnace of {}", self.__class__.__name__
         )
         Property.config(self, config)
         config.update(
@@ -295,15 +302,93 @@ class Distance(TargetedProperty):
 class ConstraintTypes(Enum):
     COMPARE_TO_CONSTANT = auto()
     COMPARE_TO_OTHER_CONSTRAINT = auto()
+    MINMAX = auto()
 
 
 @define(repr=False, order=False, eq=False)
-class Constraint(Property):
-    left: Property | Constraint
-    right: Property | Constraint
+class ConstraintBase(Property):
+    @property
+    @abstractmethod
+    def left(self) -> Property | ConstraintBase:
+        ...
+
+    @property
+    @abstractmethod
+    def right(self) -> Property | ConstraintBase:
+        ...
+
+    @property
+    @abstractmethod
+    def operator(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def ctype(self) -> ConstraintTypes:
+        ...
+
+    def config(self, config: dict) -> None:
+        if self.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
+            log.error(
+                "Cannot serialize a constraint that compares to another constraint"
+            )
+            raise TypeError
+
+        self.left.config(config)
+        self.right.config(config)
+        config["operator"] = self.operator
+
+    def solve(self, window: SpiceWindow, **kwargs) -> SpiceWindow:  # type: ignore
+        from .constraint_solver import MasterSolver
+
+        solver = MasterSolver(self, **kwargs)
+        return solver.solve(window)
+
+    def __invert__(self) -> Inverted:
+        from spice_segmenter.ops import Inverted
+
+        return Inverted(self)
+
+    def tree(self) -> Node:
+        """
+        Returns an anynode tree with the constraints
+        """
+        if isinstance(self.left, ConstraintBase) and isinstance(
+            self.right, ConstraintBase
+        ):
+            if self.operator == "|":
+                name = "OR"
+
+            elif self.operator == "&":
+                name = "AND"
+
+            else:
+                raise NotImplementedError
+
+            node = Node(name, children=[self.left.tree(), self.right.tree()])
+
+        else:
+            node = Node(self)
+
+        return node
+
+    def render_tree(self) -> None:
+        """
+        Print anytree tree
+        """
+        for pre, _fill, node in RenderTree(self.tree()):
+            print(f"{pre}{node.name}")
+
+
+@define(repr=False, order=False, eq=False)
+class Constraint(ConstraintBase):
+    left: Property | ConstraintBase
+    right: Property | ConstraintBase
     operator: str = field(default=None)
 
     def __attrs_post_init__(self) -> None:
+        log.debug("Checking constraint {} for compatibility", self)
+
         if not self.left.has_unit() and not self.right.has_unit():
             log.debug("Both sides of constraint {} have no units, skipping check", self)
 
@@ -319,6 +404,10 @@ class Constraint(Property):
             )
             return
 
+        if isinstance(self.right, MinMaxConditionTypes):
+            log.debug("Right side of constraint {} is a minmax condition", self)
+            return
+
         if not self.left.unit.is_compatible_with(self.right.unit):
             raise ValueError(
                 f"Cannot Create a constraints between two properties with incompatible units: {self.left.unit} != {self.right.unit}"
@@ -331,22 +420,13 @@ class Constraint(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.BOOLEAN
 
-    def config(self, config: dict) -> None:
-        if self.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
-            log.error(
-                "Cannot serialize a constraint that compares to another constraint"
-            )
-            raise TypeError
-
-        self.left.config(config)
-        self.right.config(config)
-        config["operator"] = self.operator
-
     @property
     def ctype(self) -> ConstraintTypes:
         if Constant in self.types:
             return ConstraintTypes.COMPARE_TO_CONSTANT
-        elif self.types[0] == Constraint and self.types[1] == Constraint:
+        elif isinstance(self.left, ConstraintBase) and isinstance(
+            self.left, ConstraintBase
+        ):
             return ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
 
         else:
@@ -387,28 +467,3 @@ class Constraint(Property):
         q = "self.left(time)" + self.operator + "right(time)"
 
         return eval(q)
-
-    def tree(self) -> Node:
-        """
-        Returns an anynode tree with the constraints
-        """
-        if isinstance(self.left, Constraint) and isinstance(self.right, Constraint):
-            node = Node(self, children=[self.left.tree(), self.right.tree()])
-
-        else:
-            node = Node(self)
-
-        return node
-
-    def render_tree(self) -> None:
-        """
-        Print anytree tree
-        """
-        for pre, _fill, node in RenderTree(self.tree()):
-            print(f"{pre}{node.name}")
-
-    def solve(self, window: SpiceWindow, **kwargs) -> SpiceWindow:  # type: ignore
-        from .constraint_solver import MasterSolver
-
-        solver = MasterSolver(self, **kwargs)
-        return solver.solve(window)

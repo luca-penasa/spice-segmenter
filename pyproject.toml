@@ -39,6 +39,7 @@ pint = "^0.20.1"
 loguru = "^0.7.0"
 tqdm = "^4.65.0"
 datetimerange = "^2.1.0"
+pandas = "^2.0.1"
 
 [tool.poetry.dev-dependencies]
 autoflake = "*"
