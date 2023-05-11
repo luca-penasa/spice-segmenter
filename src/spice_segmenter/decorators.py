@@ -1,11 +1,11 @@
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import numpy as np
 
 
 def vectorize(
-    function: Callable[..., Any] | None = None,
+    function: Optional[Callable[..., Any]] = None,
     otypes: None | str = None,
     signature: None | str = None,
 ) -> Callable[..., Any]:

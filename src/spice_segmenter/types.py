@@ -7,5 +7,6 @@ from planetary_coverage.spice import (
     SpiceSpacecraft,
 )
 
-times_types = Union[str, float, int] | Iterable[Union[str, float, int]]
+TIME_TYPES = Union[str, float, int]
+times_types = Union[TIME_TYPES, Iterable[TIME_TYPES]]
 obj_type = Union[SpiceBody, SpiceInstrument, SpiceSpacecraft, SpiceObserver]
