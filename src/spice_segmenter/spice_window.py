@@ -1,4 +1,6 @@
-from typing import Iterable
+from __future__ import annotations
+
+from typing import Iterator
 
 import numpy as np
 import pandas as pd
@@ -6,7 +8,7 @@ import spiceypy
 from attr import define, field
 from datetimerange import DateTimeRange
 from planetary_coverage import utc
-from spiceypy import Cell_Double
+from spiceypy import Cell_Double, SpiceCell
 
 from .types import times_types
 from .utils import et
@@ -15,14 +17,14 @@ from .utils import et
 class SpiceWindowIter:
     """Iterator for SpiceWindow"""
 
-    def __init__(self, spice_window: "SpiceWindow"):
+    def __init__(self, spice_window: SpiceWindow):
         self._window = spice_window
         self._index = 0
 
-    def __iter__(self):
+    def __iter__(self) -> SpiceWindowIter:
         return self
 
-    def __next__(self):
+    def __next__(self) -> SpiceWindow:
         if self._index >= len(self._window):
             raise StopIteration
         else:
@@ -38,8 +40,8 @@ class SpiceWindow:
     This is a wrapper around the SPICE time window related routines.
     """
 
-    spice_window: Cell_Double = field(default=None)
-    size: int = field(default=2000)  # 1000 intervals
+    spice_window: SpiceCell | None = field(default=None)
+    size: int = field(default=2000)
     _default_size: int = field(default=2000, init=False)
 
     def __attrs_post_init__(self) -> None:
@@ -49,7 +51,7 @@ class SpiceWindow:
             self.spice_window = Cell_Double(self.size)
 
     @classmethod
-    def from_datetimerange(cls, ranges: list[DateTimeRange]):
+    def from_datetimerange(cls, ranges: list[DateTimeRange]) -> SpiceWindow:
         """Create a SpiceWindow from a list of DateTimeRanges"""
         window = cls()
         for r in ranges:
@@ -67,51 +69,60 @@ class SpiceWindow:
             )
         return window
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SpiceWindow):
+            return False
+
+        return self.spice_window == other.spice_window
+
     def __repr__(self) -> str:
         return f"SpiceWindow({utc(self.start)} to {utc(self.end)}, N: {len(self)})"
 
-    def __iter__(self) -> Iterable:
+    def __iter__(self) -> Iterator[SpiceWindow]:
         return SpiceWindowIter(self)
 
-    def __deepcopy__(self, memo) -> "SpiceWindow":
+    def __deepcopy__(self, memo: dict) -> SpiceWindow:
         cls = self.__class__
         newobj = cls.__new__(cls)
-        newobj.spice_window = spiceypy.copy(self.spice_window)
+        newobj.spice_window = spiceypy.copy(self.spice_window)  # type: ignore
         memo[id(self)] = newobj
         return newobj
 
-    def __copy__(self) -> "SpiceWindow":
+    def __copy__(self) -> SpiceWindow:
         return SpiceWindow(self.spice_window)
 
-    def __add__(self, other) -> "SpiceWindow":
+    def __add__(self, other: SpiceWindow) -> SpiceWindow:
         return self.union(other)
 
-    def add_interval(self, start: times_types, end: times_types):
+    def add_interval(self, start: times_types, end: times_types) -> None:
         spiceypy.wninsd(et(start), et(end), self.spice_window)
 
-    def intersect(self, other: "SpiceWindow") -> "SpiceWindow":
+    def intersect(self, other: SpiceWindow) -> SpiceWindow:
         return SpiceWindow(spiceypy.wnintd(self.spice_window, other.spice_window))
 
-    def union(self, other: "SpiceWindow") -> "SpiceWindow":
+    def union(self, other: SpiceWindow) -> SpiceWindow:
         return SpiceWindow(spiceypy.wnunid(self.spice_window, other.spice_window))
 
-    def difference(self, other: "SpiceWindow") -> "SpiceWindow":
+    def difference(self, other: SpiceWindow) -> SpiceWindow:
         return SpiceWindow(spiceypy.wndifd(self.spice_window, other.spice_window))
 
-    def compare(self, other: "SpiceWindow", operator: str) -> bool:
-        return spiceypy.wnreld(self.spice_window, operator, other.spice_window)
+    def compare(self, other: SpiceWindow, operator: str) -> bool:
+        return bool(spiceypy.wnreld(self.spice_window, operator, other.spice_window))
 
-    def complement(self, other=None) -> "SpiceWindow":
+    def complement(self, other: SpiceWindow | None = None) -> SpiceWindow:
         if other is None:
             other = self
 
         start = other.start
         end = other.end
 
+        if (start is None) | (end is None):
+            raise ValueError("Cannot compute complement of empty window")
+
         return SpiceWindow(spiceypy.wncomd(start, end, self.spice_window))
 
-    def includes(self, start: times_types, end: times_types) -> "SpiceWindow":
-        return spiceypy.wnincd(et(start), et(end), self.spice_window)
+    def includes(self, start: times_types, end: times_types) -> bool:
+        return bool(spiceypy.wnincd(et(start), et(end), self.spice_window))
 
     def remove_small_intervals(self, min_size: float) -> None:
         spiceypy.wnfltd(min_size, self.spice_window)
@@ -119,7 +130,7 @@ class SpiceWindow:
     def fill_small_gaps(self, min_size: float) -> None:
         spiceypy.wnfild(min_size, self.spice_window)
 
-    def __getitem__(self, item: int) -> "SpiceWindow":
+    def __getitem__(self, item: int) -> SpiceWindow:
         if item >= len(self):
             raise IndexError(f"index {item} out of range")
         left, right = spiceypy.wnfetd(self.spice_window, item)
@@ -129,31 +140,31 @@ class SpiceWindow:
 
     def to_datetimerange(self) -> list[DateTimeRange]:
         return [
-            DateTimeRange(spiceypy.et2datetime(i.start), spiceypy.et2datetime(i.end))
+            DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end)))
             for i in self
         ]
 
     @property
-    def end(self):
+    def end(self) -> float | None:
         if len(self) == 0:
             return None
 
-        return self.spice_window[-1]
+        return float(self.spice_window[-1])
 
     @property
-    def start(self):
+    def start(self) -> float | None:
         if len(self) == 0:
             return None
 
-        return self.spice_window[0]
+        return float(self.spice_window[0])
 
-    def contains(self, point: times_types):
-        return spiceypy.wnelmd(et(point), self.spice_window)
+    def contains(self, point: times_types) -> bool:
+        return bool(spiceypy.wnelmd(et(point), self.spice_window))
 
-    def __len__(self):
-        return spiceypy.wncard(self.spice_window)
+    def __len__(self) -> int:
+        return int(spiceypy.wncard(self.spice_window))
 
-    def plot(self, ax=None, **kwargs) -> list:
+    def plot(self, ax=None, **kwargs) -> list:  # type: ignore
         import matplotlib.pyplot as plt
 
         if ax is None:
@@ -170,11 +181,11 @@ class SpiceWindow:
 
             s = inter.start_datetime
             e = inter.end_datetime
-            plotted.append(plt.axvspan(s, e, **kwargs))
+            plotted.append(plt.axvspan(s, e, **kwargs))  # type: ignore
 
         return plotted
 
-    def to_pandas(self, round: str = "S") -> pd.DataFrame:
+    def to_pandas(self, round_to: str = "S") -> pd.DataFrame:
         out = []
         for i in self:
             out.append(
@@ -182,14 +193,18 @@ class SpiceWindow:
             )
 
         tab = pd.DataFrame(out)
-        if round:
-            tab.start = tab.start.round(round)
-            tab.end = tab.end.round(round)
+        if round_to:
+            tab.start = tab.start.round(round_to)
+            tab.end = tab.end.round(round_to)
 
         return tab
 
     def to_juice_core_csv(
-        self, filename: str, obs_id: str = "OBSERVATION", wg: str = "WG2", add_z=True
+        self,
+        filename: str,
+        obs_id: str = "OBSERVATION",
+        wg: str = "WG2",
+        add_z: bool = True,
     ) -> None:
         t = self.to_pandas()
 
@@ -199,8 +214,8 @@ class SpiceWindow:
 
         t = t[["id", "start", "end", "unk", "wg"]]
 
-        format = "%Y-%m-%dT%H:%M:%S"
+        dformat = "%Y-%m-%dT%H:%M:%S"
         if add_z:
-            format += "Z"
+            dformat += "Z"
 
-        t.to_csv(filename, date_format=format, header=False, index=False)
+        t.to_csv(filename, date_format=dformat, header=False, index=False)

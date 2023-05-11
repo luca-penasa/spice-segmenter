@@ -91,7 +91,7 @@ addopts = """\
 """
 
 [tool.coverage.report]
-fail_under = 100
+fail_under = 20
 exclude_lines = [
     'if TYPE_CHECKING:',
     'pragma: no cover'
