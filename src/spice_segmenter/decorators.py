@@ -6,8 +6,8 @@ import numpy as np
 
 def vectorize(
     function: Optional[Callable[..., Any]] = None,
-    otypes: None | str = None,
-    signature: None | str = None,
+    otypes: Optional[str] = None,
+    signature: Optional[str] = None,
 ) -> Callable[..., Any]:
     """Numpy vectorization wrapper that works with instance methods."""
 
