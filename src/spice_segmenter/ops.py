@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Any, Iterable
 
 import pint
@@ -9,16 +8,12 @@ from loguru import logger as log
 from spice_segmenter.trajectory_properties import (
     ConstraintBase,
     ConstraintTypes,
+    MinMaxConditionTypes,
     Property,
 )
 from spice_segmenter.types import times_types
 
-from .trajectory_properties import (
-    ConstraintBase,
-    ConstraintTypes,
-    MinMaxConditionTypes,
-    Property,
-)
+from .decorators import vectorize
 
 
 @define(repr=False, order=False, eq=False)
@@ -52,7 +47,8 @@ class WrappedConstraint(ConstraintBase):
     def tree(self) -> Node:
         return Node("wrapped", children=[self.parent.tree()])
 
-    def __call__(self, time):
+    @vectorize
+    def __call__(self, time: times_types) -> bool:
         return self.parent(time)
 
 
@@ -68,16 +64,14 @@ class Inverted(WrappedConstraint):
     def tree(self) -> Node:
         return Node("NOT", children=[self.parent.tree()])
 
-    def __call__(self, time):
+    @vectorize
+    def __call__(self, time: times_types) -> bool:
         return ~self.parent(time)
-
-
-# __call__, ctype, left, name, operator, right, unit
 
 
 @define(repr=False, order=False, eq=False)
 class MinMaxConstraint(ConstraintBase):
-    property: Property
+    wrapped_property: Property
     minmax_type: MinMaxConditionTypes = field(converter=MinMaxConditionTypes)
     adjust: float = 0.0  # this should be a pint quantity
 
@@ -90,11 +84,11 @@ class MinMaxConstraint(ConstraintBase):
                 )
                 self.adjust = 0.0
 
-    def __call__(self, time: times_types) -> float | bool | Enum:
-        raise NotImplementedError
+    def __call__(self, time: times_types) -> bool:
+        raise NotImplementedError("MinMaxConstraints cannot be evaluated as a boolean")
 
     def __repr__(self) -> str:
-        s = f"{self.property} is a {self.name}"
+        s = f"{self.wrapped_property} is a {self.name}"
         if "global" in self.minmax_type.value:
             s += f" within {self.adjust} threshold"
 
@@ -102,7 +96,7 @@ class MinMaxConstraint(ConstraintBase):
         return s
 
     def config(self, config: dict) -> None:
-        self.property.config(config)
+        self.wrapped_property.config(config)
         config["operator"] = self.minmax_type.value
         config["adjust"] = self.adjust
 
@@ -111,12 +105,12 @@ class MinMaxConstraint(ConstraintBase):
         return ConstraintTypes.MINMAX
 
     @property
-    def right(self) -> Property | ConstraintBase:
-        return None
+    def right(self) -> Property:
+        raise KeyError("MinMaxConstraints do not have a right side")
 
     @property
     def left(self) -> Property | ConstraintBase:
-        return self.property
+        return self.wrapped_property
 
     @property
     def operator(self) -> str:

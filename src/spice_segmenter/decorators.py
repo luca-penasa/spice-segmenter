@@ -15,7 +15,7 @@ def vectorize(
         vectorized = np.vectorize(fn, otypes=otypes, signature=signature)
 
         @wraps(fn)
-        def wrapper(*args):
+        def wrapper(*args) -> Any:  # type: ignore
             return vectorized(*args)
 
         return wrapper

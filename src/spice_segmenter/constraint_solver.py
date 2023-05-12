@@ -1,4 +1,4 @@
-from typing import Iterable, Protocol, Type
+from typing import Iterable, Optional, Protocol, Type
 
 import pint
 import spiceypy
@@ -16,14 +16,14 @@ from .trajectory_properties import Constant, Constraint, ConstraintBase, Constra
 
 
 class Solver(Protocol):
-    def __init__(self, constraint: Constraint, step: float) -> None:
+    def __init__(self, constraint: ConstraintBase, step: float) -> None:
         ...
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         ...
 
     @staticmethod
-    def can_solve(constraint: Constraint) -> bool:
+    def can_solve(constraint: ConstraintBase) -> bool:
         ...
 
 
@@ -40,7 +40,7 @@ class GfevntSolverConfigurator:
     adjust: float = 0.0
 
     def add_str_parameter(self, name: str, value: str) -> None:
-        log.debug(f"adding str parameter {name} with value {value}")
+        log.debug("adding str parameter {} with value {}", name, value)
         if name in self.names:
             raise ValueError(f"Parameter {name} already exists")
 
@@ -48,7 +48,7 @@ class GfevntSolverConfigurator:
         self.strings.append(value)
 
     def add_vector_parameter(self, name: str, vector: Iterable[float]) -> None:
-        log.debug(f"adding vector parameter {name} with value {vector}")
+        log.debug("adding vector parameter {} with value {}", name, vector)
         if name in self.names:
             raise ValueError(f"Parameter {name} already exists")
 
@@ -57,18 +57,18 @@ class GfevntSolverConfigurator:
             self.floats.append(value)
 
     def as_dict(self) -> dict:
-        return dict(
-            qpnams=self.names,
-            qcpars=self.strings,
-            qdpars=self.floats,
-            qipars=self.integers,
-            qlpars=self.booleans,
-            qnpars=len(self.names),
-            op=self.operator,
-            refval=self.refval,
-            gquant=self.quantity,
-            adjust=self.adjust,
-        )
+        return {
+            "qpnams": self.names,
+            "qcpars": self.strings,
+            "qdpars": self.floats,
+            "qipars": self.integers,
+            "qlpars": self.booleans,
+            "qnpars": len(self.names),
+            "op": self.operator,
+            "refval": self.refval,
+            "gquant": self.quantity,
+            "adjust": self.adjust,
+        }
 
     def set_from_dict(self, pars: dict) -> None:
         log.debug("Setting config from pars {}", pars)
@@ -127,10 +127,12 @@ class GfevntSolverConfigurator:
                 log.error("No property unit found")
                 raise ValueError("No property unit found")
 
-            log.debug(f"property unit {property_unit}, refval unit {refval_unit}")
+            log.debug("property unit {}, refval unit {}", property_unit, refval_unit)
             if refval_unit != property_unit and not refval_unit == "dimensionless":
                 log.debug(
-                    f"converting refval with unit {refval_unit} to property unit {property_unit}"
+                    "converting refval with unit {} to property unit {}",
+                    refval_unit,
+                    property_unit,
                 )
 
                 refval = pint.Quantity(refval, refval_unit).to(property_unit).magnitude
@@ -142,13 +144,13 @@ class GfevntSolverConfigurator:
         self.add_str_parameter("OBSERVER", pars["observer"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
 
-    def set_phase_angle_from_dict(self, pars) -> None:
+    def set_phase_angle_from_dict(self, pars: dict) -> None:
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["observer"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
         self.add_str_parameter("ILLUM", pars["third_body"])
 
-    def set_coordinate_from_dict(self, pars) -> None:
+    def set_coordinate_from_dict(self, pars: dict) -> None:
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["origin"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
@@ -184,11 +186,11 @@ class GfevntSolverConfigurator:
         ]
 
     @staticmethod
-    def known_operators():
+    def known_operators() -> list[str]:
         return [">", "=", "<", "absmax", "absmin", "locmax", "locmin"]
 
     @staticmethod
-    def minmax_operators():
+    def minmax_operators() -> list[str]:
         return ["absmax", "absmin", "locmax", "locmin"]
 
     @staticmethod
@@ -209,7 +211,7 @@ class GfevntSolverConfigurator:
 
 @define(repr=False, order=False, eq=False)
 class GfevntSolver:
-    constraint: Constraint | None = None
+    constraint: Optional[ConstraintBase]
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
@@ -240,7 +242,6 @@ class GfevntSolver:
         spiceypy.gfevnt(
             udstep=spiceypy.utils.callbacks.SpiceUDFUNS(gfstep),
             udrefn=spiceypy.utils.callbacks.SpiceUDREFN(gfrefn),
-            # qnpars=len(self.config["qpnams"]),
             lenvals=100,
             tol=1e-3,
             rpt=True,
@@ -313,7 +314,7 @@ class GfocceSolver:
     result: SpiceWindow | None = None
     reporter: SearchReporter = field(factory=SearchReporter)
 
-    def configure(self):
+    def configure(self) -> dict:
         """
         occtyp     I   Type of occultation.
         front      I   Name of body occulting the other.
@@ -341,34 +342,34 @@ class GfocceSolver:
             log.error("You need to provide a valid constraint")
             raise ValueError
 
-        config = {}
+        config: dict = {}
         self.constraint.config(config)  # extract the config
 
         self.constraint.left
 
         self.config.update(
-            dict(
-                front=config["front"],
-                fshape="ELLIPSOID",
-                fframe=SpiceRef(config["front"]).frame,
-                back=config["back"],
-                bshape="ELLIPSOID",
-                bframe=SpiceRef(config["back"]).frame,
-                abcorr=config["light_time_correction"],
-                obsrvr=config["observer"],
-                tol=1e-3,
-                udstep=spiceypy.utils.callbacks.SpiceUDFUNS(gfstep),
-                udrefn=spiceypy.utils.callbacks.SpiceUDREFN(gfrefn),
-                rpt=True,
-                udrepi=self.reporter.init_search_spice,
-                udrepu=self.reporter.update_function_spice,
-                udrepf=self.reporter.end_search_spice,
-                bail=True,
-                udbail=spiceypy.utils.callbacks.SpiceUDBAIL(spiceypy.gfbail),
-            )
+            {
+                "front": config["front"],
+                "fshape": "ELLIPSOID",
+                "fframe": SpiceRef(config["front"]).frame,
+                "back": config["back"],
+                "bshape": "ELLIPSOID",
+                "bframe": SpiceRef(config["back"]).frame,
+                "abcorr": config["light_time_correction"],
+                "obsrvr": config["observer"],
+                "tol": 1e-3,
+                "udstep": spiceypy.utils.callbacks.SpiceUDFUNS(gfstep),
+                "udrefn": spiceypy.utils.callbacks.SpiceUDREFN(gfrefn),
+                "rpt": True,
+                "udrepi": self.reporter.init_search_spice,
+                "udrepu": self.reporter.update_function_spice,
+                "udrepf": self.reporter.end_search_spice,
+                "bail": True,
+                "udbail": spiceypy.utils.callbacks.SpiceUDBAIL(spiceypy.gfbail),
+            }
         )
 
-        log.debug(f"Configured: {self.config}")
+        log.debug("Configured: {}", self.config)
 
         return config
 
@@ -388,6 +389,9 @@ class GfocceSolver:
         right = self.constraint.right
 
         if not isinstance(right, Constant):
+            raise TypeError
+
+        if not isinstance(right.value, OccultationTypes):
             raise TypeError
 
         right_value = right.value
@@ -420,12 +424,12 @@ class GfocceSolver:
         return self.result
 
     @staticmethod
-    def can_solve(constraint: Constraint) -> bool:
+    def can_solve(constraint: ConstraintBase) -> bool:
         if constraint.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
             return False
 
         if constraint.left.name in ["occultation"]:
-            log.debug(f"can solve {constraint.left.name}")
+            log.debug("can solve {}", constraint.left.name)
             return True
 
         return False
@@ -481,7 +485,7 @@ class SpiceWindowSolver:
         return op_res
 
     @staticmethod
-    def can_solve(constraint: Constraint) -> bool:
+    def can_solve(constraint: ConstraintBase) -> bool:
         if constraint.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
             log.debug("Found constraint to constraint comparison")
             return True
@@ -490,7 +494,7 @@ class SpiceWindowSolver:
 
 @define(repr=False, order=False, eq=False)
 class MasterSolver:
-    constraint: Constraint | None = None
+    constraint: ConstraintBase | None = None
     step: float = 60 * 60
     minimum_interval_size: float = 0.0  # seconds
 
@@ -508,7 +512,7 @@ class MasterSolver:
 
         return result
 
-    def can_solve(self, constraint: Constraint) -> bool:
+    def can_solve(self, constraint: ConstraintBase) -> bool:
         if get_appropriate_solver(constraint):
             return True
         return False
@@ -517,7 +521,7 @@ class MasterSolver:
 solvers: list[Type[Solver]] = [GfevntSolver, GfocceSolver, SpiceWindowSolver]
 
 
-def get_appropriate_solver(constraint: Constraint) -> Type[Solver]:
+def get_appropriate_solver(constraint: ConstraintBase) -> Type[Solver]:
     for solver in solvers:
         if solver.can_solve(constraint):
             log.debug(

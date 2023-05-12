@@ -107,10 +107,8 @@ def test_window_to_juice_core() -> None:
 
     tmpfile = tempfile.gettempdir() + "/test.csv"
 
-    try:
-        os.path.remove(tmpfile)
-    except:
-        pass
+    if Path(tmpfile).exists():
+        os.remove(tmpfile)
 
     w.to_juice_core_csv(tmpfile)
     assert Path(tmpfile).exists()

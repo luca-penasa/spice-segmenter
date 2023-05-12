@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 import pint
@@ -18,6 +18,7 @@ class Vector(Property):
     frame: str = field(default="J2000")
     abcorr: str = field(default="NONE")
 
+    @property
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
@@ -76,12 +77,12 @@ class Vector(Property):
 
     def config(self, config: dict) -> None:
         config.update(
-            dict(
-                origin=self.origin.name,
-                target=self.target.name,
-                frame=self.frame,
-                abcorr=self.abcorr,
-            )
+            {
+                "origin": self.origin.name,
+                "target": self.target.name,
+                "frame": self.frame,
+                "abcorr": self.abcorr,
+            }
         )
         config["vector_definition"] = "position"
         config["property"] = self.name
@@ -93,12 +94,13 @@ class Vector(Property):
 class LatitudinalCoordinates(Property):
     vector: Vector
 
+    @property
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
     @property
     def name(self) -> str:
-        return f"latitudinal"
+        return "latitudinal"
 
     @property
     def unit(self) -> Tuple[pint.Unit, pint.Unit, pint.Unit]:
@@ -120,7 +122,7 @@ class LatitudinalCoordinates(Property):
     def latitude(self) -> Property:
         return ComponentSelector(self, 2, "latitude")
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["coordinate_type"] = self.name
 
@@ -129,6 +131,7 @@ class LatitudinalCoordinates(Property):
 class SphericalCoordinates(Property):
     vector: Vector
 
+    @property
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
@@ -156,7 +159,7 @@ class SphericalCoordinates(Property):
     def longitude(self) -> Property:
         return ComponentSelector(self, 2, "longitude")
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["coordinate_type"] = self.name
 
@@ -165,7 +168,8 @@ class SphericalCoordinates(Property):
 class CylindricalCoordinates(Property):
     vector: Vector
 
-    def type(self):
+    @property
+    def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
     @property
@@ -192,7 +196,7 @@ class CylindricalCoordinates(Property):
     def z(self) -> Property:
         return ComponentSelector(self, 2, "z")
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["coordinate_type"] = self.name
 
@@ -201,7 +205,8 @@ class CylindricalCoordinates(Property):
 class GeodeticCoordinates(Property):
     vector: Vector
 
-    def type(self):
+    @property
+    def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
     @property
@@ -228,7 +233,7 @@ class GeodeticCoordinates(Property):
     def altitude(self) -> Property:
         return ComponentSelector(self, 2, "altitude")
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["coordinate_type"] = self.name
 
@@ -237,7 +242,8 @@ class GeodeticCoordinates(Property):
 class PlanetographicCoordinates(Property):
     vector: Vector
 
-    def type(self):
+    @property
+    def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
     @property
@@ -264,7 +270,7 @@ class PlanetographicCoordinates(Property):
     def altitude(self) -> Property:
         return ComponentSelector(self, 2, "altitude")
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["coordinate_type"] = self.name
 
@@ -273,12 +279,13 @@ class PlanetographicCoordinates(Property):
 class RaDecCoordinates(Property):
     vector: Vector
 
-    def type(self):
+    @property
+    def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
     @property
     def name(self) -> str:
-        return f"ra/dec"
+        return "ra/dec"
 
     @property
     def unit(self) -> pint.Unit:
@@ -300,7 +307,7 @@ class RaDecCoordinates(Property):
     def declination(self) -> Property:
         return ComponentSelector(self, 2, "declination")
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["coordinate_type"] = self.name
 
@@ -315,13 +322,14 @@ class ComponentSelector(Property):
     _name: str = "component_selector"
 
     @vector.validator
-    def _validate_vector(self, attribute, value):
-        if not value.type() == PropertyTypes.VECTOR:
+    def _validate_vector(self, attribute, value) -> Any:  # type: ignore
+        if not value.type == PropertyTypes.VECTOR:
             raise ValueError(f"Vector must be of type {PropertyTypes.VECTOR}")
 
         return instance_of(Property)(self, attribute, value)
 
-    def type(self):
+    @property
+    def type(self) -> PropertyTypes:
         return PropertyTypes.SCALAR
 
     @property
@@ -336,7 +344,7 @@ class ComponentSelector(Property):
     def __call__(self, time: times_types) -> float:
         return self.vector.__call__(time)[self.component]
 
-    def config(self, config: dict):
+    def config(self, config: dict) -> None:
         self.vector.config(config)
         config["component"] = self.name
         config["property_unit"] = str(self.unit)

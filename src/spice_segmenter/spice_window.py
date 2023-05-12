@@ -40,8 +40,8 @@ class SpiceWindow:
     This is a wrapper around the SPICE time window related routines.
     """
 
-    spice_window: SpiceCell | None = field(default=None)
-    size: int = field(default=2000)
+    spice_window: SpiceCell = field(default=None)
+    size: int = field(default=None)
     _default_size: int = field(default=2000, init=False)
 
     def __attrs_post_init__(self) -> None:
@@ -73,7 +73,7 @@ class SpiceWindow:
         if not isinstance(other, SpiceWindow):
             return False
 
-        return self.spice_window == other.spice_window
+        return bool(self.spice_window == other.spice_window)
 
     def __repr__(self) -> str:
         return f"SpiceWindow({utc(self.start)} to {utc(self.end)}, N: {len(self)})"
@@ -140,23 +140,23 @@ class SpiceWindow:
 
     def to_datetimerange(self) -> list[DateTimeRange]:
         return [
-            DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end)))
+            DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end)))  # type: ignore
             for i in self
         ]
 
     @property
-    def end(self) -> float | None:
+    def end(self) -> float:
         if len(self) == 0:
-            return None
+            return np.nan
 
-        return float(self.spice_window[-1])
+        return float(self.spice_window[-1])  # type: ignore
 
     @property
-    def start(self) -> float | None:
+    def start(self) -> float:
         if len(self) == 0:
-            return None
+            return np.nan
 
-        return float(self.spice_window[0])
+        return float(self.spice_window[0])  # type: ignore
 
     def contains(self, point: times_types) -> bool:
         return bool(spiceypy.wnelmd(et(point), self.spice_window))
@@ -189,13 +189,13 @@ class SpiceWindow:
         out = []
         for i in self:
             out.append(
-                {"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))}
+                {"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))}  # type: ignore
             )
 
         tab = pd.DataFrame(out)
         if round_to:
-            tab.start = tab.start.round(round_to)
-            tab.end = tab.end.round(round_to)
+            tab.start = tab.start.round(round_to)  # type: ignore
+            tab.end = tab.end.round(round_to)  # type: ignore
 
         return tab
 

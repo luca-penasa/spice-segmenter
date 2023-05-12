@@ -13,5 +13,8 @@ config = TourConfig(
     mk="plan",
     download_kernels=True,
 )
-traj = config[slice(*config.coverage, "1 day")]
+
+start, end = config.coverage
+
+traj = config[start:end:"1 day"]
 config.load_kernels()

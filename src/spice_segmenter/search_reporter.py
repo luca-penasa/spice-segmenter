@@ -20,8 +20,6 @@ class SearchReporter:
     end_time: float = 0.0
 
     def reset(self) -> None:
-        if self.bar:
-            self.bar.reset()
         self.last_value = 0.0
         self.end_time = 0.0
         self.start_time = 0.0
@@ -32,14 +30,10 @@ class SearchReporter:
             interval_range = iend - istart
 
             percent = (et - istart) / interval_range * 100
-            # self.bar.update(percent)
 
             progress = percent - self.last_value
             self.last_value = percent
             self.bar.update(progress)
-            # self.bar.n = percent
-            # self.bar.last_print_n = percent
-            # self.bar.refresh()
 
         return update_progress_report
 
@@ -51,6 +45,7 @@ class SearchReporter:
     def init_search(self) -> Callable[[SpiceCell, str, str], None]:
         def init_search(cell: SpiceCell, pre: str, suf: str) -> None:
             self.bar = tqdm(total=100, unit="%", desc=pre)
+            self.reset()
             log.debug("Starting {}", pre)
             self.start_time = time.time()
 

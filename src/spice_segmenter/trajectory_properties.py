@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from typing import TYPE_CHECKING, Callable, Iterable, Union
 
+import numpy as np
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
@@ -13,9 +14,10 @@ from loguru import logger as log
 from planetary_coverage.spice import SpiceRef
 from spiceypy.utils.callbacks import UDFUNB, UDFUNS
 
+from spice_segmenter.types import times_types
+
 from .decorators import vectorize
 from .spice_window import SpiceWindow
-from .types import times_types
 from .utils import et
 
 if TYPE_CHECKING:
@@ -327,6 +329,10 @@ class ConstraintBase(Property):
     def ctype(self) -> ConstraintTypes:
         ...
 
+    @abstractmethod
+    def __call__(self, time: times_types) -> bool:
+        ...
+
     def config(self, config: dict) -> None:
         if self.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
             log.error(
@@ -408,6 +414,14 @@ class Constraint(ConstraintBase):
             log.debug("Right side of constraint {} is a minmax condition", self)
             return
 
+        if isinstance(self.left.unit, Iterable):
+            log.warning(
+                "Constraint {} has a left side with multiple units: {}. This is not supported",
+                self,
+                self.left.unit,
+            )
+            raise NotImplementedError
+
         if not self.left.unit.is_compatible_with(self.right.unit):
             raise ValueError(
                 f"Cannot Create a constraints between two properties with incompatible units: {self.left.unit} != {self.right.unit}"
@@ -446,7 +460,8 @@ class Constraint(ConstraintBase):
         return pint.Unit("")  # a constraint has no unit, as it returns bools
 
     def __call__(self, time: times_types) -> bool:
-        right = None
+        right: Property | None = None
+
         if self.left.unit != self.right.unit:
             log.warning(
                 "Comparing {} with {}. This is not recommended. Will attempt automatic conversion.",
@@ -466,4 +481,4 @@ class Constraint(ConstraintBase):
 
         q = "self.left(time)" + self.operator + "right(time)"
 
-        return eval(q)
+        return np.array(eval(q), dtype=bool)
