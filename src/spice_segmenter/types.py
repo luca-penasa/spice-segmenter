@@ -8,5 +8,5 @@ from planetary_coverage.spice import (
 )
 
 TIME_TYPES = Union[str, float, int]
-times_types = Union[TIME_TYPES, Iterable[TIME_TYPES]]
+TIMES_TYPES = Union[TIME_TYPES, Iterable[TIME_TYPES]]
 obj_type = Union[SpiceBody, SpiceInstrument, SpiceSpacecraft, SpiceObserver]

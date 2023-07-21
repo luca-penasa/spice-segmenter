@@ -8,7 +8,7 @@ from planetary_coverage import SpiceRef
 
 from .decorators import vectorize
 from .trajectory_properties import Property, PropertyTypes
-from .types import times_types
+from .types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)
@@ -34,7 +34,7 @@ class Vector(Property):
         return pint.Unit("km"), pint.Unit("km"), pint.Unit("km")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.array:
+    def __call__(self, time: TIMES_TYPES) -> np.array:
         return spiceypy.spkpos(
             self.target.name, time, self.frame, self.abcorr, self.origin.name
         )[0]
@@ -107,7 +107,7 @@ class LatitudinalCoordinates(Property):
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.ndarray:
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         return np.array(spiceypy.reclat(self.vector.__call__(time)))
 
     @property
@@ -144,7 +144,7 @@ class SphericalCoordinates(Property):
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.ndarray:
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         return np.array(spiceypy.recsph(self.vector.__call__(time)))
 
     @property
@@ -181,7 +181,7 @@ class CylindricalCoordinates(Property):
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("km")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.ndarray:
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         return np.array(spiceypy.reccyl(self.vector.__call__(time)))
 
     @property
@@ -218,7 +218,7 @@ class GeodeticCoordinates(Property):
         return pint.Unit("rad"), pint.Unit("rad"), pint.Unit("km")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.ndarray:
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         return np.array(spiceypy.recgeo(self.vector.__call__(time)))
 
     @property
@@ -255,7 +255,7 @@ class PlanetographicCoordinates(Property):
         return pint.Unit("rad"), pint.Unit("rad"), pint.Unit("km")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.ndarray:
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         return np.array(spiceypy.recpgr(self.vector.__call__(time)))
 
     @property
@@ -292,7 +292,7 @@ class RaDecCoordinates(Property):
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
 
     @vectorize(signature="(),()->(n)")
-    def __call__(self, time: times_types) -> np.ndarray:
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         return np.array(spiceypy.recrad(self.vector.__call__(time)))
 
     @property
@@ -341,7 +341,7 @@ class ComponentSelector(Property):
         return self.vector.unit[self.component]
 
     @vectorize()
-    def __call__(self, time: times_types) -> float:
+    def __call__(self, time: TIMES_TYPES) -> float:
         return self.vector.__call__(time)[self.component]
 
     def config(self, config: dict) -> None:

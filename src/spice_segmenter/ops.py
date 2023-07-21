@@ -11,7 +11,7 @@ from spice_segmenter.trajectory_properties import (
     MinMaxConditionTypes,
     Property,
 )
-from spice_segmenter.types import times_types
+from spice_segmenter.types import TIMES_TYPES
 
 from .decorators import vectorize
 
@@ -48,7 +48,7 @@ class WrappedConstraint(ConstraintBase):
         return Node("wrapped", children=[self.parent.tree()])
 
     @vectorize
-    def __call__(self, time: times_types) -> bool:
+    def __call__(self, time: TIMES_TYPES) -> bool:
         return self.parent(time)
 
 
@@ -65,7 +65,7 @@ class Inverted(WrappedConstraint):
         return Node("NOT", children=[self.parent.tree()])
 
     @vectorize
-    def __call__(self, time: times_types) -> bool:
+    def __call__(self, time: TIMES_TYPES) -> bool:
         return ~self.parent(time)
 
 
@@ -84,7 +84,7 @@ class MinMaxConstraint(ConstraintBase):
                 )
                 self.adjust = 0.0
 
-    def __call__(self, time: times_types) -> bool:
+    def __call__(self, time: TIMES_TYPES) -> bool:
         raise NotImplementedError("MinMaxConstraints cannot be evaluated as a boolean")
 
     def __repr__(self) -> str:

@@ -14,13 +14,15 @@ from loguru import logger as log
 from planetary_coverage.spice import SpiceRef
 from spiceypy.utils.callbacks import UDFUNB, UDFUNS
 
-from spice_segmenter.types import times_types
+from spice_segmenter.types import TIMES_TYPES
 
 from .decorators import vectorize
 from .spice_window import SpiceWindow
 from .utils import et
 
 if TYPE_CHECKING:
+    from ops import Inverted
+
     from spice_segmenter.occultation import OccultationTypes
 
 
@@ -58,7 +60,7 @@ class MinMaxConditionTypes(Enum):
 @define(repr=False, order=False, eq=False)
 class Property(ABC):
     @abstractmethod
-    def __call__(self, time: times_types) -> float | bool | Enum:
+    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum:
         ...
 
     def __str__(self) -> str:
@@ -85,16 +87,16 @@ class Property(ABC):
         ...
 
     def compute_as_spice_function(self) -> UDFUNS:
-        def as_function(time: times_types) -> float | bool | Enum:
+        def as_function(time: TIMES_TYPES) -> float | bool | Enum:
             return self.__call__(time)
 
         return spiceypy.utils.callbacks.SpiceUDFUNS(as_function)
 
-    def is_decreasing(self, time: times_types) -> bool:
+    def is_decreasing(self, time: TIMES_TYPES) -> bool:
         return spiceypy.uddc(self.compute_as_spice_function(), time, self.dt)  # type: ignore
 
     def is_decreasing_as_spice_function(self) -> UDFUNB:
-        def as_function(function: Callable, time: times_types) -> bool:
+        def as_function(function: Callable, time: TIMES_TYPES) -> bool:
             return self.is_decreasing(time)
 
         return spiceypy.utils.callbacks.SpiceUDFUNB(as_function)
@@ -187,7 +189,7 @@ class Constant(Property):
         self._value.u = unit
 
     @vectorize
-    def __call__(self, time: times_types) -> float | OccultationTypes:
+    def __call__(self, time: TIMES_TYPES) -> float | OccultationTypes:
         return self._value.magnitude  # type: ignore
 
     def config(self, config: dict) -> None:
@@ -209,7 +211,7 @@ class UnitAdaptor(Property):
         return self._unit
 
     @vectorize
-    def __call__(self, time: times_types) -> float:
+    def __call__(self, time: TIMES_TYPES) -> float:
         return (  # type: ignore
             pint.Quantity(self.parent(time), self.parent.unit).to(self.unit).magnitude
         )
@@ -256,7 +258,7 @@ class PhaseAngle(TargetedProperty):
         return pint.Unit("rad")
 
     @vectorize
-    def __call__(self, time: times_types) -> float:
+    def __call__(self, time: TIMES_TYPES) -> float:
         return spiceypy.phaseq(  # type: ignore
             et(time),
             self.target.name,
@@ -285,7 +287,7 @@ class Distance(TargetedProperty):
         return pint.Unit("km")
 
     @vectorize
-    def __call__(self, time: times_types) -> float:
+    def __call__(self, time: TIMES_TYPES) -> float:
         return spiceypy.vnorm(  # type: ignore
             spiceypy.spkpos(
                 self.target.name,
@@ -330,7 +332,7 @@ class ConstraintBase(Property):
         ...
 
     @abstractmethod
-    def __call__(self, time: times_types) -> bool:
+    def __call__(self, time: TIMES_TYPES) -> bool:
         ...
 
     def config(self, config: dict) -> None:
@@ -459,7 +461,7 @@ class Constraint(ConstraintBase):
     def unit(self) -> pint.Unit:
         return pint.Unit("")  # a constraint has no unit, as it returns bools
 
-    def __call__(self, time: times_types) -> bool:
+    def __call__(self, time: TIMES_TYPES) -> bool:
         right: Property | None = None
 
         if self.left.unit != self.right.unit:

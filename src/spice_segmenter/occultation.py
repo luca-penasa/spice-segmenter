@@ -7,7 +7,7 @@ from planetary_coverage.spice import SpiceRef
 
 from spice_segmenter.decorators import vectorize
 from spice_segmenter.trajectory_properties import Property, PropertyTypes
-from spice_segmenter.types import times_types
+from spice_segmenter.types import TIMES_TYPES
 
 from .utils import et
 
@@ -73,7 +73,7 @@ class Occultation(Property):
             return OccultationTypes.NONE
 
     @vectorize
-    def __call__(self, times: times_types) -> OccultationTypes:
+    def __call__(self, times: TIMES_TYPES) -> OccultationTypes:
         v = spiceypy.occult(
             self.back.name,
             "ELLIPSOID",

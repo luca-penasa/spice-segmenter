@@ -10,7 +10,7 @@ from datetimerange import DateTimeRange
 from planetary_coverage import utc
 from spiceypy import Cell_Double, SpiceCell
 
-from .types import times_types
+from .types import TIMES_TYPES
 from .utils import et
 
 
@@ -94,7 +94,7 @@ class SpiceWindow:
     def __add__(self, other: SpiceWindow) -> SpiceWindow:
         return self.union(other)
 
-    def add_interval(self, start: times_types, end: times_types) -> None:
+    def add_interval(self, start: TIMES_TYPES, end: TIMES_TYPES) -> None:
         spiceypy.wninsd(et(start), et(end), self.spice_window)
 
     def intersect(self, other: SpiceWindow) -> SpiceWindow:
@@ -121,7 +121,7 @@ class SpiceWindow:
 
         return SpiceWindow(spiceypy.wncomd(start, end, self.spice_window))
 
-    def includes(self, start: times_types, end: times_types) -> bool:
+    def includes(self, start: TIMES_TYPES, end: TIMES_TYPES) -> bool:
         return bool(spiceypy.wnincd(et(start), et(end), self.spice_window))
 
     def remove_small_intervals(self, min_size: float) -> None:
@@ -158,7 +158,7 @@ class SpiceWindow:
 
         return float(self.spice_window[0])  # type: ignore
 
-    def contains(self, point: times_types) -> bool:
+    def contains(self, point: TIMES_TYPES) -> bool:
         return bool(spiceypy.wnelmd(et(point), self.spice_window))
 
     def __len__(self) -> int:
