@@ -10,7 +10,7 @@ from spiceypy import gfrefn, gfstep
 from spice_segmenter.ops import Inverted
 
 from .occultation import OccultationTypes
-from .search_reporter import SearchReporter
+from .search_reporter import SearchReporter, get_default_reporter_class
 from .spice_window import SpiceWindow
 from .trajectory_properties import Constant, Constraint, ConstraintBase, ConstraintTypes
 
@@ -215,7 +215,7 @@ class GfevntSolver:
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter = field(factory=SearchReporter)
+    reporter: SearchReporter = field(factory=get_default_reporter_class)
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         log.debug(
@@ -293,9 +293,7 @@ class GfevntSolver:
 
         quantity = conf.get("property", None)
         if not quantity:
-            log.warning(
-                "No property keyword found in constraint, this might imply a bug"
-            )
+            log.debug("No property keyword found in constraint, this might imply a bug")
             return False
 
         if quantity.lower() in GfevntSolverConfigurator.known_properties():
@@ -312,7 +310,7 @@ class GfocceSolver:
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter = field(factory=SearchReporter)
+    reporter: SearchReporter = field(factory=get_default_reporter_class)
 
     def configure(self) -> dict:
         """

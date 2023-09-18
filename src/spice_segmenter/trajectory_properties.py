@@ -396,6 +396,8 @@ class Constraint(ConstraintBase):
 
     def __attrs_post_init__(self) -> None:
         log.debug("Checking constraint {} for compatibility", self)
+        log.debug("Left type is {}", type(self.left))
+        log.debug("Right type is {}", type(self.right))
 
         if not self.left.has_unit() and not self.right.has_unit():
             log.debug("Both sides of constraint {} have no units, skipping check", self)
@@ -412,7 +414,9 @@ class Constraint(ConstraintBase):
             )
             return
 
-        if isinstance(self.right, MinMaxConditionTypes):
+        if hasattr(self.right, "value") and isinstance(
+            self.right.value, MinMaxConditionTypes
+        ):
             log.debug("Right side of constraint {} is a minmax condition", self)
             return
 

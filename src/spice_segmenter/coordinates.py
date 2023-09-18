@@ -4,7 +4,7 @@ import numpy as np
 import pint
 import spiceypy
 from attr import define, field
-from planetary_coverage import SpiceRef
+from planetary_coverage import SpiceRef, et
 
 from .decorators import vectorize
 from .trajectory_properties import Property, PropertyTypes
@@ -36,7 +36,7 @@ class Vector(Property):
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.array:
         return spiceypy.spkpos(
-            self.target.name, time, self.frame, self.abcorr, self.origin.name
+            self.target.name, et(time), self.frame, self.abcorr, self.origin.name
         )[0]
 
     @property
@@ -88,6 +88,38 @@ class Vector(Property):
         config["property"] = self.name
         config["coordinate_type"] = "rectangular"
         config["method"] = "ellipsoid"
+
+
+class SubObserverPointMethods:
+    """
+    Sub-observer point computation methods, for now we support only these two.
+    """
+
+    NEAREST = "NEAR POINT/ELLIPSOID"
+    INTERCEPT = "INTERCEPT/ELLIPSOID"
+
+
+@define(repr=False, order=False, eq=False)
+class SubObserverPoint(Vector):
+    method = field(default=SubObserverPointMethods.INTERCEPT)
+
+    @vectorize(signature="(),()->(n)")
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
+        return spiceypy.subpnt(
+            str(self.method),
+            self.target.name,
+            et(time),
+            self.target.frame.name,
+            "None",
+            self.origin.name,
+        )[0]
+
+    def __repr__(self) -> str:
+        return f"Sub observer ({self.origin}) point on {self.target} in frame {self.frame}, computed using {self.method} method"
+
+    def config(self, config: dict) -> None:
+        super().config(config)
+        config["method"] = str(self.method)
 
 
 @define(repr=False, order=False, eq=False)
@@ -256,7 +288,14 @@ class PlanetographicCoordinates(Property):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(spiceypy.recpgr(self.vector.__call__(time)))
+        return np.array(
+            spiceypy.recpgr(
+                self.vector.target.name,
+                self.vector.__call__(time),
+                self.vector.target.re,
+                self.vector.target.f,
+            )
+        )
 
     @property
     def longitude(self) -> Property:

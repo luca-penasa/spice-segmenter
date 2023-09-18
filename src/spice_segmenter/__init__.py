@@ -16,3 +16,6 @@ from loguru import logger
 logger.remove()
 
 logger.add(sys.stderr, level="WARNING")
+
+
+SHOW_PROGRESSBAR = True

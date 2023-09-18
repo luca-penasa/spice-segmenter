@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Iterable, Iterator
 
 import numpy as np
 import pandas as pd
@@ -51,7 +51,7 @@ class SpiceWindow:
             self.spice_window = Cell_Double(self.size)
 
     @classmethod
-    def from_datetimerange(cls, ranges: list[DateTimeRange]) -> SpiceWindow:
+    def from_datetimerange(cls, ranges: Iterable[DateTimeRange]) -> SpiceWindow:
         """Create a SpiceWindow from a list of DateTimeRanges"""
         window = cls()
         for r in ranges:
@@ -160,6 +160,10 @@ class SpiceWindow:
 
     def contains(self, point: TIMES_TYPES) -> bool:
         return bool(spiceypy.wnelmd(et(point), self.spice_window))
+
+    def __call__(self, points: np.ndarray) -> np.ndarray:
+        points = np.atleast_1d(points)
+        return np.array([self.contains(p) for p in points])
 
     def __len__(self) -> int:
         return int(spiceypy.wncard(self.spice_window))

@@ -69,3 +69,51 @@ class SearchReporter:
     @property
     def end_search_spice(self) -> UDREPF:  # type: ignore
         return spiceypy.utils.callbacks.SpiceUDREPF(self.end_search)
+
+
+@define(repr=False, order=False, eq=False)
+class NoSearchReporter:
+    def reset(self) -> None:
+        pass
+
+    @property
+    def update_function(self) -> Callable[[float, float, float], None]:
+        def update_progress_report(istart: float, iend: float, et: float) -> None:
+            pass
+
+        return update_progress_report
+
+    @property
+    def update_function_spice(self) -> UDREPU:  # type: ignore
+        return spiceypy.utils.callbacks.SpiceUDREPU(self.update_function)
+
+    @property
+    def init_search(self) -> Callable[[SpiceCell, str, str], None]:
+        def init_search(cell: SpiceCell, pre: str, suf: str) -> None:
+            pass
+
+        return init_search
+
+    @property
+    def init_search_spice(self) -> UDREPI:  # type: ignore
+        return spiceypy.utils.callbacks.SpiceUDREPI(self.init_search)
+
+    @property
+    def end_search(self) -> Callable[[], None]:
+        def end_search() -> None:
+            pass
+
+        return end_search
+
+    @property
+    def end_search_spice(self) -> UDREPF:  # type: ignore
+        return spiceypy.utils.callbacks.SpiceUDREPF(self.end_search)
+
+
+def get_default_reporter_class() -> SearchReporter | NoSearchReporter:
+    from spice_segmenter import SHOW_PROGRESSBAR
+
+    if SHOW_PROGRESSBAR:
+        return SearchReporter()
+    else:
+        return NoSearchReporter()
