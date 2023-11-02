@@ -5,18 +5,24 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING, Callable, Iterable, Union
 
 import numpy as np
+import numpy.typing as npt
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
 from anytree import Node, RenderTree
 from attrs import define, field
 from loguru import logger as log
-from planetary_coverage.spice import SpiceRef
+from planetary_coverage.spice import (
+    SpiceBody,
+    SpiceInstrument,
+    SpiceRef,
+    SpiceSpacecraft,
+)
 from spiceypy.utils.callbacks import UDFUNB, UDFUNS
 
 from spice_segmenter.types import TIMES_TYPES
 
-from .decorators import vectorize
+from .decorators import declare, vectorize
 from .spice_window import SpiceWindow
 from .utils import et
 
@@ -222,8 +228,8 @@ class UnitAdaptor(Property):
 
 @define(repr=False, order=False, eq=False)
 class TargetedProperty(Property, ABC):
-    observer: SpiceRef = field(converter=as_spice_ref)
-    target: SpiceRef = field(converter=as_spice_ref)
+    observer: SpiceInstrument | SpiceSpacecraft = field(converter=as_spice_ref)
+    target: SpiceBody = field(converter=as_spice_ref)
     light_time_correction: str = field(default="NONE", kw_only=True)
 
     def config(self, config: dict) -> None:
@@ -240,22 +246,14 @@ class TargetedProperty(Property, ABC):
         )
 
 
-@define(repr=False, order=False, eq=False)
+@declare(name="phase_angle", unit=pint.Unit("rad"))
 class PhaseAngle(TargetedProperty):
     third_body: SpiceRef = field(
-        factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref  # type: ignore
+        factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref
     )
 
     def __repr__(self) -> str:
         return f"Phase Angle of {self.target} with respect to {self.third_body} as seen from {self.observer}"
-
-    @property
-    def name(self) -> str:
-        return "phase_angle"
-
-    @property
-    def unit(self) -> pint.Unit:
-        return pint.Unit("rad")
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
@@ -273,18 +271,10 @@ class PhaseAngle(TargetedProperty):
         config["property"] = self.name
 
 
-@define(repr=False, order=False, eq=False)
+@declare(name="distance", unit=pint.Unit("km"))
 class Distance(TargetedProperty):
-    @property
-    def name(self) -> str:
-        return "distance"
-
     def __repr__(self) -> str:
         return f"Distance of {self.target} from {self.observer}"
-
-    @property
-    def unit(self) -> pint.Unit:
-        return pint.Unit("km")
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
@@ -292,11 +282,26 @@ class Distance(TargetedProperty):
             spiceypy.spkpos(
                 self.target.name,
                 et(time),
-                self.observer.frame,  # type: ignore
+                self.observer.frame,
                 self.light_time_correction,
                 self.observer.name,
             )[0]
         )
+
+    def config(self, config: dict) -> None:
+        TargetedProperty.config(self, config)
+        config["property"] = self.name
+
+
+@declare(name="angular_size", unit=pint.Unit("rad"))
+class AngularSize(TargetedProperty):
+    def __repr__(self) -> str:
+        return f"Angular size of {self.target}, seen from {self.observer}"
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        d = Distance.__call__(self, time)
+        return 2 * np.arctan(self.target.radius / d)  # type: ignore
 
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
@@ -399,6 +404,13 @@ class Constraint(ConstraintBase):
         log.debug("Left type is {}", type(self.left))
         log.debug("Right type is {}", type(self.right))
 
+        if not isinstance(self.right, Property):
+            log.debug(
+                "Left side of constraint {} is not a constraint or property. Assuming is a constant.",
+                self,
+            )
+            self.right = Constant(self.right)
+
         if not self.left.has_unit() and not self.right.has_unit():
             log.debug("Both sides of constraint {} have no units, skipping check", self)
 
@@ -465,7 +477,7 @@ class Constraint(ConstraintBase):
     def unit(self) -> pint.Unit:
         return pint.Unit("")  # a constraint has no unit, as it returns bools
 
-    def __call__(self, time: TIMES_TYPES) -> bool:
+    def __call__(self, time: TIMES_TYPES) -> npt.NDArray[np.bool_]:
         right: Property | None = None
 
         if self.left.unit != self.right.unit:

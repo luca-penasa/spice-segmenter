@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- the configuration mechanisms now is a single dict
+
+### Added
+- Angular size property for a target
+- Top level imports now available for some classes
+
+### Removed
+- Some boilerplate code by introducing a decorator to declare properties.
 
 ## [0.0.3] - 2023-09-18
 ### Added
@@ -16,4 +25,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 [Unreleased]: https://github.com/luca-penasa/spice_segmenter/compare/0.0.3...master
 [0.0.3]: https://github.com/luca-penasa/spice_segmenter/tree/0.0.3
-

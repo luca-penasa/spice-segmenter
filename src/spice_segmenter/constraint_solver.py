@@ -7,10 +7,15 @@ from loguru import logger as log
 from planetary_coverage import SpiceRef
 from spiceypy import gfrefn, gfstep
 
+from spice_segmenter import config
 from spice_segmenter.ops import Inverted
 
 from .occultation import OccultationTypes
-from .search_reporter import SearchReporter, get_default_reporter_class
+from .search_reporter import (
+    NoSearchReporter,
+    SearchReporter,
+    get_default_reporter_class,
+)
 from .spice_window import SpiceWindow
 from .trajectory_properties import Constant, Constraint, ConstraintBase, ConstraintTypes
 
@@ -215,7 +220,9 @@ class GfevntSolver:
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter = field(factory=get_default_reporter_class)
+    reporter: SearchReporter | NoSearchReporter = field(
+        factory=get_default_reporter_class
+    )
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         log.debug(
@@ -236,6 +243,12 @@ class GfevntSolver:
         maxval = 100000
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
+
+        if config.get("GFEVNT_STEP", False):
+            log.debug("step size overriden from module config.")
+            self.step = config["GFEVNT_STEP"]
+
+        log.debug(f"Setting step size at {self.step} seconds.")
 
         spiceypy.gfsstp(self.step)  # set the step size
 
@@ -310,7 +323,9 @@ class GfocceSolver:
     step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter = field(factory=get_default_reporter_class)
+    reporter: SearchReporter | NoSearchReporter = field(
+        factory=get_default_reporter_class
+    )
 
     def configure(self) -> dict:
         """

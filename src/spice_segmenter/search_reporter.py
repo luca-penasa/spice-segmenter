@@ -38,7 +38,7 @@ class SearchReporter:
         return update_progress_report
 
     @property
-    def update_function_spice(self) -> UDREPU:  # type: ignore
+    def update_function_spice(self) -> UDREPU:
         return spiceypy.utils.callbacks.SpiceUDREPU(self.update_function)
 
     @property
@@ -52,7 +52,7 @@ class SearchReporter:
         return init_search
 
     @property
-    def init_search_spice(self) -> UDREPI:  # type: ignore
+    def init_search_spice(self) -> UDREPI:
         return spiceypy.utils.callbacks.SpiceUDREPI(self.init_search)
 
     @property
@@ -67,7 +67,7 @@ class SearchReporter:
         return end_search
 
     @property
-    def end_search_spice(self) -> UDREPF:  # type: ignore
+    def end_search_spice(self) -> UDREPF:
         return spiceypy.utils.callbacks.SpiceUDREPF(self.end_search)
 
 
@@ -84,7 +84,7 @@ class NoSearchReporter:
         return update_progress_report
 
     @property
-    def update_function_spice(self) -> UDREPU:  # type: ignore
+    def update_function_spice(self) -> UDREPU:
         return spiceypy.utils.callbacks.SpiceUDREPU(self.update_function)
 
     @property
@@ -95,7 +95,7 @@ class NoSearchReporter:
         return init_search
 
     @property
-    def init_search_spice(self) -> UDREPI:  # type: ignore
+    def init_search_spice(self) -> UDREPI:
         return spiceypy.utils.callbacks.SpiceUDREPI(self.init_search)
 
     @property
@@ -106,14 +106,14 @@ class NoSearchReporter:
         return end_search
 
     @property
-    def end_search_spice(self) -> UDREPF:  # type: ignore
+    def end_search_spice(self) -> UDREPF:
         return spiceypy.utils.callbacks.SpiceUDREPF(self.end_search)
 
 
 def get_default_reporter_class() -> SearchReporter | NoSearchReporter:
-    from spice_segmenter import SHOW_PROGRESSBAR
+    from spice_segmenter import config
 
-    if SHOW_PROGRESSBAR:
+    if config["SHOW_PROGRESSBAR"]:
         return SearchReporter()
     else:
         return NoSearchReporter()

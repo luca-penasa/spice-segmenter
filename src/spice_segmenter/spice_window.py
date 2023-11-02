@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Iterable, Iterator
+from typing import Any, Iterable, Iterator
 
+import matplotlib
 import numpy as np
 import pandas as pd
 import spiceypy
@@ -84,7 +85,7 @@ class SpiceWindow:
     def __deepcopy__(self, memo: dict) -> SpiceWindow:
         cls = self.__class__
         newobj = cls.__new__(cls)
-        newobj.spice_window = spiceypy.copy(self.spice_window)  # type: ignore
+        newobj.spice_window = spiceypy.copy(self.spice_window)
         memo[id(self)] = newobj
         return newobj
 
@@ -140,7 +141,7 @@ class SpiceWindow:
 
     def to_datetimerange(self) -> list[DateTimeRange]:
         return [
-            DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end)))  # type: ignore
+            DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end)))
             for i in self
         ]
 
@@ -149,14 +150,14 @@ class SpiceWindow:
         if len(self) == 0:
             return np.nan
 
-        return float(self.spice_window[-1])  # type: ignore
+        return float(self.spice_window[-1])
 
     @property
     def start(self) -> float:
         if len(self) == 0:
             return np.nan
 
-        return float(self.spice_window[0])  # type: ignore
+        return float(self.spice_window[0])
 
     def contains(self, point: TIMES_TYPES) -> bool:
         return bool(spiceypy.wnelmd(et(point), self.spice_window))
@@ -168,7 +169,9 @@ class SpiceWindow:
     def __len__(self) -> int:
         return int(spiceypy.wncard(self.spice_window))
 
-    def plot(self, ax=None, **kwargs) -> list:  # type: ignore
+    def plot(
+        self, ax: matplotlib.axes.Axes | None = None, **kwargs: dict[str, Any]
+    ) -> list:
         import matplotlib.pyplot as plt
 
         if ax is None:
@@ -179,13 +182,11 @@ class SpiceWindow:
         plotted = []
         for i, inter in enumerate(intervals):
             if "label" in kwargs and i == 1:
-                kwargs[
-                    "label"
-                ] = f"_{kwargs['label']}"  # not really nice, we are altering kwargs
+                kwargs["label"] = f"_{kwargs['label']}"  # type: ignore
 
             s = inter.start_datetime
             e = inter.end_datetime
-            plotted.append(plt.axvspan(s, e, **kwargs))  # type: ignore
+            plotted.append(plt.axvspan(s, e, **kwargs))
 
         return plotted
 
@@ -193,13 +194,13 @@ class SpiceWindow:
         out = []
         for i in self:
             out.append(
-                {"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))}  # type: ignore
+                {"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))}
             )
 
         tab = pd.DataFrame(out)
         if round_to:
-            tab.start = tab.start.round(round_to)  # type: ignore
-            tab.end = tab.end.round(round_to)  # type: ignore
+            tab.start = tab.start.round(round_to)
+            tab.end = tab.end.round(round_to)
 
         return tab
 
