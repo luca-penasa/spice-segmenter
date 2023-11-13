@@ -4,7 +4,10 @@ import numpy as np
 import pint
 import spiceypy
 from attr import define, field
+from numpy.typing import ArrayLike
 from planetary_coverage import SpiceRef, et
+from planetary_coverage.spice import SpiceBody, SpiceInstrument
+from spiceypy import NotFoundError
 
 from .decorators import vectorize
 from .trajectory_properties import Property, PropertyTypes
@@ -12,32 +15,13 @@ from .types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)
-class Vector(Property):
-    origin: SpiceRef = field(converter=SpiceRef)
-    target: SpiceRef = field(converter=SpiceRef)
-    frame: str = field(default="J2000")
-    abcorr: str = field(default="NONE")
+class VectorBase(Property):
+    frame: str = field(default="J2000", kw_only=True)
+    abcorr: str = field(default="NONE", kw_only=True)
 
     @property
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
-
-    def __repr__(self) -> str:
-        return f"Vector from {self.origin} to {self.target} in frame {self.frame}"
-
-    @property
-    def name(self) -> str:
-        return "coordinate"
-
-    @property
-    def unit(self) -> Tuple[pint.Unit, pint.Unit, pint.Unit]:
-        return pint.Unit("km"), pint.Unit("km"), pint.Unit("km")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.array:
-        return spiceypy.spkpos(
-            self.target.name, et(time), self.frame, self.abcorr, self.origin.name
-        )[0]
 
     @property
     def x(self) -> Property:
@@ -75,13 +59,43 @@ class Vector(Property):
     def as_planetographic(self) -> "PlanetographicCoordinates":
         return PlanetographicCoordinates(self)
 
+    @property
+    def unit(self) -> Tuple[pint.Unit, pint.Unit, pint.Unit]:
+        return pint.Unit("km"), pint.Unit("km"), pint.Unit("km")
+
     def config(self, config: dict) -> None:
+        config.update(
+            {
+                "frame": self.frame,
+                "abcorr": self.abcorr,
+            }
+        )
+
+
+@define(repr=False, order=False, eq=False)
+class Vector(VectorBase):
+    origin: SpiceRef = field(converter=SpiceRef)
+    target: SpiceRef = field(converter=SpiceRef)
+
+    def __repr__(self) -> str:
+        return f"Vector from {self.origin} to {self.target} in frame {self.frame}"
+
+    @property
+    def name(self) -> str:
+        return "coordinate"
+
+    @vectorize(signature="(),()->(n)")
+    def __call__(self, time: TIMES_TYPES) -> ArrayLike:
+        return spiceypy.spkpos(
+            self.target.name, et(time), self.frame, self.abcorr, self.origin.name
+        )[0]
+
+    def config(self, config: dict) -> None:
+        super().config(config)
         config.update(
             {
                 "origin": self.origin.name,
                 "target": self.target.name,
-                "frame": self.frame,
-                "abcorr": self.abcorr,
             }
         )
         config["vector_definition"] = "position"
@@ -123,6 +137,64 @@ class SubObserverPoint(Vector):
 
 
 @define(repr=False, order=False, eq=False)
+class Boresight(VectorBase):
+    instrument = field(converter=SpiceInstrument)
+
+    @vectorize(signature="(),()->(n)")
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
+        T = spiceypy.pxform(self.instrument.frame, self.frame, et(time))
+        return T @ np.array([0, 0, 1])  # we should get this value from spices, please
+
+    @property
+    def name(self) -> str:
+        return "boresight"
+
+    def __repr__(self) -> str:
+        return f"Boresight of {self.instrument} in frame {self.frame}"
+
+    def config(self, config: dict) -> None:
+        super().config(config)
+        config["instrument"] = self.instrument.name
+
+
+@define(repr=False, order=False, eq=False)
+class BoresightIntersection(Boresight):
+    target = field(converter=SpiceBody)
+    boresight = field(default=None, init=False)
+
+    def __attrs_post_init__(self):
+        self.boresight = Boresight(self.instrument, frame=self.frame)
+
+    @vectorize(signature="(),()->(n)")
+    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
+        bsight = self.boresight(time)
+        try:
+            return spiceypy.sincpt(
+                "ELLIPSOID",
+                self.target.name,
+                et(time),
+                self.target.frame.name,
+                self.abcorr,
+                self.instrument.name,
+                self.frame,
+                bsight,
+            )[0]
+        except NotFoundError:
+            return np.array([np.nan, np.nan, np.nan])
+
+    @property
+    def name(self) -> str:
+        return "boresight_intersection"
+
+    def __repr__(self) -> str:
+        return f"Boresight intersection of {self.instrument} on {self.target} in frame {self.frame}"
+
+    def config(self, config: dict) -> None:
+        super().config(config)
+        config["target"] = self.target.name
+
+
+@define(repr=False, order=False, eq=False)
 class LatitudinalCoordinates(Property):
     vector: Vector
 
@@ -140,7 +212,10 @@ class LatitudinalCoordinates(Property):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(spiceypy.reclat(self.vector.__call__(time)))
+        value = self.vector.__call__(time)
+        if np.isnan(value).any():
+            return np.array([np.nan, np.nan, np.nan])
+        return np.array(spiceypy.reclat(value))
 
     @property
     def radius(self) -> Property:
@@ -177,7 +252,10 @@ class SphericalCoordinates(Property):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(spiceypy.recsph(self.vector.__call__(time)))
+        value = self.vector.__call__(time)
+        if np.isnan(value).any():
+            return np.array([np.nan, np.nan, np.nan])
+        return np.array(spiceypy.recsph(value))
 
     @property
     def radius(self) -> Property:
@@ -214,7 +292,10 @@ class CylindricalCoordinates(Property):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(spiceypy.reccyl(self.vector.__call__(time)))
+        value = self.vector.__call__(time)
+        if np.isnan(value).any():
+            return np.array([np.nan, np.nan, np.nan])
+        return np.array(spiceypy.reccyl(value))
 
     @property
     def radius(self) -> Property:
@@ -251,7 +332,10 @@ class GeodeticCoordinates(Property):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(spiceypy.recgeo(self.vector.__call__(time)))
+        value = self.vector.__call__(time)
+        if np.isnan(value).any():
+            return np.array([np.nan, np.nan, np.nan])
+        return np.array(spiceypy.recgeo(value))
 
     @property
     def longitude(self) -> Property:
@@ -288,14 +372,18 @@ class PlanetographicCoordinates(Property):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(
-            spiceypy.recpgr(
-                self.vector.target.name,
-                self.vector.__call__(time),
-                self.vector.target.re,
-                self.vector.target.f,
+        value = self.vector.__call__(time)
+        if np.isnan(value).any():
+            return np.array([np.nan, np.nan, np.nan])
+        else:
+            return np.array(
+                spiceypy.recpgr(
+                    self.vector.target.name,
+                    value,
+                    self.vector.target.re,
+                    self.vector.target.f,
+                )
             )
-        )
 
     @property
     def longitude(self) -> Property:
