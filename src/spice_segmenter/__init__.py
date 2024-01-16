@@ -6,7 +6,8 @@ Warning
 
 This is just a stub, that might never see the light
 """
-from typing import Union
+
+from attr import define, field
 
 from .coordinates import (
     CylindricalCoordinates,
@@ -22,7 +23,13 @@ from .coordinates import (
 from .occultation import Occultation, OccultationTypes
 from .ops import MinMaxConditionTypes, MinMaxConstraint
 from .spice_window import SpiceWindow
-from .trajectory_properties import AngularSize, Distance, PhaseAngle
+from .trajectory_properties import (
+    AngularSize,
+    Constant,
+    Constraint,
+    Distance,
+    PhaseAngle,
+)
 
 __all__ = [
     "MinMaxConstraint",
@@ -42,6 +49,8 @@ __all__ = [
     "OccultationTypes",
     "SpiceWindow",
     "AngularSize",
+    "Constraint",
+    "Constant",
 ]
 
 import sys
@@ -54,8 +63,13 @@ logger.remove()
 
 logger.add(sys.stderr, level="WARNING")
 
-config: dict[str, Union[bool, float, int]] = {}
+
+@define
+class Config:
+    """Configuration for the spice_segmenter module"""
+
+    show_progressbar: bool = field(default=True)
+    solver_step: float = field(default=60 * 60)
 
 
-config["SHOW_PROGRESSBAR"] = True
-config["GFEVNT_STEP"] = 60 * 60
+config = Config()

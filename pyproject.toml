@@ -30,11 +30,11 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8.0, <4.0"
+python = ">=3.9.0, <4.0"
 anytree = "^2.8.0"
 attrs = ">20.0.0"
-spiceypy = ">=6.0.0"
-planetary-coverage = "^1.0.0"
+spiceypy = ">=5.1.1,<6.0.0"
+planetary-coverage = ">=1.0.0"
 pint = "^0.22"
 loguru = "^0.7.0"
 tqdm = "^4.65.0"

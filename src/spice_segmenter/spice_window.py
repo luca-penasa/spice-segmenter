@@ -70,6 +70,13 @@ class SpiceWindow:
             )
         return window
 
+    @classmethod
+    def from_start_end(cls, start: TIMES_TYPES, end: TIMES_TYPES) -> SpiceWindow:
+        """Create a SpiceWindow from a start and end time"""
+        window = cls()
+        window.add_interval(start, end)
+        return window
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SpiceWindow):
             return False

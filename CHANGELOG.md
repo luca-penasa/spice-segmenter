@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - Angular size property for a target
 - Top level imports now available for some classes
+- Angular separation property added: can also be used in searches
+- Fov visibility search implemented. still to be improved.
 
 ### Removed
 - Some boilerplate code by introducing a decorator to declare properties.

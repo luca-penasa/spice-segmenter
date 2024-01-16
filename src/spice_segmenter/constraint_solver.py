@@ -1,4 +1,5 @@
-from typing import Iterable, Optional, Protocol, Type
+from abc import ABC, abstractmethod
+from typing import Iterable, Optional, Type
 
 import pint
 import spiceypy
@@ -17,23 +18,35 @@ from .search_reporter import (
     get_default_reporter_class,
 )
 from .spice_window import SpiceWindow
-from .trajectory_properties import Constant, Constraint, ConstraintBase, ConstraintTypes
+from .trajectory_properties import Constant, ConstraintBase, ConstraintTypes
 
 
-class Solver(Protocol):
-    def __init__(self, constraint: ConstraintBase, step: float) -> None:
-        ...
+@define(repr=False, order=False, eq=False)
+class Solver(ABC):
+    """The interface for any ConstraintSolvers"""
 
+    constraint: Optional[ConstraintBase]
+    step: float | None = field(factory=lambda: config.solver_step)
+
+    @abstractmethod
     def solve(self, window: SpiceWindow) -> SpiceWindow:
+        """Solve the constraint on the given window"""
         ...
 
     @staticmethod
+    @abstractmethod
     def can_solve(constraint: ConstraintBase) -> bool:
+        """Check if the constraint can be solved by this solver"""
         ...
 
 
 @define(repr=False, order=False, eq=False)
 class GfevntSolverConfigurator:
+    """Configures the gfevnt solver
+
+    as the config of the cspice gfevnt method is a bit convoluted, this class is used to simplify the configuration of the solver
+    """
+
     names: list[str] = field(factory=list)
     strings: list[str] = field(factory=list)
     floats: list[float] = field(factory=list)
@@ -45,6 +58,7 @@ class GfevntSolverConfigurator:
     adjust: float = 0.0
 
     def add_str_parameter(self, name: str, value: str) -> None:
+        """Add a str type parameter to the configuration. Mostly to avoid duplicated code"""
         log.debug("adding str parameter {} with value {}", name, value)
         if name in self.names:
             raise ValueError(f"Parameter {name} already exists")
@@ -53,6 +67,7 @@ class GfevntSolverConfigurator:
         self.strings.append(value)
 
     def add_vector_parameter(self, name: str, vector: Iterable[float]) -> None:
+        """Add a vectors type parameter to the configuration. Mostly to avoid duplicated code"""
         log.debug("adding vector parameter {} with value {}", name, vector)
         if name in self.names:
             raise ValueError(f"Parameter {name} already exists")
@@ -62,6 +77,7 @@ class GfevntSolverConfigurator:
             self.floats.append(value)
 
     def as_dict(self) -> dict:
+        """Return the configuration as a dictionary"""
         return {
             "qpnams": self.names,
             "qcpars": self.strings,
@@ -76,6 +92,7 @@ class GfevntSolverConfigurator:
         }
 
     def set_from_dict(self, pars: dict) -> None:
+        """Set the configuration from a dictionary"""
         log.debug("Setting config from pars {}", pars)
 
         quantity = pars["property"]
@@ -85,7 +102,17 @@ class GfevntSolverConfigurator:
         if quantity not in self.known_properties():
             raise ValueError("Unknown property {}", quantity)
 
-        if quantity.lower() == "distance":
+        if quantity.lower() == "angular_separation":
+            self.add_str_parameter("TARGET1", pars["target"])
+            self.add_str_parameter("FRAME1", pars["target_frame"])
+            self.add_str_parameter("SHAPE1", "POINT")
+            self.add_str_parameter("TARGET2", pars["other"])
+            self.add_str_parameter("FRAME2", pars["other_frame"])
+            self.add_str_parameter("SHAPE2", "POINT")
+            self.add_str_parameter("OBSERVER", pars["observer"])
+            self.add_str_parameter("ABCORR", pars["abcorr"])
+
+        elif quantity.lower() == "distance":
             self.set_distance_from_dict(pars)
 
         elif quantity.lower() == "phase_angle":
@@ -145,17 +172,20 @@ class GfevntSolverConfigurator:
             self.refval = float(refval)
 
     def set_distance_from_dict(self, pars: dict) -> None:
+        """Set the configuration for a distance constraint"""
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["observer"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
 
     def set_phase_angle_from_dict(self, pars: dict) -> None:
+        """Set the configuration for a phase angle constraint"""
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["observer"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
         self.add_str_parameter("ILLUM", pars["third_body"])
 
     def set_coordinate_from_dict(self, pars: dict) -> None:
+        """Set the configuration for a coordinate constraint"""
         self.add_str_parameter("TARGET", pars["target"])
         self.add_str_parameter("OBSERVER", pars["origin"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
@@ -181,6 +211,7 @@ class GfevntSolverConfigurator:
 
     @staticmethod
     def known_properties() -> list[str]:
+        """Return the list of properties known by this solver"""
         return [
             "angular_separation",
             "coordinate",
@@ -192,14 +223,17 @@ class GfevntSolverConfigurator:
 
     @staticmethod
     def known_operators() -> list[str]:
+        """Return the list of operators known by this solver"""
         return [">", "=", "<", "absmax", "absmin", "locmax", "locmin"]
 
     @staticmethod
     def minmax_operators() -> list[str]:
+        """Return the list of minmax operators known by this solver"""
         return ["absmax", "absmin", "locmax", "locmin"]
 
     @staticmethod
     def translate_minamx(value: str) -> str:
+        """Translate min and max constratins from spice_segmenter to absmin and absmax as needed by the spice gfevnt method"""
         conf_mapping = {
             "local_minimum": "locmin",
             "local_maximum": "locmax",
@@ -215,9 +249,9 @@ class GfevntSolverConfigurator:
 
 
 @define(repr=False, order=False, eq=False)
-class GfevntSolver:
-    constraint: Optional[ConstraintBase]
-    step: float = 60 * 60  # in seconds
+class GfevntSolver(Solver):
+    """Wrapper to the gfevnt solver from spice/spiceypy"""
+
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
     reporter: SearchReporter | NoSearchReporter = field(
@@ -243,10 +277,6 @@ class GfevntSolver:
         maxval = 100000
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
-
-        if config.get("GFEVNT_STEP", False):
-            log.debug("step size overriden from module config.")
-            self.step = config["GFEVNT_STEP"]
 
         log.debug(f"Setting step size at {self.step} seconds.")
 
@@ -316,11 +346,9 @@ class GfevntSolver:
 
 
 @define(repr=False, order=False, eq=False)
-class GfocceSolver:
+class GfocceSolver(Solver):
     """Occultation Solver"""
 
-    constraint: Constraint | None = None
-    step: float = 60 * 60  # in seconds
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
     reporter: SearchReporter | NoSearchReporter = field(
@@ -449,11 +477,8 @@ class GfocceSolver:
 
 
 @define(repr=False, order=False, eq=False)
-class SpiceWindowSolver:
+class SpiceWindowSolver(Solver):
     """Solves a constraints made by two constraints returing SpiceWindow objects"""
-
-    constraint: ConstraintBase | None = None
-    step: float = 60 * 60  # in seconds
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         if not self.constraint or not self.can_solve(self.constraint):
@@ -506,9 +531,69 @@ class SpiceWindowSolver:
 
 
 @define(repr=False, order=False, eq=False)
-class MasterSolver:
+class FovVisibilitySolver(Solver):
+    """
+    Wrapper for GFTFOV: target body appears in an instrument`s field of view.
+
+    We need to use https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/cspice/gffove_c.html to get progress.
+    """
+
+    def solve(self, window: SpiceWindow) -> SpiceWindow:
+        config = {}
+        self.constraint.config(config)  # get the config
+        log.debug("Config for the solver - fov visibility - {}", config)
+
+        result = SpiceWindow()  # the resulting window
+
+        pars = dict(
+            inst=self.constraint.left.observer.name,
+            target=self.constraint.left.target.name,
+            tshape="ELLIPSOID",
+            tframe=self.constraint.left.target.frame.name,
+            abcorr=self.constraint.left.light_time_correction,
+            obsrvr=self.constraint.left.observer.name,
+            step=self.step,
+            cnfine=window.spice_window,
+            result=result.spice_window,
+        )
+
+        log.debug(f"Calling gftfov with pars {pars}")
+
+        # inst       I   Name of the instrument.
+        # target     I   Name of the target body.
+        # tshape     I   Type of shape model used for target body.
+        # tframe     I   Body-fixed, body-centered frame for target body.
+        # abcorr     I   Aberration correction flag.
+        # obsrvr     I   Name of the observing body.
+        # step       I   Step size in seconds for finding FOV events.
+        # cnfine    I-O  SPICE window to which the search is restricted.
+        # result     O   SPICE window containing results.
+
+        spiceypy.gftfov(**pars)
+
+        log.debug("Result {}", result)
+
+        if self.constraint.right is False:
+            log.debug("Inverting result")
+            result = result.complement(window)
+
+        return result
+
+    @staticmethod
+    def can_solve(constraint: ConstraintBase) -> bool:
+        if not constraint.ctype == ConstraintTypes.COMPARE_TO_CONSTANT:
+            # we cannot solve if we are not comparing agains a constant
+            return False
+        # but we solve for the fov_visibility constraint (agains a constant)
+        if "fov_visibility" in [constraint.left.name, constraint.right.name]:
+            return True
+
+        return False
+
+
+@define(repr=False, order=False, eq=False)
+class MasterSolver(Solver):
     constraint: ConstraintBase | None = None
-    step: float = 60 * 60
     minimum_interval_size: float = 0.0  # seconds
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -517,6 +602,7 @@ class MasterSolver:
             raise ValueError
 
         solver = get_appropriate_solver(self.constraint)
+        log.debug(f"Using as solver step size {self.step} seconds")
         result = solver(self.constraint, step=self.step).solve(window)
 
         if self.minimum_interval_size > 0.0:
@@ -525,16 +611,23 @@ class MasterSolver:
 
         return result
 
-    def can_solve(self, constraint: ConstraintBase) -> bool:
+    @staticmethod
+    def can_solve(constraint: ConstraintBase) -> bool:
         if get_appropriate_solver(constraint):
             return True
         return False
 
 
-solvers: list[Type[Solver]] = [GfevntSolver, GfocceSolver, SpiceWindowSolver]
+solvers: list[Type[Solver]] = [
+    FovVisibilitySolver,
+    GfevntSolver,
+    GfocceSolver,
+    SpiceWindowSolver,
+]
 
 
 def get_appropriate_solver(constraint: ConstraintBase) -> Type[Solver]:
+    log.debug(f"Looking for a solver to solve {constraint}")
     for solver in solvers:
         if solver.can_solve(constraint):
             log.debug(

@@ -6,7 +6,7 @@ import spiceypy
 from attr import define, field
 from numpy.typing import ArrayLike
 from planetary_coverage import SpiceRef, et
-from planetary_coverage.spice import SpiceBody, SpiceInstrument
+from planetary_coverage.spice import SpiceBody, SpiceFrame, SpiceInstrument
 from spiceypy import NotFoundError
 
 from .decorators import vectorize
@@ -16,7 +16,7 @@ from .types import TIMES_TYPES
 
 @define(repr=False, order=False, eq=False)
 class VectorBase(Property):
-    frame: str = field(default="J2000", kw_only=True)
+    frame: SpiceFrame = field(default="J2000", kw_only=True, converter=SpiceFrame)
     abcorr: str = field(default="NONE", kw_only=True)
 
     @property
@@ -66,7 +66,7 @@ class VectorBase(Property):
     def config(self, config: dict) -> None:
         config.update(
             {
-                "frame": self.frame,
+                "frame": self.frame.name,
                 "abcorr": self.abcorr,
             }
         )

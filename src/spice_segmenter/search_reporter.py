@@ -113,7 +113,7 @@ class NoSearchReporter:
 def get_default_reporter_class() -> SearchReporter | NoSearchReporter:
     from spice_segmenter import config
 
-    if config["SHOW_PROGRESSBAR"]:
+    if config.show_progressbar:
         return SearchReporter()
     else:
         return NoSearchReporter()

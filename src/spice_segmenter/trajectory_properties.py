@@ -128,7 +128,7 @@ class Property(ABC):
         if isinstance(other, Property):
             return other
         else:
-            return Constant(other)
+            return Constant.from_value(other)
 
     def __gt__(self, other: left_types) -> Constraint:
         return Constraint(self, self._handle_other_operand(other), ">")
@@ -164,10 +164,25 @@ class Property(ABC):
     def config(self, config: dict) -> None:
         log.debug("adding prop unit for {}", self.unit)
         config["property_unit"] = str(self.unit)
+        config["property"] = self.name
 
 
 @define(repr=False, order=False, eq=False)
 class Constant(Property):
+    @staticmethod
+    def from_value(value):
+        if isinstance(value, bool):
+            return BoolConstant(value)
+
+        elif isinstance(value, (int, float, str, Enum)):
+            return ScalarConstant(value)
+
+        else:
+            raise NotImplementedError
+
+
+@define(repr=False, order=False, eq=False)
+class ScalarConstant(Constant):
     _value: pint.Quantity = field(converter=lambda x: pint.Quantity(x))  # type: ignore
 
     def __repr__(self) -> str:
@@ -201,6 +216,33 @@ class Constant(Property):
     def config(self, config: dict) -> None:
         config.update({"reference_value": self.value})
         config["reference_value_unit"] = str(self.unit)
+
+
+@define(repr=False, order=False, eq=False)
+class BoolConstant(Constant):
+    _value: pint.Quantity = field(converter=bool)  # type: ignore
+
+    def __repr__(self) -> str:
+        return f"{self.value}"
+
+    @property
+    def name(self) -> str:
+        return "bool_constant"
+
+    @property
+    def value(self) -> float | OccultationTypes:
+        return self._value
+
+    @property
+    def unit(self) -> pint.Unit:
+        return pint.Unit("")
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float | OccultationTypes:
+        return self._value  # type: ignore
+
+    def config(self, config: dict) -> None:
+        config.update({"reference_value": self.value})
 
 
 @define(repr=False, order=False, eq=False)
@@ -240,6 +282,7 @@ class TargetedProperty(Property, ABC):
         config.update(
             {
                 "target": self.target.name,
+                "target_frame": self.target.frame.name,
                 "observer": self.observer.name,
                 "abcorr": self.light_time_correction,
             }
@@ -282,7 +325,7 @@ class Distance(TargetedProperty):
             spiceypy.spkpos(
                 self.target.name,
                 et(time),
-                self.observer.frame,
+                self.observer.frame.name,
                 self.light_time_correction,
                 self.observer.name,
             )[0]
@@ -354,7 +397,7 @@ class ConstraintBase(Property):
     def solve(self, window: SpiceWindow, **kwargs) -> SpiceWindow:  # type: ignore
         from .constraint_solver import MasterSolver
 
-        solver = MasterSolver(self, **kwargs)
+        solver = MasterSolver(constraint=self, **kwargs)
         return solver.solve(window)
 
     def __invert__(self) -> Inverted:
@@ -409,7 +452,7 @@ class Constraint(ConstraintBase):
                 "Left side of constraint {} is not a constraint or property. Assuming is a constant.",
                 self,
             )
-            self.right = Constant(self.right)
+            self.right = Constant.from_value(self.right)
 
         if not self.left.has_unit() and not self.right.has_unit():
             log.debug("Both sides of constraint {} have no units, skipping check", self)
@@ -454,7 +497,7 @@ class Constraint(ConstraintBase):
 
     @property
     def ctype(self) -> ConstraintTypes:
-        if Constant in self.types:
+        if isinstance(self.right, Constant) or isinstance(self.left, Constant):
             return ConstraintTypes.COMPARE_TO_CONSTANT
         elif isinstance(self.left, ConstraintBase) and isinstance(
             self.left, ConstraintBase
