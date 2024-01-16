@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "spice_segmenter"
-version = "0.0.3"
+version = "0.0.4"
 description = "Spice-based segmenter, wrapping event finding routines within spice toolkit"
 authors = [
     "luca penasa <luca.penasa@gmail.com>",
