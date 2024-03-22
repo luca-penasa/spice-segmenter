@@ -18,7 +18,14 @@ from .search_reporter import (
     get_default_reporter_class,
 )
 from .spice_window import SpiceWindow
-from .trajectory_properties import Constant, ConstraintBase, ConstraintTypes
+from .trajectory_properties import (
+    BoolConstant,
+    BooleanProperty,
+    Constant,
+    ConstraintBase,
+    ConstraintTypes,
+    PropertyTypes,
+)
 
 
 @define(repr=False, order=False, eq=False)
@@ -592,6 +599,44 @@ class FovVisibilitySolver(Solver):
 
 
 @define(repr=False, order=False, eq=False)
+class BooleanPropertySolver(Solver):
+    """Solver for boolean properties"""
+
+    @staticmethod
+    def can_solve(constraint: ConstraintBase) -> bool:
+        if constraint.ctype == ConstraintTypes.COMPARE_TO_CONSTANT:
+            if constraint.left.type == PropertyTypes.BOOLEAN:
+                return True
+        return False
+
+    def solve(self, window: SpiceWindow) -> SpiceWindow:
+        if not self.constraint:
+            log.error("No constraint set")
+            raise ValueError
+
+        if not self.can_solve(self.constraint):
+            log.error("Constraint not solvable")
+            raise ValueError
+
+        result = SpiceWindow()
+
+        right_value: BoolConstant = self.constraint.right(
+            0
+        )  # call returns the underlaying value
+        left_prop: BooleanProperty = self.constraint.left
+
+        spiceypy.gfudb(
+            spiceypy.utils.callbacks.SpiceUDFUNS(spiceypy.udf),
+            left_prop.compute_as_spice_function(invert=~right_value),
+            self.step,
+            window.spice_window,
+            result.spice_window,
+        )
+
+        return result
+
+
+@define(repr=False, order=False, eq=False)
 class MasterSolver(Solver):
     constraint: ConstraintBase | None = None
     minimum_interval_size: float = 0.0  # seconds
@@ -619,6 +664,7 @@ class MasterSolver(Solver):
 
 
 solvers: list[Type[Solver]] = [
+    BooleanPropertySolver,
     FovVisibilitySolver,
     GfevntSolver,
     GfocceSolver,

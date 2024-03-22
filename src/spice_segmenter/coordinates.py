@@ -9,8 +9,8 @@ from planetary_coverage import SpiceRef, et
 from planetary_coverage.spice import SpiceBody, SpiceFrame, SpiceInstrument
 from spiceypy import NotFoundError
 
-from .decorators import vectorize
-from .trajectory_properties import Property, PropertyTypes
+from .decorators import declare, vectorize
+from .trajectory_properties import BooleanProperty, Property, PropertyTypes
 from .types import TIMES_TYPES
 
 
@@ -187,11 +187,32 @@ class BoresightIntersection(Boresight):
         return "boresight_intersection"
 
     def __repr__(self) -> str:
-        return f"Boresight intersection of {self.instrument} on {self.target} in frame {self.frame}"
+        return f"Boresight intersection of {self.instrument} on {self.target} (computed in frame {self.frame})"
 
     def config(self, config: dict) -> None:
         super().config(config)
         config["target"] = self.target.name
+
+
+@declare(
+    name="boresight_intersects_body",
+    unit=pint.Unit("dimensionless"),
+    property_type=PropertyTypes.BOOLEAN,
+)
+class BoresightIntersects(BooleanProperty):
+    observer = field(converter=SpiceInstrument)
+    target = field(converter=SpiceBody)
+
+    intersection = field(init=False, default=None)
+
+    def __attrs_post_init__(self):
+        self.intersection = BoresightIntersection(
+            target=self.target, instrument=self.observer
+        )
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> bool:
+        return ~np.isnan(self.intersection(time)).any()
 
 
 @define(repr=False, order=False, eq=False)

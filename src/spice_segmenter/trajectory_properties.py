@@ -66,16 +66,14 @@ class MinMaxConditionTypes(Enum):
 @define(repr=False, order=False, eq=False)
 class Property(ABC):
     @abstractmethod
-    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum:
-        ...
+    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum: ...
 
     def __str__(self) -> str:
         return self.__repr__()
 
     @property
     @abstractmethod
-    def unit(self) -> pint.Unit | Iterable[pint.Unit]:
-        ...
+    def unit(self) -> pint.Unit | Iterable[pint.Unit]: ...
 
     @property
     def type(self) -> PropertyTypes:
@@ -89,13 +87,14 @@ class Property(ABC):
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     def compute_as_spice_function(self) -> UDFUNS:
         def as_function(time: TIMES_TYPES) -> float | bool | Enum:
             return self.__call__(time)
 
+        # todo we are marking as_function as returing float, bool or enum, but wont work with SpiceUDFUNS. You need to use SpiceUDFUNB instead for booleans
+        # while for enum wont work at all. Move these routines in the derived ScalarProperty and BooleanProperty classes please!
         return spiceypy.utils.callbacks.SpiceUDFUNS(as_function)
 
     def is_decreasing(self, time: TIMES_TYPES) -> bool:
@@ -106,20 +105,6 @@ class Property(ABC):
             return self.is_decreasing(time)
 
         return spiceypy.utils.callbacks.SpiceUDFUNB(as_function)
-
-    # def solve(self, window: SpiceWindow, relation: str, value: float):
-    #     result = SpiceWindow(size=10000)
-    #     return spiceypy.gfuds(
-    #         self.compute_as_spice_function(),
-    #         self.is_decreasing_as_spice_function(),
-    #         relation,
-    #         value,
-    #         0.0,
-    #         float(60 * 60),
-    #         10000,
-    #         window.spice_window,
-    #         result.spice_window,
-    #     )
 
     def __repr__(self) -> str:
         return f"{self.name}"
@@ -168,13 +153,44 @@ class Property(ABC):
 
 
 @define(repr=False, order=False, eq=False)
+class BooleanProperty(Property):
+    @abstractmethod
+    def __call__(self, time: TIMES_TYPES) -> bool:
+        pass
+
+    @property
+    def type(self) -> PropertyTypes:
+        return PropertyTypes.BOOLEAN
+
+    @property
+    def unit(self) -> pint.Unit:
+        return pint.Unit("")
+
+    def has_unit(self) -> bool:
+        return False
+
+    def compute_as_spice_function(self, invert: bool = False) -> UDFUNB:
+        if invert:
+
+            def as_function(udfun, time: TIMES_TYPES) -> bool:
+                return ~self.__call__(time)
+
+        else:
+
+            def as_function(udfun, time: TIMES_TYPES) -> bool:
+                return self.__call__(time)
+
+        return spiceypy.utils.callbacks.SpiceUDFUNB(as_function)
+
+
+@define(repr=False, order=False, eq=False)
 class Constant(Property):
     @staticmethod
     def from_value(value):
         if isinstance(value, bool):
             return BoolConstant(value)
 
-        elif isinstance(value, (int, float, str, Enum)):
+        elif isinstance(value, (int, float, str, Enum, pint.Quantity)):
             return ScalarConstant(value)
 
         else:
@@ -361,27 +377,22 @@ class ConstraintTypes(Enum):
 class ConstraintBase(Property):
     @property
     @abstractmethod
-    def left(self) -> Property | ConstraintBase:
-        ...
+    def left(self) -> Property | ConstraintBase: ...
 
     @property
     @abstractmethod
-    def right(self) -> Property | ConstraintBase:
-        ...
+    def right(self) -> Property | ConstraintBase: ...
 
     @property
     @abstractmethod
-    def operator(self) -> str:
-        ...
+    def operator(self) -> str: ...
 
     @property
     @abstractmethod
-    def ctype(self) -> ConstraintTypes:
-        ...
+    def ctype(self) -> ConstraintTypes: ...
 
     @abstractmethod
-    def __call__(self, time: TIMES_TYPES) -> bool:
-        ...
+    def __call__(self, time: TIMES_TYPES) -> bool: ...
 
     def config(self, config: dict) -> None:
         if self.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
