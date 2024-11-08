@@ -29,7 +29,7 @@ from .trajectory_properties import (
 
 
 @define(repr=False, order=False, eq=False)
-class Solver(ABC):
+class BaseSolver(ABC):
     """The interface for any ConstraintSolvers"""
 
     constraint: Optional[ConstraintBase]
@@ -48,10 +48,11 @@ class Solver(ABC):
 
 
 @define(repr=False, order=False, eq=False)
-class GfevntSolverConfigurator:
-    """Configures the gfevnt solver
+class SpiceEventSolverConfigurator:
+    """Configures the cspice gfevnt solver.
 
-    as the config of the cspice gfevnt method is a bit convoluted, this class is used to simplify the configuration of the solver
+    As the config of the cspice gfevnt method is a bit convoluted,
+    this class is used to simplify the configuration of the solver
     """
 
     names: list[str] = field(factory=list)
@@ -256,7 +257,7 @@ class GfevntSolverConfigurator:
 
 
 @define(repr=False, order=False, eq=False)
-class GfevntSolver(Solver):
+class SpiceEventSolver(BaseSolver):
     """Wrapper to the gfevnt solver from spice/spiceypy"""
 
     config: dict = field(factory=dict)
@@ -325,7 +326,7 @@ class GfevntSolver(Solver):
 
         log.debug("Constraint full config {}", config)
 
-        pars_composer = GfevntSolverConfigurator()
+        pars_composer = SpiceEventSolverConfigurator()
         pars_composer.set_from_dict(config)
         self.config = pars_composer.as_dict()
 
@@ -346,14 +347,14 @@ class GfevntSolver(Solver):
             log.debug("No property keyword found in constraint, this might imply a bug")
             return False
 
-        if quantity.lower() in GfevntSolverConfigurator.known_properties():
+        if quantity.lower() in SpiceEventSolverConfigurator.known_properties():
             return True
 
         return False
 
 
 @define(repr=False, order=False, eq=False)
-class GfocceSolver(Solver):
+class SpiceOccultationSolver(BaseSolver):
     """Occultation Solver"""
 
     config: dict = field(factory=dict)
@@ -484,7 +485,7 @@ class GfocceSolver(Solver):
 
 
 @define(repr=False, order=False, eq=False)
-class SpiceWindowSolver(Solver):
+class SpiceWindowSolver(BaseSolver):
     """Solves a constraints made by two constraints returing SpiceWindow objects"""
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -499,7 +500,7 @@ class SpiceWindowSolver(Solver):
             log.error("Left or right operands not of type Constraint")
             raise TypeError
 
-        solver: Type[Solver] = get_appropriate_solver(self.constraint.left)
+        solver: Type[BaseSolver] = get_appropriate_solver(self.constraint.left)
 
         # solve the first constraint
         result = solver(self.constraint.left, step=self.step).solve(window)
@@ -538,7 +539,7 @@ class SpiceWindowSolver(Solver):
 
 
 @define(repr=False, order=False, eq=False)
-class FovVisibilitySolver(Solver):
+class FovVisibilitySolver(BaseSolver):
     """
     Wrapper for GFTFOV: target body appears in an instrument`s field of view.
 
@@ -599,7 +600,7 @@ class FovVisibilitySolver(Solver):
 
 
 @define(repr=False, order=False, eq=False)
-class BooleanPropertySolver(Solver):
+class BooleanPropertySolver(BaseSolver):
     """Solver for boolean properties"""
 
     @staticmethod
@@ -637,9 +638,57 @@ class BooleanPropertySolver(Solver):
 
 
 @define(repr=False, order=False, eq=False)
-class MasterSolver(Solver):
+class GenericScalarSolver(BaseSolver):
+    """Solver for boolean properties"""
+
+    @staticmethod
+    def can_solve(constraint: ConstraintBase) -> bool:
+        if constraint.ctype == ConstraintTypes.COMPARE_TO_CONSTANT:
+            if constraint.left.type == PropertyTypes.SCALAR:
+                return True
+        return False
+
+    def solve(self, window: SpiceWindow) -> SpiceWindow:
+        if not self.constraint:
+            log.error("No constraint set")
+            raise ValueError
+
+        if not self.can_solve(self.constraint):
+            log.error("Constraint not solvable")
+            raise ValueError
+
+        result = SpiceWindow()
+
+        right_value: BoolConstant = self.constraint.right.value
+        left_prop = self.constraint.left
+
+        as_spice_f = left_prop.compute_as_spice_function()
+
+        def is_dec(func: spiceypy.utils.callbacks.UDFUNC, t: float) -> bool:
+            return spiceypy.uddc(func, t, 1.0)
+
+        spiceypy.gfuds(
+            as_spice_f,
+            spiceypy.utils.callbacks.SpiceUDFUNB(is_dec),
+            self.constraint.operator,
+            right_value,
+            0.0,
+            self.step,
+            10000,
+            window.spice_window,
+            result.spice_window,
+        )
+
+        return result
+
+
+@define(repr=False, order=False, eq=False)
+class MasterSolver(BaseSolver):
+    """Solves any type of constraint by determining the right solver to use."""
+
     constraint: ConstraintBase | None = None
     minimum_interval_size: float = 0.0  # seconds
+    solver_config: dict = {}
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         if not self.constraint or not self.can_solve(self.constraint):
@@ -648,7 +697,9 @@ class MasterSolver(Solver):
 
         solver = get_appropriate_solver(self.constraint)
         log.debug(f"Using as solver step size {self.step} seconds")
-        result = solver(self.constraint, step=self.step).solve(window)
+        result = solver(self.constraint, step=self.step, **self.solver_config).solve(
+            window
+        )
 
         if self.minimum_interval_size > 0.0:
             log.debug("Removing small intervals")
@@ -663,18 +714,20 @@ class MasterSolver(Solver):
         return False
 
 
-solvers: list[Type[Solver]] = [
-    BooleanPropertySolver,
+# All the known solvers. The MasterSolver goes through this list until it finds an appropriate solver.
+SOLVERS: list[Type[BaseSolver]] = [
     FovVisibilitySolver,
-    GfevntSolver,
-    GfocceSolver,
+    SpiceEventSolver,
+    SpiceOccultationSolver,
     SpiceWindowSolver,
+    BooleanPropertySolver,
+    GenericScalarSolver,
 ]
 
 
-def get_appropriate_solver(constraint: ConstraintBase) -> Type[Solver]:
+def get_appropriate_solver(constraint: ConstraintBase) -> Type[BaseSolver]:
     log.debug(f"Looking for a solver to solve {constraint}")
-    for solver in solvers:
+    for solver in SOLVERS:
         if solver.can_solve(constraint):
             log.debug(
                 "Found solver {} for constraint {}, of type {}",

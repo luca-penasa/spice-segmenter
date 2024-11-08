@@ -1,19 +1,7 @@
-import tempfile
-from pathlib import Path
-
 import numpy
-from planetary_coverage import TourConfig
+from quick_spice_manager import SpiceManager
 
-kdir = Path(tempfile.gettempdir()).joinpath("kernels")
-
-config = TourConfig(
-    kernels_dir=kdir,
-    target="Jupiter",
-    spacecraft="Juice",
-    version="latest",
-    mk="plan",
-    download_kernels=True,
-)
+config = SpiceManager().tour_config
 
 start, end = (
     numpy.datetime64("2023-04-14T12:42:17.657"),

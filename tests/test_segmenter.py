@@ -4,9 +4,7 @@ from planetary_coverage import utc
 
 from spice_segmenter.spice_window import SpiceWindow
 
-from . import TourConfig
-
-tc = TourConfig()
+from . import tour_config as tc
 
 
 def test_spice_window() -> None:

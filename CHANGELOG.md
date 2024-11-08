@@ -8,11 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- solver for boolean properties + boolean props interface
+- spice-based solver for boolean properties + boolean props interface
 - boresightintesect property
+- spice-based solver for generic scalar properties, first implementation.
 
 ### Changed
 
+- now relying on quick-spice-manager to download spice kernels
 - Constants can be instantiated from pint.Quantity so thata we can write `phase < Quantity(22, 'deg')`
 
 ## [0.0.4] - 2024-01-16

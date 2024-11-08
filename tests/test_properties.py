@@ -14,9 +14,8 @@ from spice_segmenter.trajectory_properties import (
 )
 from spice_segmenter.types import TIMES_TYPES
 
-from . import TourConfig
+from . import tour_config as tc
 
-tc = TourConfig()
 start, end = tc.coverage
 
 t1 = start + np.timedelta64(100, "D")

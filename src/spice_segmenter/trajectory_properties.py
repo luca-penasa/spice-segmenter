@@ -141,7 +141,7 @@ class Property(ABC):
         if not isinstance(other, Property):
             return NotImplemented
 
-        return Constraint(self, other, "==")
+        return Constraint(self, other, "=")
 
     def __or__(self, other: left_types) -> Constraint:
         return Constraint(self, self._handle_other_operand(other), "|")
@@ -551,6 +551,12 @@ class Constraint(ConstraintBase):
         ):  # this is added just to make flake8 aware we are actually using it in the eval below
             raise ValueError("Could not convert right side of constraint")
 
-        q = "self.left(time)" + self.operator + "right(time)"
+        if self.operator == "=":
+            operator = "=="
+        else:
+            operator = self.operator
+
+        # todo: is thera a better way to do this?
+        q = "self.left(time)" + operator + "right(time)"
 
         return np.array(eval(q), dtype=bool)

@@ -27,7 +27,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9.0, <4.0"
+python = ">=3.10.0, <4.0"
 anytree = "^2.8.0"
 attrs = ">20.0.0"
 spiceypy = ">=5.1.1"
@@ -37,6 +37,7 @@ loguru = "^0.7.0"
 tqdm = "^4.65.0"
 datetimerange = "^2.1.0"
 pandas = "^2.0.1"
+quick-spice-manager = "^0.0.1"
 
 [tool.poetry.dev-dependencies]
 autoflake = "*"
