@@ -1,0 +1,18 @@
+name: Release on PyPI and deploy docs
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/python-poetry-env
+      - name: Deploy docs
+        run: poetry run mkdocs gh-deploy --force

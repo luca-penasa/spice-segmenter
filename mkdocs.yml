@@ -1,5 +1,5 @@
-site_name: "spice_segmenter"
-repo_url: https://github.com/luca.penasa/spice_segmenter
+site_name: "Spice Segmenter"
+repo_url: https://github.com/luca-penasa/spice-segmenter
 
 theme:
   name: material
@@ -28,9 +28,7 @@ plugins:
       default_handler: python
       handlers:
         python:
-          rendering:
+          options:
             show_signature_annotations: true
             show_source: true
             show_submodules: true
-      watch:
-        - src/spice_segmenter

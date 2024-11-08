@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier
+_commit: 3b67e70
+_src_path: git@github.com:luca-penasa/wolt-python-package-cookiecutter.git
+author_email: luca.penasa@gmail.com
+author_name: Luca Penasa
+github_username: luca-penasa
+module_name: spice_segmenter
+project_name: Spice Segmenter
+project_short_desription: Spice-based segmenter, wrapping event finding routines within
+    spice toolkit.
+project_url_slug: spice-segmenter
+publish_docs_on_gh_pages: true
+publish_package_on_pypi: false

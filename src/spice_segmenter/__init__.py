@@ -7,6 +7,11 @@ Warning
 This is just a stub, that might never see the light
 """
 
+import importlib
+
+__version__ = importlib.metadata.version("spice_segmenter")
+
+
 from attr import define, field
 
 from .coordinates import (
