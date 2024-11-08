@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "spice-segmenter"
-version = "0.0.4"
+version = "0.0.5"
 description = "Spice-based segmenter, wrapping event finding routines within spice toolkit."
 authors = [
     "Luca Penasa <luca.penasa@gmail.com>"
@@ -133,7 +133,7 @@ disallow_any_unimported = true
 # ]
 # disallow_untyped_defs = false
 [tool.bumpversion]
-current_version = "0.0.4"  # Replace with your current version
+current_version = "0.0.5"  # Replace with your current version
 
 
 [[tool.bumpversion.files]]
