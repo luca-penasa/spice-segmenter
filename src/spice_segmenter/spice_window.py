@@ -77,6 +77,12 @@ class SpiceWindow:
         window.add_interval(start, end)
         return window
 
+    def to_start_end(self):
+        return pd.Timestamp(utc(self.start)), pd.Timestamp(utc(self.end))
+
+    def is_point(self):
+        return bool(len(self) == 1 and self.start - self.end < 1e-09)
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SpiceWindow):
             return False
@@ -147,10 +153,7 @@ class SpiceWindow:
         return out
 
     def to_datetimerange(self) -> list[DateTimeRange]:
-        return [
-            DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end)))
-            for i in self
-        ]
+        return [DateTimeRange(pd.Timestamp(utc(i.start)), pd.Timestamp(utc(i.end))) for i in self]
 
     @property
     def end(self) -> float:
@@ -176,9 +179,7 @@ class SpiceWindow:
     def __len__(self) -> int:
         return int(spiceypy.wncard(self.spice_window))
 
-    def plot(
-        self, ax: matplotlib.axes.Axes | None = None, **kwargs: dict[str, Any]
-    ) -> list:
+    def plot(self, ax: matplotlib.axes.Axes | None = None, **kwargs: dict[str, Any]) -> list:
         import matplotlib.pyplot as plt
 
         if ax is None:
@@ -199,10 +200,12 @@ class SpiceWindow:
 
     def to_pandas(self, round_to: str = "S") -> pd.DataFrame:
         out = []
+
+        if len(self) == 0:
+            return pd.DataFrame(columns=["start", "end"])
+
         for i in self:
-            out.append(
-                {"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))}
-            )
+            out.append({"start": np.datetime64(utc(i.start)), "end": np.datetime64(utc(i.end))})
 
         tab = pd.DataFrame(out)
         if round_to:

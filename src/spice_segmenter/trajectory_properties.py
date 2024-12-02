@@ -119,15 +119,11 @@ class Property(ABC):
         return Constraint(self, self._handle_other_operand(other), ">")
 
     def __ge__(self, other: left_types) -> Constraint:
-        log.warning(
-            "Using >= operator on properties is not supported by SPICE. Using > instead."
-        )
+        log.warning("Using >= operator on properties is not supported by SPICE. Using > instead.")
         return Constraint(self, self._handle_other_operand(other), ">")
 
     def __le__(self, other: left_types) -> Constraint:
-        log.warning(
-            "Using <= operator on properties is not supported by SPICE. Using < instead."
-        )
+        log.warning("Using <= operator on properties is not supported by SPICE. Using < instead.")
         return Constraint(self, self._handle_other_operand(other), "<")
 
     def __lt__(self, other: left_types) -> Constraint:
@@ -291,9 +287,7 @@ class TargetedProperty(Property, ABC):
     light_time_correction: str = field(default="NONE", kw_only=True)
 
     def config(self, config: dict) -> None:
-        log.debug(
-            "targeted property config here with instnace of {}", self.__class__.__name__
-        )
+        log.debug("targeted property config here with instnace of {}", self.__class__.__name__)
         Property.config(self, config)
         config.update(
             {
@@ -307,9 +301,7 @@ class TargetedProperty(Property, ABC):
 
 @declare(name="phase_angle", unit=pint.Unit("rad"))
 class PhaseAngle(TargetedProperty):
-    third_body: SpiceRef = field(
-        factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref
-    )
+    third_body: SpiceRef = field(factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref)
 
     def __repr__(self) -> str:
         return f"Phase Angle of {self.target} with respect to {self.third_body} as seen from {self.observer}"
@@ -367,6 +359,22 @@ class AngularSize(TargetedProperty):
         config["property"] = self.name
 
 
+@declare(name="px_size", unit=pint.Unit("dimensionless"))
+class TargetSizeOnSensor(TargetedProperty):
+    def __repr__(self) -> str:
+        return f"Size in pixels of {self.target}, on the {self.observer} sensor."
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        angular_size = AngularSize.__call__(self, time)
+        ifov = np.mean(self.observer.ifov)
+        return angular_size / ifov
+
+    def config(self, config: dict) -> None:
+        TargetedProperty.config(self, config)
+        config["property"] = self.name
+
+
 class ConstraintTypes(Enum):
     COMPARE_TO_CONSTANT = auto()
     COMPARE_TO_OTHER_CONSTRAINT = auto()
@@ -396,9 +404,7 @@ class ConstraintBase(Property):
 
     def config(self, config: dict) -> None:
         if self.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
-            log.error(
-                "Cannot serialize a constraint that compares to another constraint"
-            )
+            log.error("Cannot serialize a constraint that compares to another constraint")
             raise TypeError
 
         self.left.config(config)
@@ -420,9 +426,7 @@ class ConstraintBase(Property):
         """
         Returns an anynode tree with the constraints
         """
-        if isinstance(self.left, ConstraintBase) and isinstance(
-            self.right, ConstraintBase
-        ):
+        if isinstance(self.left, ConstraintBase) and isinstance(self.right, ConstraintBase):
             if self.operator == "|":
                 name = "OR"
 
@@ -438,6 +442,17 @@ class ConstraintBase(Property):
             node = Node(self)
 
         return node
+    
+
+    def render_tree_str(self) -> str:
+        """
+        Get the tree as str
+        """
+        out = ""
+        for pre, _fill, node in RenderTree(self.tree()):
+            out+= f"{pre}{node.name}\n"
+
+        return out
 
     def render_tree(self) -> None:
         """
@@ -468,10 +483,7 @@ class Constraint(ConstraintBase):
         if not self.left.has_unit() and not self.right.has_unit():
             log.debug("Both sides of constraint {} have no units, skipping check", self)
 
-        elif (
-            self.ctype is not ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
-            and not self.right.has_unit()
-        ):
+        elif self.ctype is not ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT and not self.right.has_unit():
             log.warning(
                 "Constraint {} compares {} to {}",
                 self,
@@ -480,9 +492,7 @@ class Constraint(ConstraintBase):
             )
             return
 
-        if hasattr(self.right, "value") and isinstance(
-            self.right.value, MinMaxConditionTypes
-        ):
+        if hasattr(self.right, "value") and isinstance(self.right.value, MinMaxConditionTypes):
             log.debug("Right side of constraint {} is a minmax condition", self)
             return
 
@@ -510,9 +520,7 @@ class Constraint(ConstraintBase):
     def ctype(self) -> ConstraintTypes:
         if isinstance(self.right, Constant) or isinstance(self.left, Constant):
             return ConstraintTypes.COMPARE_TO_CONSTANT
-        elif isinstance(self.left, ConstraintBase) and isinstance(
-            self.left, ConstraintBase
-        ):
+        elif isinstance(self.left, ConstraintBase) and isinstance(self.left, ConstraintBase):
             return ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
 
         else:
@@ -546,9 +554,7 @@ class Constraint(ConstraintBase):
         else:
             right = self.right
 
-        if (
-            right is None
-        ):  # this is added just to make flake8 aware we are actually using it in the eval below
+        if right is None:  # this is added just to make flake8 aware we are actually using it in the eval below
             raise ValueError("Could not convert right side of constraint")
 
         if self.operator == "=":

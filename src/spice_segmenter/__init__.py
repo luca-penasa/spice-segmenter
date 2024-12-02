@@ -8,11 +8,10 @@ This is just a stub, that might never see the light
 """
 
 import importlib
+import sys
 
-__version__ = importlib.metadata.version("spice_segmenter")
-
-
-from attr import define, field
+from attrs import define, field
+from loguru import logger as log
 
 from .coordinates import (
     CylindricalCoordinates,
@@ -36,6 +35,8 @@ from .trajectory_properties import (
     PhaseAngle,
 )
 
+__version__ = importlib.metadata.version("spice_segmenter")
+
 __all__ = [
     "MinMaxConstraint",
     "MinMaxConditionTypes",
@@ -58,15 +59,29 @@ __all__ = [
     "Constant",
 ]
 
-import sys
+log.disable("spice_segmenter")
 
-from loguru import logger
 
-# entirely disables logging for the spice_segmenter module
-logger.disable("spice_segmenter")
-logger.remove()
+def log_enable(
+    level: str = "INFO",
+    mod: str = "spice_segmenter",
+    remove_handlers: bool = True,
+) -> None:
+    """Enable logging for a given module at specific level, by default it operates on the whole module."""
+    if remove_handlers:
+        log.remove()
+    log.enable(mod)
+    log.add(sys.stderr, level=level)
 
-logger.add(sys.stderr, level="WARNING")
+
+def log_enable_debug() -> None:
+    """Enable debug logging for a given module, by default it operates on the whole module."""
+    log_enable(level="DEBUG")
+
+
+def log_disable(mod: str = "spice_segmenter") -> None:
+    """Totally disable logging from this module, by default it operates on the whole module."""
+    log.disable(mod)
 
 
 @define

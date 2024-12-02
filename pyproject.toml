@@ -39,7 +39,7 @@ pint = ">=0.20"
 tqdm = "^4.65.0"
 datetimerange = "^2.1.0"
 pandas = "^2.0.1"
-quick-spice-manager = "^0.0.1"
+quick-spice-manager = ">=0.0.1"
 
 [tool.poetry.group.dev.dependencies]
 mkdocstrings = { version = ">=0.23", extras = ["python"] }
@@ -57,6 +57,8 @@ ipykernel = "^6.29.5"
 nbmake = ">=1.4.6"
 bump-my-version = "^0.27.0"
 rust-just = "^1.36.0"
+mkdocs-with-pdf = "^0.9.3"
+mkdocs-jupyter = "^0.25.1"
 
 [build-system]
 requires = ["poetry-core"]

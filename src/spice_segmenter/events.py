@@ -1,4 +1,5 @@
-from typing import Any, Iterable, Literal
+from collections.abc import Iterable
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ class PointEvent:
 
 
 def fov_in_out(
-    target: str, start: str, end: str
+    target: str, start: str, end: str,
 ) -> list[tuple[PointEvent, PointEvent]]:
     fov_vis = BodyFOVVisibility("JUICE_JANUS", target) == True
     w = SpiceWindow()
@@ -28,10 +29,10 @@ def fov_in_out(
         window_start, window_end = item
 
         in_event = PointEvent(
-            time=window_start.to_numpy(), description=f"{target} ingresses fov"
+            time=window_start.to_numpy(), description=f"{target} ingresses fov",
         )
         out_event = PointEvent(
-            time=window_end.to_numpy(), description=f"{target} egresses fov"
+            time=window_end.to_numpy(), description=f"{target} egresses fov",
         )
         output.append((in_event, out_event))
 
@@ -39,7 +40,7 @@ def fov_in_out(
 
 
 def boolean_series_flips(
-    times: Iterable[np.timedelta64], boolean_series: Iterable[bool]
+    times: Iterable[np.timedelta64], boolean_series: Iterable[bool],
 ) -> list[tuple[np.datetime64, Literal["TO_TRUE", "TO_FALSE"]]]:
     "determines times of flipping and polarity of the boolean series"
     _times: np.ndarray = np.array(times)
@@ -65,7 +66,7 @@ def enters_exists_daylight(trajectory: Any) -> list[PointEvent]:
     items = boolean_series_flips(trajectory.utc, trajectory.day)
 
     is_sc_traj = isinstance(
-        trajectory, planetary_coverage.trajectory.SpacecraftTrajectory
+        trajectory, planetary_coverage.trajectory.SpacecraftTrajectory,
     )
 
     print(f"Is a SC traj {is_sc_traj}")

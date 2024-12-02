@@ -660,6 +660,15 @@ class GenericScalarSolver(BaseSolver):
         result = SpiceWindow()
 
         right_value: BoolConstant = self.constraint.right.value
+
+        runit = self.constraint.right.unit
+        lunit = self.constraint.left.unit
+
+
+        if runit != lunit:
+            log.info('different units between constraint and property are used. attempting conversion')
+            right_value = pint.Quantity(right_value, runit).to(lunit).magnitude
+
         left_prop = self.constraint.left
 
         as_spice_f = left_prop.compute_as_spice_function()

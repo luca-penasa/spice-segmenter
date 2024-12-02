@@ -65,12 +65,11 @@ class Occultation(Property):
     def _remap_to_enum(self, value: int) -> OccultationTypes:
         if value == -3:
             return OccultationTypes.FULL
-        elif value == -2:
+        if value == -2:
             return OccultationTypes.ANNULAR
-        elif value == -1:
+        if value == -1:
             return OccultationTypes.PARTIAL
-        else:
-            return OccultationTypes.NONE
+        return OccultationTypes.NONE
 
     @vectorize
     def __call__(self, times: TIMES_TYPES) -> OccultationTypes:
