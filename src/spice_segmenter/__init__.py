@@ -13,6 +13,12 @@ import sys
 from attrs import define, field
 from loguru import logger as log
 
+# from .constraint import Constraint
+
+# from .constant import Constant
+
+from .property_base import Property
+
 from .coordinates import (
     CylindricalCoordinates,
     GeodeticCoordinates,
@@ -29,8 +35,6 @@ from .ops import MinMaxConditionTypes, MinMaxConstraint
 from .spice_window import SpiceWindow
 from .trajectory_properties import (
     AngularSize,
-    Constant,
-    Constraint,
     Distance,
     PhaseAngle,
 )
@@ -55,8 +59,8 @@ __all__ = [
     "OccultationTypes",
     "SpiceWindow",
     "AngularSize",
-    "Constraint",
-    "Constant",
+    "constraint",
+    "constant",
 ]
 
 log.disable("spice_segmenter")
@@ -88,8 +92,8 @@ def log_disable(mod: str = "spice_segmenter") -> None:
 class Config:
     """Configuration for the spice_segmenter module"""
 
-    show_progressbar: bool = field(default=True)
-    solver_step: float = field(default=60 * 60)
+    show_progressbar: bool = field(default=False)
+    solver_step: float = field(default=5 * 60)
 
 
 config = Config()

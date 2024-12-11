@@ -7,7 +7,8 @@ from planetary_coverage.spice import SpiceRef
 
 from spice_segmenter.coordinates import Vector
 from spice_segmenter.decorators import declare, vectorize
-from spice_segmenter.trajectory_properties import PropertyTypes, TargetedProperty
+from spice_segmenter.property_base import PropertyTypes
+from spice_segmenter.trajectory_properties import TargetedProperty
 from spice_segmenter.types import TIMES_TYPES
 from spice_segmenter.utils import et
 

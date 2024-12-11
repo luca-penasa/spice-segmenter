@@ -9,7 +9,10 @@ from planetary_coverage import SpiceRef
 from spiceypy import gfrefn, gfstep
 
 from spice_segmenter import config
+from .constant import BoolConstant, Constant
+from .constraint import ConstraintTypes
 from spice_segmenter.ops import Inverted
+from .property_base import BooleanProperty, PropertyTypes
 
 from .occultation import OccultationTypes
 from .search_reporter import (
@@ -18,13 +21,8 @@ from .search_reporter import (
     get_default_reporter_class,
 )
 from .spice_window import SpiceWindow
-from .trajectory_properties import (
-    BoolConstant,
-    BooleanProperty,
-    Constant,
+from .constraint import (
     ConstraintBase,
-    ConstraintTypes,
-    PropertyTypes,
 )
 
 
@@ -152,9 +150,7 @@ class SpiceEventSolverConfigurator:
         if not is_min_max:
             refval = pars.get("reference_value", None)
             if refval is None:
-                raise ValueError(
-                    "No reference value found, and not a minmax constraint"
-                )
+                raise ValueError("No reference value found, and not a minmax constraint")
 
             refval_unit = pars.get("reference_value_unit", None)
             property_unit = pars.get("property_unit", None)
@@ -198,16 +194,12 @@ class SpiceEventSolverConfigurator:
         self.add_str_parameter("OBSERVER", pars["origin"])
         self.add_str_parameter("ABCORR", pars["abcorr"])
         self.add_str_parameter("COORDINATE SYSTEM", pars["coordinate_type"])
-        self.add_str_parameter(
-            "COORDINATE", pars["component"].upper().replace("_", " ")
-        )
+        self.add_str_parameter("COORDINATE", pars["component"].upper().replace("_", " "))
         self.add_str_parameter("REFERENCE FRAME", pars["frame"])
         self.add_str_parameter("VECTOR DEFINITION", pars["vector_definition"])
         self.add_str_parameter("METHOD", pars["method"])
 
-        if pars["vector_definition"] == "SURFACE INTERCEPT POINT".lower().replace(
-            " ", "_"
-        ):
+        if pars["vector_definition"] == "SURFACE INTERCEPT POINT".lower().replace(" ", "_"):
             log.error("Surface intercept point not implemented")
             raise NotImplementedError
 
@@ -262,14 +254,14 @@ class SpiceEventSolver(BaseSolver):
 
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter | NoSearchReporter = field(
-        factory=get_default_reporter_class
-    )
+    reporter: SearchReporter | NoSearchReporter = field(factory=get_default_reporter_class)
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
-        log.debug(
-            "Solvig with gfevnt {} and type {}", self.constraint, type(self.constraint)
-        )
+        if not len(window):
+            self.result = SpiceWindow()
+            return self.result
+
+        log.debug("Solvig with gfevnt {} and type {}", self.constraint, type(self.constraint))
         if not self.constraint:
             log.error("You need to provide a valid constraint")
             raise ValueError
@@ -359,9 +351,7 @@ class SpiceOccultationSolver(BaseSolver):
 
     config: dict = field(factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter | NoSearchReporter = field(
-        factory=get_default_reporter_class
-    )
+    reporter: SearchReporter | NoSearchReporter = field(factory=get_default_reporter_class)
 
     def configure(self) -> dict:
         """
@@ -426,6 +416,10 @@ class SpiceOccultationSolver(BaseSolver):
         if not self.constraint or not self.can_solve(self.constraint):
             log.error("You need to provide a valid constraint/constraints not solvable")
             raise ValueError
+
+        if not len(window):
+            self.result = SpiceWindow()
+            return self.result
 
         constraint_config = self.configure()
 
@@ -500,6 +494,9 @@ class SpiceWindowSolver(BaseSolver):
             log.error("Left or right operands not of type Constraint")
             raise TypeError
 
+        if not len(window):
+            return SpiceWindow()
+
         solver: Type[BaseSolver] = get_appropriate_solver(self.constraint.left)
 
         # solve the first constraint
@@ -515,9 +512,7 @@ class SpiceWindowSolver(BaseSolver):
 
         elif self.constraint.operator == "|":
             log.debug("solving an OR operator")
-            result2 = solver(self.constraint.right, step=self.step).solve(
-                result.complement(window)
-            )
+            result2 = solver(self.constraint.right, step=self.step).solve(result.complement(window))
             op_res = result.union(result2)
 
         else:
@@ -547,6 +542,8 @@ class FovVisibilitySolver(BaseSolver):
     """
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
+        if not len(window):
+            return SpiceWindow()
         config = {}
         self.constraint.config(config)  # get the config
         log.debug("Config for the solver - fov visibility - {}", config)
@@ -619,11 +616,12 @@ class BooleanPropertySolver(BaseSolver):
             log.error("Constraint not solvable")
             raise ValueError
 
+        if not len(window):
+            return SpiceWindow()
+
         result = SpiceWindow()
 
-        right_value: BoolConstant = self.constraint.right(
-            0
-        )  # call returns the underlaying value
+        right_value: BoolConstant = self.constraint.right(0)  # call returns the underlaying value
         left_prop: BooleanProperty = self.constraint.left
 
         spiceypy.gfudb(
@@ -657,6 +655,9 @@ class GenericScalarSolver(BaseSolver):
             log.error("Constraint not solvable")
             raise ValueError
 
+        if not len(window):
+            return SpiceWindow()
+
         result = SpiceWindow()
 
         right_value: BoolConstant = self.constraint.right.value
@@ -664,9 +665,8 @@ class GenericScalarSolver(BaseSolver):
         runit = self.constraint.right.unit
         lunit = self.constraint.left.unit
 
-
         if runit != lunit:
-            log.info('different units between constraint and property are used. attempting conversion')
+            log.info("different units between constraint and property are used. attempting conversion")
             right_value = pint.Quantity(right_value, runit).to(lunit).magnitude
 
         left_prop = self.constraint.left
@@ -704,11 +704,12 @@ class MasterSolver(BaseSolver):
             log.error("No constraint set or constraint not solvable")
             raise ValueError
 
+        if not len(window):
+            return SpiceWindow()
+
         solver = get_appropriate_solver(self.constraint)
         log.debug(f"Using as solver step size {self.step} seconds")
-        result = solver(self.constraint, step=self.step, **self.solver_config).solve(
-            window
-        )
+        result = solver(self.constraint, step=self.step, **self.solver_config).solve(window)
 
         if self.minimum_interval_size > 0.0:
             log.debug("Removing small intervals")

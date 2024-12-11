@@ -6,7 +6,7 @@ from attrs import define, field
 from planetary_coverage.spice import SpiceRef
 
 from spice_segmenter.decorators import vectorize
-from spice_segmenter.trajectory_properties import Property, PropertyTypes
+from spice_segmenter.property_base import Property, PropertyTypes
 from spice_segmenter.types import TIMES_TYPES
 
 from .utils import et

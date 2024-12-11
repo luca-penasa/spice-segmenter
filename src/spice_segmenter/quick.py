@@ -7,6 +7,7 @@ from spice_segmenter.ops import MinMaxConditionTypes, MinMaxConstraint
 from spice_segmenter.trajectory_properties import Distance
 from spice_segmenter.visibility import BodyFOVVisibility
 
+from planetary_coverage.spice import SpiceBody
 
 def find_visibility_intervals(target, start, end, observer="juice_janus", solver_step_sec=5) -> pd.DataFrame:
     """Find the first interval in which the target is visibile in the FOV of the observer."""
@@ -18,6 +19,11 @@ def find_visibility_intervals(target, start, end, observer="juice_janus", solver
     interval = (v == True).solve(w)
     return interval.to_pandas()
 
+
+def body_radii_to_distance(n_radii: float, target: str = "JUPITER"):
+    """Return the distance to the body corresponding to the given number of radii of the body."""
+    target = SpiceBody(target)
+    return n_radii * target.radius
 
 def find_first_visibility_interval(
     target,

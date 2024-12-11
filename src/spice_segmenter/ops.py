@@ -5,11 +5,10 @@ from anytree import Node
 from attrs import define, field
 from loguru import logger as log
 
+from spice_segmenter.constraint import ConstraintBase, ConstraintTypes
+from spice_segmenter.property_base import Property
 from spice_segmenter.trajectory_properties import (
-    ConstraintBase,
-    ConstraintTypes,
     MinMaxConditionTypes,
-    Property,
 )
 from spice_segmenter.types import TIMES_TYPES
 

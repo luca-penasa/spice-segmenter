@@ -6,7 +6,9 @@ import pint
 from attr import define
 
 if TYPE_CHECKING:
-    from spice_segmenter.trajectory_properties import PropertyTypes
+    from spice_segmenter.property_base import PropertyTypes
+
+
 
 
 def vectorize(
@@ -70,10 +72,11 @@ def declare(
     cls.unit = property(_unit)
 
     if property_type:
-
         def _type(self):
             return property_type
 
         cls.type = property(_type)
-
-    return define(repr=False, order=False, eq=False)(cls)
+    P = define(repr=False, order=False, eq=False)(cls)
+    from spice_segmenter.trajectory_properties import PROPERTIES_REGISTRY
+    PROPERTIES_REGISTRY.append((name, P))
+    return  P

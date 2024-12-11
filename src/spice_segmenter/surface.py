@@ -7,7 +7,8 @@ from numpy.typing import ArrayLike
 from planetary_coverage import SpiceRef, et
 from planetary_coverage.spice import SpiceBody
 
-from spice_segmenter.trajectory_properties import Property, PropertyTypes
+from spice_segmenter.property_base import Property
+from spice_segmenter.property_base import PropertyTypes
 from spice_segmenter.types import TIMES_TYPES
 
 from .decorators import declare
