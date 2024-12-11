@@ -39,6 +39,9 @@ from .trajectory_properties import (
     PhaseAngle,
 )
 
+
+from .constraint import Constraint
+
 __version__ = importlib.metadata.version("spice_segmenter")
 
 __all__ = [
@@ -61,6 +64,7 @@ __all__ = [
     "AngularSize",
     "constraint",
     "constant",
+    "Constraint",
 ]
 
 log.disable("spice_segmenter")

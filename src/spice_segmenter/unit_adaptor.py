@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pint
 from attrs import define, field
@@ -26,7 +27,7 @@ class UnitAdaptor(Property):
         return self._unit
 
     @vectorize
-    def __call__(self, time: "TIMES_TYPES") -> float:
+    def __call__(self, time: TIMES_TYPES) -> float:
         return (  # type: ignore
             pint.Quantity(self.parent(time), self.parent.unit).to(self.unit).magnitude
         )

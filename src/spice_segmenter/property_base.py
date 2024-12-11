@@ -1,6 +1,7 @@
 
-from typing import TYPE_CHECKING
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from spice_segmenter.types import TIMES_TYPES
 
@@ -43,7 +44,7 @@ class Property(ABC):
     def type(self) -> PropertyTypes:
         return PropertyTypes.SCALAR
 
-    def as_unit(self, unit: pint.Unit | str) -> "UnitAdaptor":
+    def as_unit(self, unit: pint.Unit | str) -> UnitAdaptor:
         from spice_segmenter.unit_adaptor import UnitAdaptor
         return UnitAdaptor(self, unit)
 
@@ -74,7 +75,7 @@ class Property(ABC):
     def __repr__(self) -> str:
         return f"{self.name}"
 
-    def _handle_other_operand(self, other: "left_types") -> "Property":
+    def _handle_other_operand(self, other: left_types) -> Property:
         if isinstance(other, Property):
             return other
 
@@ -82,29 +83,29 @@ class Property(ABC):
 
         return Constant.from_value(other)
 
-    def __gt__(self, other: "left_types") -> "Constraint":
+    def __gt__(self, other: left_types) -> Constraint:
         from spice_segmenter.constraint import Constraint
         return Constraint(self, self._handle_other_operand(other), ">")
 
-    def __ge__(self, other: "left_types") -> "Constraint":
+    def __ge__(self, other: left_types) -> Constraint:
         from spice_segmenter.constraint import Constraint
         log.warning("Using >= operator on properties is not supported by SPICE. Using > instead.")
         return Constraint(self, self._handle_other_operand(other), ">")
 
-    def __le__(self, other: "left_types") -> "Constraint":
+    def __le__(self, other: left_types) -> Constraint:
         from spice_segmenter.constraint import Constraint
         log.warning("Using <= operator on properties is not supported by SPICE. Using < instead.")
         return Constraint(self, self._handle_other_operand(other), "<")
 
-    def __lt__(self, other: "left_types") -> "Constraint":
+    def __lt__(self, other: left_types) -> Constraint:
         from spice_segmenter.constraint import Constraint
         return Constraint(self, self._handle_other_operand(other), "<")
 
-    def __and__(self, other: "left_types") -> "Constraint":
+    def __and__(self, other: left_types) -> Constraint:
         from spice_segmenter.constraint import Constraint
         return Constraint(self, self._handle_other_operand(other), "&")
 
-    def __eq__(self, other: "left_types") -> "Constraint":  # type: ignore
+    def __eq__(self, other: left_types) -> Constraint:  # type: ignore
         other = self._handle_other_operand(other)
         if not isinstance(other, Property):
             return NotImplemented
@@ -113,7 +114,7 @@ class Property(ABC):
 
         return Constraint(self, other, "=")
 
-    def __or__(self, other: "left_types") -> "Constraint":
+    def __or__(self, other: left_types) -> Constraint:
         from spice_segmenter.constraint import Constraint
         return Constraint(self, self._handle_other_operand(other), "|")
 
