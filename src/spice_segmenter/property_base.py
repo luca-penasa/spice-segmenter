@@ -143,7 +143,6 @@ class BooleanProperty(Property):
 
     def compute_as_spice_function(self, invert: bool = False) -> UDFUNB:
         if invert:
-
             def as_function(udfun, time: TIMES_TYPES) -> bool:
                 return ~self.__call__(time)
 

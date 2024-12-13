@@ -9,7 +9,7 @@ This is just a stub, that might never see the light
 
 import importlib
 import sys
-
+import pandas as pd
 from attrs import define, field
 from loguru import logger as log
 
@@ -18,6 +18,7 @@ from loguru import logger as log
 # from .constant import Constant
 
 from .property_base import Property
+from .constraint import ConstraintBase
 
 from .coordinates import (
     CylindricalCoordinates,
@@ -65,6 +66,8 @@ __all__ = [
     "constraint",
     "constant",
     "Constraint",
+    "ConstraintBase",
+    "Property"
 ]
 
 log.disable("spice_segmenter")
@@ -92,12 +95,37 @@ def log_disable(mod: str = "spice_segmenter") -> None:
     log.disable(mod)
 
 
+
+def is_any_number(value):
+    # Check if the value is a numeric type
+    if isinstance(value, (int, float, complex)):
+        return True
+
+    # Check if the value is a string that can be converted to a number
+    if isinstance(value, str):
+        try:
+            float(value)  # Attempt to convert to a float
+            return True
+        except ValueError:
+            return False
+
+    return False
+
+
+
+
+def to_seconds(timedelta: str | pd.Timedelta | float | int):
+    if is_any_number(timedelta):
+        return float(timedelta)
+    else:
+        return pd.Timedelta(timedelta).total_seconds()
+
 @define
 class Config:
     """Configuration for the spice_segmenter module"""
 
     show_progressbar: bool = field(default=False)
-    solver_step: float = field(default=5 * 60)
+    solver_step: float = field(default=5 * 60, converter=to_seconds)
 
 
 config = Config()

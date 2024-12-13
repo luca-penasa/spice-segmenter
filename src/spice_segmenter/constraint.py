@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 left_types = Union["Property", str, float, int, Enum]
 
+
 class ConstraintTypes(Enum):
     COMPARE_TO_CONSTANT = auto()
     COMPARE_TO_OTHER_CONSTRAINT = auto()
@@ -123,6 +124,7 @@ class Constraint(ConstraintBase):
         log.debug("Left type is {}", type(self.left))
         log.debug("Right type is {}", type(self.right))
         from spice_segmenter.constant import Constant
+
         if not isinstance(self.right, Property):
             log.debug(
                 "Left side of constraint {} is not a constraint or property. Assuming is a constant.",
@@ -155,9 +157,9 @@ class Constraint(ConstraintBase):
             raise NotImplementedError
 
         if not self.left.unit.is_compatible_with(self.right.unit):
-            raise ValueError(
-                f"Cannot Create a constraints between two properties with incompatible units: {self.left.unit} != {self.right.unit}",
-            )
+            msg = f"Cannot Create a constraints between two properties with incompatible units: {self.left.unit} vs {self.right.unit}"
+            log.warning(msg)
+            # raise ValueError(msg)
 
     def __repr__(self) -> str:
         return f"({self.left} {self.operator} {self.right})"
@@ -169,6 +171,7 @@ class Constraint(ConstraintBase):
     @property
     def ctype(self) -> ConstraintTypes:
         from spice_segmenter.constant import Constant
+
         if isinstance(self.right, Constant) or isinstance(self.left, Constant):
             return ConstraintTypes.COMPARE_TO_CONSTANT
         if isinstance(self.left, ConstraintBase) and isinstance(self.left, ConstraintBase):
@@ -213,6 +216,8 @@ class Constraint(ConstraintBase):
             operator = self.operator
 
         # TODO: is thera a better way to do this?
+        # yes the right way is to ship constraints with a lambda function that represent the operator
+        # and then use that lambda (or named) function to make the eval e.g. > -> lambda a,b: a > b
         q = "self.left(time)" + operator + "right(time)"
 
         return np.array(eval(q), dtype=bool)

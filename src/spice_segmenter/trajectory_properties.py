@@ -41,15 +41,16 @@ class MinMaxConditionTypes(Enum):
     GLOBAL_MAXIMUM = "global_maximum"
 
 
+
 @define(repr=False, order=False, eq=False)
-class TargetedProperty(Property, ABC):
+class TargetedPropertyMixin():
     observer: SpiceInstrument | SpiceSpacecraft = field(converter=as_spice_ref)
     target: SpiceBody = field(converter=as_spice_ref)
     light_time_correction: str = field(default="NONE", kw_only=True)
 
     def config(self, config: dict) -> None:
         log.debug("targeted property config here with instnace of {}", self.__class__.__name__)
-        Property.config(self, config)
+        super().config(config)
         config.update(
             {
                 "target": self.target.name,
@@ -59,6 +60,11 @@ class TargetedProperty(Property, ABC):
             },
         )
 
+
+
+@define(repr=False, order=False, eq=False)
+class TargetedProperty( TargetedPropertyMixin, Property):
+    pass
 
 @declare(name="phase_angle", unit=pint.Unit("rad"))
 class PhaseAngle(TargetedProperty):

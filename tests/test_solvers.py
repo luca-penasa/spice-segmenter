@@ -1,5 +1,6 @@
 from spice_segmenter import SpiceWindow
-from spice_segmenter.constraint_solver import ConstraintBase, GenericScalarSolver
+from spice_segmenter.constraint import ConstraintBase
+from spice_segmenter.constraint_solver import GenericScalarSolver
 from spice_segmenter.trajectory_properties import AngularSize
 
 c_less = AngularSize("JUICE_JANUS", "CALLISTO").as_unit("deg") < 2

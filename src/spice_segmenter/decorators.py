@@ -77,6 +77,8 @@ def declare(
 
         cls.type = property(_type)
     P = define(repr=False, order=False, eq=False)(cls)
+
+    
     from spice_segmenter.trajectory_properties import PROPERTIES_REGISTRY
     PROPERTIES_REGISTRY.append((name, P))
     return  P

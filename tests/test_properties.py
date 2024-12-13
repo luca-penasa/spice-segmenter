@@ -2,17 +2,17 @@ import numpy as np
 import pint
 from pytest import approx
 
+from spice_segmenter.constant import Constant
+from spice_segmenter.constraint import Constraint
 from spice_segmenter.decorators import declare
 from spice_segmenter.ops import Inverted
+from spice_segmenter.property_base import Property
 from spice_segmenter.trajectory_properties import (
-    Constant,
-    Constraint,
     Distance,
     PhaseAngle,
-    Property,
-    UnitAdaptor,
 )
 from spice_segmenter.types import TIMES_TYPES
+from spice_segmenter.unit_adaptor import UnitAdaptor
 
 from . import tour_config as tc
 
@@ -38,7 +38,7 @@ def test_phase() -> None:
     ph1 = phase(t1)
 
     assert tc[t1].phase[0] == approx(  # type: ignore
-        np.rad2deg(ph1), abs=1e-2
+        np.rad2deg(ph1), abs=1e-2,
     )  # abs: we know planetary coverage implements the phase at the sub-sc point, but should be almost there anyway
 
 
@@ -86,12 +86,12 @@ def test_inverted_wrapped():
 
     c = Constraint(p, 1, "==")
     assert isinstance(
-        c.right, Constant
+        c.right, Constant,
     )  # it should translate a 1 to a constant by itself.
 
     c2 = p == 1
     assert isinstance(
-        c2.right, Constant
+        c2.right, Constant,
     )  # it should translate a 1 to a constant by itself.
 
     assert c("2020-01-01") == True

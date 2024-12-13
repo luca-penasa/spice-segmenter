@@ -1,0 +1,170 @@
+""" "Properties related to the illumination condition of a target subject to illumination by a 'reflector'. Aka 'shine'.
+Adapted from the original implementation by Klaus-Dieter Matz (DLR), end of 2024.
+"""
+
+import pint
+from planetary_coverage import et
+from planetary_coverage.spice import SpiceBody
+import spiceypy
+import numpy as np
+
+from spice_segmenter.component_selector import ComponentSelector
+from spice_segmenter.decorators import declare, vectorize
+from spice_segmenter.property_base import Property, PropertyTypes, BooleanProperty
+from spice_segmenter.trajectory_properties import TargetedPropertyMixin, TargetedProperty
+
+
+from attrs import field
+
+from spice_segmenter.types import TIMES_TYPES
+
+
+def relfected_light_properties(
+    time, target_name="CALLISTO", observer="JUICE_JANUS", reflector="JUPITER", light_source="SUN", abcorr="LT+S"
+):
+    """Calculate 'Jupiter Shine' parameters."""
+
+    time = et(time)
+    target = SpiceBody(target_name)
+    target_frame = target.frame.name
+    reflector_radii = SpiceBody(reflector).radii
+
+    reflector_pos, reflector2sub_sc_lt = spiceypy.spkpos(reflector, time, target_frame, abcorr, target_name)
+    sub_sc_point, _, sc2sub_sc = spiceypy.subpnt(
+        "NEARPOINT/ELLIPSOID", target_name, time, target_frame, abcorr, observer
+    )
+
+    sub_sc2reflector = sub_sc_point + reflector_pos
+    reflector2sun, _ = spiceypy.spkpos(light_source, time - reflector2sub_sc_lt, target_frame, abcorr, reflector)
+
+    return np.array(
+        [
+            jupiter_elevation(sub_sc2reflector, sub_sc_point),
+            jupiter_phase_angle(sub_sc2reflector, reflector2sun),
+            pseudo_phase_angle(sc2sub_sc, sub_sc2reflector),
+            jupiter_angular_radius(sub_sc2reflector, reflector_radii),
+        ]
+    )
+
+
+def jupiter_elevation(sub_sc2reflector, sub_sc_point):
+    """Calculate the elevation of the reflector above the horizon at the sub-s/c point."""
+    return 90.0 - np.rad2deg(spiceypy.vsep(sub_sc2reflector, sub_sc_point))
+
+
+def jupiter_phase_angle(sub_sc2reflector, reflector2sun):
+    """Calculate the phase angle of the reflector as seen from the sub-s/c point."""
+    return np.rad2deg(spiceypy.vsep(-sub_sc2reflector, reflector2sun))
+
+
+def jupiter_angular_radius(sub_sc2reflector, reflector_radii):
+    """Calculate the angular radius of the reflector as seen from the sub-s/c point."""
+    return np.rad2deg(np.arctan(reflector_radii[0] / spiceypy.vnorm(sub_sc2reflector)))
+
+
+def pseudo_phase_angle(sc2sub_sc, sub_sc2reflector):
+    """Calculate the pseudo 'Phase' angle (reflector <- sub-s/c -> S/C)."""
+    return np.rad2deg(spiceypy.vsep(-sc2sub_sc, sub_sc2reflector))
+
+
+@declare(
+    name="shine_properties",
+    unit=[pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")],
+    property_type=PropertyTypes.VECTOR,
+)
+class ShineProperties(TargetedProperty):
+    reflector = field(converter=SpiceBody)
+    light_source = field(converter=SpiceBody, default="SUN")
+
+    def __repr__(self) -> str:
+        return f"Shine properties for the sub observer point on {self.target}, illuminated by reflected light of {self.reflector}, as seen from {self.observer}"
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        return relfected_light_properties(
+            time,
+            target_name=self.target,
+            observer=self.observer,
+            reflector=self.reflector,
+            light_source=self.light_source,
+            abcorr=self.light_time_correction,
+        )
+
+    def config(self, config: dict) -> None:
+        TargetedProperty.config(self, config)
+        config["reflector"] = self.reflector.name
+        config["property"] = self.name
+
+    @property
+    def reflector_elevation(self) -> Property:
+        return ComponentSelector(self, 0, "reflector_elevation")
+
+    @property
+    def reflector_phase_angle(self) -> Property:
+        return ComponentSelector(self, 1, "reflector_phase_angle")
+
+    @property
+    def local_phase_angle(self) -> Property:
+        return ComponentSelector(self, 2, "local_phase_angle")
+
+    @property
+    def reflector_angular_radius(self) -> Property:
+        return ComponentSelector(self, 3, "reflector_angular_radius")
+
+
+@declare(
+    name="jupiter_rise",
+    unit=pint.Unit("dimensionless"),
+    property_type=PropertyTypes.BOOLEAN,
+)
+class JupiterRise(TargetedPropertyMixin, BooleanProperty):
+    def __repr__(self) -> str:
+        return f"Jupiter rise status for the sub-{self.observer} {self.target}"
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        props = ShineProperties(self.observer, self.target, "JUPITER")
+
+        el = props.reflector_elevation(time)
+        r = props.reflector_angular_radius(time)
+
+        return el > r
+
+
+@declare(
+    name="jupiter_rise_ratio",
+    unit=pint.Unit("dimensionless"),
+    property_type=PropertyTypes.SCALAR,
+)
+class JupiterRiseRatio(TargetedProperty):
+    def __repr__(self) -> str:
+        return f"Jupiter rise ratio (elevation/apparent jupiter radius) for the sub-{self.observer} on {self.target}"
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        props = ShineProperties(self.observer, self.target, "JUPITER")
+
+        el = props.reflector_elevation(time)
+        r = props.reflector_angular_radius(time)
+
+        return el / r
+
+
+@declare(
+    name="jupiter_shine_ideal_condition",
+    unit=pint.Unit("dimensionless"),
+    property_type=PropertyTypes.BOOLEAN,
+)
+class JupiterShineIdealCondition(TargetedPropertyMixin, BooleanProperty):
+    max_apparent_jupiter_phase = field(default=90)  # half disk is illuminated
+    min_rise_ratio = field(default=1)  # half above the sub-observer horizon
+
+    def __repr__(self) -> str:
+        return f"Sub-{self.observer} on {self.target} is in ideal condition for Jupiter shine (apparent phase of Jupiter < {self.max_apparent_jupiter_phase} and el/radius of jupiter > {self.min_rise_ratio})"
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        props = ShineProperties(self.observer, self.target, "JUPITER")
+
+        el, phase, _, angular_radius = props(time)
+        return (el / angular_radius > self.min_rise_ratio) & (phase < self.max_apparent_jupiter_phase)

@@ -164,7 +164,7 @@ class SpiceEventSolverConfigurator:
                 raise ValueError("No property unit found")
 
             log.debug("property unit {}, refval unit {}", property_unit, refval_unit)
-            if refval_unit != property_unit and not refval_unit == "dimensionless":
+            if refval_unit != property_unit and refval_unit != "dimensionless":
                 log.debug(
                     "converting refval with unit {} to property unit {}",
                     refval_unit,
@@ -172,6 +172,7 @@ class SpiceEventSolverConfigurator:
                 )
 
                 refval = pint.Quantity(refval, refval_unit).to(property_unit).magnitude
+                log.debug(f'Converted refval is {refval} {property_unit}')
 
             self.refval = float(refval)
 
