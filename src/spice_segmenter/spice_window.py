@@ -109,8 +109,10 @@ class SpiceWindow:
         return self.union(other)
 
     def add_interval(self, start: TIMES_TYPES, end: TIMES_TYPES) -> None:
-        start = pd.Timestamp(start).to_numpy()
-        end  = pd.Timestamp(end).to_numpy()
+        if not isinstance(start, (float, int)):
+            start = pd.Timestamp(start).to_numpy()
+        if not isinstance(end, (float, int)):
+            end  = pd.Timestamp(end).to_numpy()
         spiceypy.wninsd(et(start), et(end), self.spice_window)
 
     def intersect(self, other: SpiceWindow) -> SpiceWindow:
