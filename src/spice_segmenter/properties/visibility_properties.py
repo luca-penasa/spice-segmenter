@@ -5,12 +5,12 @@ import spiceypy
 from attr import field
 from planetary_coverage.spice import SpiceRef
 
-from spice_segmenter.coordinates import Vector
-from spice_segmenter.decorators import declare, vectorize
-from spice_segmenter.property_base import PropertyTypes
-from spice_segmenter.trajectory_properties import TargetedProperty
-from spice_segmenter.types import TIMES_TYPES
-from spice_segmenter.utils import et
+from ..properties.coordinates import Vector
+from ..support.decorators import declare, vectorize
+from ..core.property import PropertyTypes
+from ..properties.observation_properties import TargetedProperty
+from ..support.time_types import TIMES_TYPES
+from ..support.spice_utilities import et
 
 
 @declare(name="fov_visibility", property_type=PropertyTypes.BOOLEAN)

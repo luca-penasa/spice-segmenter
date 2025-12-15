@@ -1,4 +1,4 @@
-from spice_segmenter.occultation import OccultationTypes
+from spice_segmenter.properties.occultation_types import OccultationTypes
 
 
 def test_enum() -> None:

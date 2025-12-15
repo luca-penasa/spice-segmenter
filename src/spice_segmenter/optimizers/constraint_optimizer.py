@@ -17,8 +17,8 @@ import numpy as np
 from loguru import logger as log
 
 if TYPE_CHECKING:
-    from spice_segmenter.constraint import ConstraintBase
-    from spice_segmenter.property_base import Property
+    from ..core.constraints import ConstraintBase
+    from ..core.property import Property
 
 
 class PropertyTransformer(ABC):
@@ -55,7 +55,7 @@ class TargetSizeOnSensorToDistance(PropertyTransformer):
 
     def can_transform(self, left: Property, operator: str, right: Any) -> bool:
         """Check if left is TargetSizeOnSensor and operator is comparison."""
-        from spice_segmenter.trajectory_properties import TargetSizeOnSensor
+        from ..properties.observation_properties import TargetSizeOnSensor
 
         if not isinstance(left, TargetSizeOnSensor):
             return False
@@ -66,8 +66,8 @@ class TargetSizeOnSensorToDistance(PropertyTransformer):
     def transform(self, left: Property, operator: str, right: Any) -> tuple[Property, str, Any]:
         """Transform to Distance constraint."""
 
-        from spice_segmenter.constant import Constant
-        from spice_segmenter.trajectory_properties import Distance, TargetSizeOnSensor
+        from ..ops.constant_values import Constant
+        from ..properties.observation_properties import Distance, TargetSizeOnSensor
 
         if not isinstance(left, TargetSizeOnSensor):
             raise ValueError("Left side must be TargetSizeOnSensor")
@@ -121,7 +121,7 @@ class AngularSizeToDistance(PropertyTransformer):
 
     def can_transform(self, left: Property, operator: str, right: Any) -> bool:
         """Check if left is AngularSize and operator is comparison."""
-        from spice_segmenter.trajectory_properties import AngularSize
+        from ..properties.observation_properties import AngularSize
 
         if not isinstance(left, AngularSize):
             return False
@@ -131,8 +131,8 @@ class AngularSizeToDistance(PropertyTransformer):
     def transform(self, left: Property, operator: str, right: Any) -> tuple[Property, str, Any]:
         """Transform to Distance constraint."""
 
-        from spice_segmenter.constant import Constant
-        from spice_segmenter.trajectory_properties import AngularSize, Distance
+        from ..ops.constant_values import Constant
+        from ..properties.observation_properties import AngularSize, Distance
 
         if not isinstance(left, AngularSize):
             raise ValueError("Left side must be AngularSize")
@@ -218,8 +218,8 @@ class ConstraintOptimizer:
 
     def _optimize_recursive(self, constraint: ConstraintBase) -> ConstraintBase:
         """Recursively optimize constraint tree."""
-        from spice_segmenter.constraint import Constraint, ConstraintBase
-        from spice_segmenter.ops import Inverted, WrappedConstraint
+        from ..core.constraints import Constraint, ConstraintBase
+        from ..ops.constraint_operations import Inverted, WrappedConstraint
 
         if isinstance(constraint, Constraint):
             # Try to transform this constraint

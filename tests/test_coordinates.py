@@ -1,4 +1,4 @@
-from spice_segmenter.coordinates import Vector
+from spice_segmenter.properties.coordinates import Vector
 
 
 def test_vector():

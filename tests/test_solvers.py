@@ -1,9 +1,9 @@
 from spice_segmenter import SpiceWindow, log_enable
-from spice_segmenter.constraint import ConstraintBase
+from spice_segmenter.core.constraints import ConstraintBase
 from spice_segmenter.constraint_solver import GenericScalarSolver
 from spice_segmenter.constraint_solver.constraint_solver import SpiceEventSolver, SpiceOccultationSolver, SpiceWindowSolver
-from spice_segmenter.trajectory_properties import AngularSize, Distance
-from spice_segmenter.coordinates import Vector
+from spice_segmenter.properties.observation_properties import AngularSize, Distance
+from spice_segmenter.properties.coordinates import Vector
 from spice_segmenter.constraint_solver import get_appropriate_solver
 from spice_segmenter import Occultation, OccultationTypes
 from planetary_coverage.spice import SpiceBody

@@ -6,9 +6,9 @@ import pint
 from attr import define, field
 from attrs.validators import instance_of
 
-from spice_segmenter.decorators import vectorize
-from spice_segmenter.property_base import Property, PropertyTypes
-from spice_segmenter.types import TIMES_TYPES
+from ..support.decorators import vectorize
+from ..core.property import Property, PropertyTypes
+from ..support.time_types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)

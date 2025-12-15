@@ -13,11 +13,10 @@ from planetary_coverage.spice import (
 )
 from spiceypy import NotFoundError
 
-from spice_segmenter.component_selector import ComponentSelector
-
-from .decorators import declare, vectorize
-from .property_base import BooleanProperty, Property, PropertyTypes
-from .types import TIMES_TYPES
+from ..properties.component_selector import ComponentSelector
+from ..support.decorators import declare, vectorize
+from ..core.property import BooleanProperty, Property, PropertyTypes
+from ..support.time_types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)

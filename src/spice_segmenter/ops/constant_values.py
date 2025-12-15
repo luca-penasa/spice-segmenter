@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING
 import pint
 from attrs import define, field
 
-from spice_segmenter.decorators import vectorize
-from spice_segmenter.property_base import Property
+from ..support.decorators import vectorize
+from ..core.property import Property
 
 if TYPE_CHECKING:
-    from spice_segmenter.occultation import OccultationTypes
-    from spice_segmenter.types import TIMES_TYPES
+    from ..properties.occultation_types import OccultationTypes
+    from ..support.time_types import TIMES_TYPES
 
 @define(repr=False, order=False, eq=False)
 class Constant(Property):

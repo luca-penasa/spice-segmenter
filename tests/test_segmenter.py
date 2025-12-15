@@ -2,7 +2,7 @@ import pytest
 import spiceypy
 from planetary_coverage import utc
 
-from spice_segmenter.spice_window import SpiceWindow
+from spice_segmenter.core.spice_window import SpiceWindow
 
 from . import tour_config as tc
 

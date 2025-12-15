@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 import pint
 from attrs import define, field
 
-from spice_segmenter.decorators import vectorize
-from spice_segmenter.property_base import Property
-from spice_segmenter.utils import as_pint_unit
+from ..support.decorators import vectorize
+from ..core.property import Property
+from ..support.spice_utilities import as_pint_unit
 
 if TYPE_CHECKING:
-    from spice_segmenter.types import TIMES_TYPES
+    from ..support.time_types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)

@@ -7,10 +7,10 @@ from numpy.typing import ArrayLike
 from planetary_coverage import SpiceRef, et
 from planetary_coverage.spice import SpiceBody
 
-from spice_segmenter.property_base import Property, PropertyTypes
-from spice_segmenter.types import TIMES_TYPES
+from ..core.property import Property, PropertyTypes
+from ..support.time_types import TIMES_TYPES
 
-from .decorators import declare
+from ..support.decorators import declare
 
 
 @declare(

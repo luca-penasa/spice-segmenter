@@ -6,9 +6,9 @@ import pandas as pd
 import planetary_coverage
 from attrs import define, field
 
-from spice_segmenter.quick import find_ca
-from spice_segmenter.spice_window import SpiceWindow
-from spice_segmenter.visibility import BodyFOVVisibility
+from ..collections.quick_access import find_ca
+from ..core.spice_window import SpiceWindow
+from ..properties.visibility_properties import BodyFOVVisibility
 
 
 @define

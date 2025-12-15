@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from spice_segmenter.types import TIMES_TYPES
+from ..support.time_types import TIMES_TYPES
 
 if TYPE_CHECKING:
-    from spice_segmenter.constraint import Constraint, left_types
-    from spice_segmenter.unit_adaptor import UnitAdaptor
+    from .constraints import Constraint, left_types
+    from ..ops.unit_adapter import UnitAdaptor
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
@@ -45,7 +45,7 @@ class Property(ABC):
         return PropertyTypes.SCALAR
 
     def as_unit(self, unit: pint.Unit | str) -> UnitAdaptor:
-        from spice_segmenter.unit_adaptor import UnitAdaptor
+        from ..ops.unit_adapter import UnitAdaptor
         return UnitAdaptor(self, unit)
 
     def has_unit(self) -> bool:
@@ -79,49 +79,49 @@ class Property(ABC):
         if isinstance(other, Property):
             return other
 
-        from spice_segmenter.constant import Constant
+        from ..ops.constant_values import Constant
 
         return Constant.from_value(other)
 
     def __gt__(self, other: left_types) -> Constraint:
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
         return Constraint(self, self._handle_other_operand(other), ">")
 
     def __ge__(self, other: left_types) -> Constraint:
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
         log.warning("Using >= operator on properties is not supported by SPICE. Using > instead.")
         return Constraint(self, self._handle_other_operand(other), ">")
 
     def __le__(self, other: left_types) -> Constraint:
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
         log.warning("Using <= operator on properties is not supported by SPICE. Using < instead.")
         return Constraint(self, self._handle_other_operand(other), "<")
 
     def __lt__(self, other: left_types) -> Constraint:
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
         return Constraint(self, self._handle_other_operand(other), "<")
 
     def __and__(self, other: left_types) -> Constraint:
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
         return Constraint(self, self._handle_other_operand(other), "&")
 
     def __eq__(self, other: left_types) -> Constraint:  # type: ignore
         # Check if comparing with MinMaxConditionTypes enum for convenient syntax
-        from spice_segmenter.trajectory_properties import MinMaxConditionTypes
+        from ..properties.observation_properties import MinMaxConditionTypes
         if isinstance(other, MinMaxConditionTypes):
-            from spice_segmenter.ops import MinMaxConstraint
+            from ..ops.constraint_operations import MinMaxConstraint
             return MinMaxConstraint(self, other)
 
         other = self._handle_other_operand(other)
         if not isinstance(other, Property):
             return NotImplemented
 
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
 
         return Constraint(self, other, "=")
 
     def __or__(self, other: left_types) -> Constraint:
-        from spice_segmenter.constraint import Constraint
+        from .constraints import Constraint
         return Constraint(self, self._handle_other_operand(other), "|")
 
     def config(self, config: dict) -> None:
@@ -145,7 +145,7 @@ class Property(ABC):
         """
         import json
 
-        from spice_segmenter.serialization import create_property_converter
+        from ..support.serialization import create_property_converter
 
         converter = create_property_converter()
         data = converter.unstructure(self)
@@ -168,7 +168,7 @@ class Property(ABC):
         """
         import json
 
-        from spice_segmenter.serialization import create_property_converter
+        from ..support.serialization import create_property_converter
 
         converter = create_property_converter()
         data = json.loads(json_str)

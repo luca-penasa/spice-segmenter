@@ -6,14 +6,13 @@ from anytree import Node
 from attrs import define, field
 from loguru import logger as log
 
-from spice_segmenter.constraint import ConstraintBase, ConstraintTypes
-from spice_segmenter.property_base import Property
-from spice_segmenter.trajectory_properties import (
+from ..core.constraints import ConstraintBase, ConstraintTypes
+from ..core.property import Property
+from ..properties.observation_properties import (
     MinMaxConditionTypes,
 )
-from spice_segmenter.types import TIMES_TYPES
-
-from .decorators import vectorize
+from ..support.time_types import TIMES_TYPES
+from ..support.decorators import vectorize
 
 
 @define(repr=False, order=False, eq=False)

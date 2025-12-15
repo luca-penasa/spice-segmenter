@@ -6,10 +6,10 @@ from planetary_coverage.spice import SpiceRef
 from planetary_coverage.spice.times import et as _et
 
 if TYPE_CHECKING:
-    from spice_segmenter.trajectory_properties import TargetedProperty
+    from ..core.property import Property
+    from ..properties.observation_properties import TargetedProperty
 
-from spice_segmenter.property_base import Property
-from spice_segmenter.types import TIMES_TYPES
+from ..support.time_types import TIMES_TYPES
 
 
 def et(time: TIMES_TYPES) -> float:
@@ -27,6 +27,8 @@ def add_properties_to_table(
 ):
 
     """Table rows must have start, end and target columns."""
+    from ..core.property import Property
+    
     for i, row in tab.iterrows():
         target = row[targetcol]
 

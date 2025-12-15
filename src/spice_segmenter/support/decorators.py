@@ -7,7 +7,7 @@ import pint
 from attr import define
 
 if TYPE_CHECKING:
-    from spice_segmenter.property_base import PropertyTypes
+    from ..core.property import PropertyTypes
 
 
 
@@ -80,6 +80,6 @@ def declare(
     P = define(repr=False, order=False, eq=False)(cls)
 
 
-    from spice_segmenter.trajectory_properties import PROPERTIES_REGISTRY
+    from ..properties.observation_properties import PROPERTIES_REGISTRY
     PROPERTIES_REGISTRY.append((name, P))
     return  P

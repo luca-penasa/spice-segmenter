@@ -9,14 +9,14 @@ from attrs import field
 from planetary_coverage import et
 from planetary_coverage.spice import SpiceBody
 
-from spice_segmenter.component_selector import ComponentSelector
-from spice_segmenter.decorators import declare, vectorize
-from spice_segmenter.property_base import BooleanProperty, Property, PropertyTypes
-from spice_segmenter.trajectory_properties import (
+from ..properties.component_selector import ComponentSelector
+from ..support.decorators import declare, vectorize
+from ..core.property import BooleanProperty, Property, PropertyTypes
+from ..properties.observation_properties import (
     TargetedProperty,
     TargetedPropertyMixin,
 )
-from spice_segmenter.types import TIMES_TYPES
+from ..support.time_types import TIMES_TYPES
 
 
 def relfected_light_properties(

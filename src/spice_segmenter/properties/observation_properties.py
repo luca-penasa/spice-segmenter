@@ -19,13 +19,13 @@ from planetary_coverage.spice.toolbox import (
     sc_state,
 )
 
-from spice_segmenter.component_selector import ComponentSelector
-from spice_segmenter.property_base import Property, PropertyTypes
-from spice_segmenter.types import TIMES_TYPES
-from spice_segmenter.utils import as_spice_ref
+from ..properties.component_selector import ComponentSelector
+from ..core.property import Property, PropertyTypes
+from ..support.time_types import TIMES_TYPES
+from ..support.spice_utilities import as_spice_ref
 
-from .decorators import declare, vectorize
-from .utils import et
+from ..support.decorators import declare, vectorize
+from ..support.spice_utilities import et
 
 PROPERTIES_REGISTRY = []
 
@@ -216,7 +216,7 @@ class SubObserverIlluminationAngles(TargetedProperty):
 
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> float:
-        from spice_segmenter.coordinates import SubObserverPoint
+        from ..properties.coordinates import SubObserverPoint
 
         pt = SubObserverPoint(self.observer, self.target)(time)
 

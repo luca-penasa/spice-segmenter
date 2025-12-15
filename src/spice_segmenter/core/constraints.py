@@ -14,14 +14,14 @@ from anytree import Node, RenderTree
 from attrs import define, field
 from loguru import logger as log
 
-from spice_segmenter.property_base import Property, PropertyTypes
-from spice_segmenter.spice_window import SpiceWindow
-from spice_segmenter.trajectory_properties import MinMaxConditionTypes
-from spice_segmenter.unit_adaptor import UnitAdaptor
+from .property import Property, PropertyTypes
+from .spice_window import SpiceWindow
+from ..properties.observation_properties import MinMaxConditionTypes
 
 if TYPE_CHECKING:
-    from spice_segmenter.ops import Inverted
-    from spice_segmenter.types import TIMES_TYPES
+    from ..ops.constraint_operations import Inverted
+    from ..ops.unit_adapter import UnitAdaptor
+    from ..support.time_types import TIMES_TYPES
 
 
 left_types = Union["Property", str, float, int, Enum]
@@ -132,7 +132,7 @@ class ConstraintBase(Property):
     @solve.register
     def _(self, window: SpiceWindow, **kwargs) -> SpiceWindow:
         """Solve with a pre-constructed SpiceWindow."""
-        from .constraint_solver import MasterSolver
+        from ..constraint_solver.constraint_solver import MasterSolver
 
         # Handle optimization flag
         optimize = kwargs.pop("optimize", False)
@@ -140,7 +140,7 @@ class ConstraintBase(Property):
         # Apply constraint optimizer if requested
         constraint = self
         if optimize:
-            from .constraint_optimizer import optimize_constraint
+            from ..optimizers.constraint_optimizer import optimize_constraint
             constraint = optimize_constraint(self, verbose=True)
 
         solver = MasterSolver(constraint=constraint, **kwargs)
@@ -159,7 +159,7 @@ class ConstraintBase(Property):
         return self.solve(window, **kwargs)
 
     def __invert__(self) -> Inverted:
-        from spice_segmenter.ops import Inverted
+        from ..ops.constraint_operations import Inverted
 
         return Inverted(self)
 
@@ -215,7 +215,7 @@ class Constraint(ConstraintBase):
         log.debug("Checking constraint {} for compatibility", self)
         log.debug("Left type is {}", type(self.left))
         log.debug("Right type is {}", type(self.right))
-        from spice_segmenter.constant import Constant
+        from ..ops.constant_values import Constant
 
         if not isinstance(self.right, Property):
             log.debug(
@@ -267,7 +267,7 @@ class Constraint(ConstraintBase):
 
     @property
     def ctype(self) -> ConstraintTypes:
-        from spice_segmenter.constant import Constant
+        from ..ops.constant_values import Constant
 
         if isinstance(self.right, Constant) or isinstance(self.left, Constant):
             return ConstraintTypes.COMPARE_TO_CONSTANT
@@ -295,6 +295,8 @@ class Constraint(ConstraintBase):
         right: Property | None = None
 
         if self.left.unit != self.right.unit:
+            from ..ops.unit_adapter import UnitAdaptor
+            
             log.warning(
                 "Comparing {} with {}. This is not recommended. Will attempt automatic conversion.",
                 self.left.unit,

@@ -2,17 +2,17 @@ import numpy as np
 import pint
 from pytest import approx
 
-from spice_segmenter.constant import Constant
-from spice_segmenter.constraint import Constraint
-from spice_segmenter.decorators import declare
+from spice_segmenter.ops.constant_values import Constant
+from spice_segmenter.core.constraints import Constraint
+from spice_segmenter.support.decorators import declare
 from spice_segmenter.ops import Inverted
-from spice_segmenter.property_base import Property
-from spice_segmenter.trajectory_properties import (
+from spice_segmenter.core.property import Property
+from spice_segmenter.properties.observation_properties import (
     Distance,
     PhaseAngle,
 )
-from spice_segmenter.types import TIMES_TYPES
-from spice_segmenter.unit_adaptor import UnitAdaptor
+from spice_segmenter.support.time_types import TIMES_TYPES
+from spice_segmenter.ops.unit_adapter import UnitAdaptor
 
 from . import tour_config as tc
 

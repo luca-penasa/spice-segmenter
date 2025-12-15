@@ -7,9 +7,11 @@ import pandas as pd
 from loguru import logger as log
 from planetary_coverage.spice import SpiceBody
 
-from spice_segmenter import MinMaxConditionTypes, MinMaxConstraint, SpiceWindow, config
-from spice_segmenter.trajectory_properties import Distance
-from spice_segmenter.visibility import BodyFOVVisibility
+from ..ops.constraint_operations import MinMaxConstraint
+from ..core.spice_window import SpiceWindow
+from ..support.config import config
+from ..properties.observation_properties import Distance, MinMaxConditionTypes
+from ..properties.visibility_properties import BodyFOVVisibility
 
 
 def flybys_windows(

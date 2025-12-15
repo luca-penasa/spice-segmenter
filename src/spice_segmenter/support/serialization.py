@@ -15,9 +15,8 @@ from cattrs.strategies import configure_tagged_union, include_subclasses
 
 if TYPE_CHECKING:
     from cattrs import Converter
-
-from spice_segmenter.constraint import Constraint
-from spice_segmenter.property_base import Property
+    from ..core.constraints import Constraint
+    from ..core.property import Property
 
 
 def get_all_subclasses(cls: type) -> list[type]:
@@ -40,7 +39,7 @@ def get_all_subclasses(cls: type) -> list[type]:
 def create_property_converter(
     register_spice_types: bool = True,
     register_pint: bool = True,
-) -> Converter:
+) -> "Converter":
     """
     Create a cattrs converter configured for spice_segmenter Property and Constraint objects.
     
@@ -57,7 +56,7 @@ def create_property_converter(
         Configured cattrs Converter instance
         
     Example:
-        >>> from spice_segmenter.serialization import create_property_converter
+        >>> from ..support.serialization import create_property_converter
         >>> from spice_segmenter import PhaseAngle, Distance
         >>> 
         >>> # Create constraints
@@ -73,6 +72,9 @@ def create_property_converter(
         >>> from spice_segmenter import Constraint
         >>> reconstructed = converter.structure(data, Constraint)
     """
+    from ..core.constraints import Constraint
+    from ..core.property import Property
+    
     converter = make_converter()
 
     # Register unstructuring hooks for external types
@@ -145,7 +147,7 @@ def create_property_converter(
     return converter
 
 
-def unstructure_constraint(constraint: Constraint, converter: Converter | None = None) -> dict:
+def unstructure_constraint(constraint: "Constraint", converter: "Converter | None" = None) -> dict:
     """
     Convenience function to unstructure (serialize) a Constraint to a dictionary.
     
@@ -161,7 +163,7 @@ def unstructure_constraint(constraint: Constraint, converter: Converter | None =
     return converter.unstructure(constraint)
 
 
-def structure_constraint(data: dict, converter: Converter | None = None) -> Constraint:
+def structure_constraint(data: dict, converter: "Converter | None" = None) -> "Constraint":
     """
     Convenience function to structure (deserialize) a dictionary into a Constraint.
     
@@ -172,6 +174,8 @@ def structure_constraint(data: dict, converter: Converter | None = None) -> Cons
     Returns:
         Reconstructed Constraint object
     """
+    from ..core.constraints import Constraint
+    
     if converter is None:
         converter = create_property_converter()
     return converter.structure(data, Constraint)

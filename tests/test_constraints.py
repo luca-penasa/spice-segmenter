@@ -1,4 +1,5 @@
-from spice_segmenter import Distance, config, SpiceWindow
+from spice_segmenter import Distance, SpiceWindow
+from spice_segmenter.support.config import config
 from . import tour_config as tc
 
 config.solver_step = '24 h'
