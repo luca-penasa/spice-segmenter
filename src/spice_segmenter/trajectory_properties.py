@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
 from enum import Enum
-from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pint
@@ -13,23 +11,21 @@ from loguru import logger as log
 from planetary_coverage.spice import (
     SpiceBody,
     SpiceInstrument,
-    SpiceRef,
     SpiceSpacecraft,
 )
-from planetary_coverage.spice.toolbox import groundtrack_velocity, sc_state
+from planetary_coverage.spice.toolbox import (
+    groundtrack_velocity,
+    illum_angles,
+    sc_state,
+)
 
+from spice_segmenter.component_selector import ComponentSelector
 from spice_segmenter.property_base import Property, PropertyTypes
 from spice_segmenter.types import TIMES_TYPES
-
-from planetary_coverage.spice.toolbox import illum_angles
-from spice_segmenter.component_selector import ComponentSelector
 from spice_segmenter.utils import as_spice_ref
 
 from .decorators import declare, vectorize
 from .utils import et
-
-
-
 
 PROPERTIES_REGISTRY = []
 
@@ -41,15 +37,16 @@ class MinMaxConditionTypes(Enum):
     GLOBAL_MAXIMUM = "global_maximum"
 
 
-
 @define(repr=False, order=False, eq=False)
-class TargetedPropertyMixin():
+class TargetedPropertyMixin:
     observer: SpiceInstrument | SpiceSpacecraft = field(converter=as_spice_ref)
     target: SpiceBody = field(converter=as_spice_ref)
     light_time_correction: str = field(default="NONE", kw_only=True)
 
     def config(self, config: dict) -> None:
-        log.debug("targeted property config here with instnace of {}", self.__class__.__name__)
+        log.debug(
+            "targeted property config here with instance of {}", self.__class__.__name__,
+        )
         super().config(config)
         config.update(
             {
@@ -61,14 +58,16 @@ class TargetedPropertyMixin():
         )
 
 
-
 @define(repr=False, order=False, eq=False)
-class TargetedProperty( TargetedPropertyMixin, Property):
+class TargetedProperty(TargetedPropertyMixin, Property):
     pass
+
 
 @declare(name="phase_angle", unit=pint.Unit("rad"))
 class PhaseAngle(TargetedProperty):
-    third_body: SpiceRef = field(factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref)
+    third_body: SpiceBody = field(
+        factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref,
+    )
 
     def __repr__(self) -> str:
         return f"Phase Angle of {self.target} with respect to {self.third_body} as seen from {self.observer}"
@@ -117,7 +116,9 @@ class SubObserverPointVelocity(TargetedProperty):
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        state = sc_state(time, self.observer.spacecraft, self.target, self.light_time_correction)
+        state = sc_state(
+            time, self.observer.spacecraft, self.target, self.light_time_correction,
+        )
         return groundtrack_velocity(self.target, state)
 
     def __repr__(self) -> str:
@@ -159,9 +160,7 @@ class SubObserverPixelScale(TargetedProperty):
 @declare(name="approx_altitude", unit=pint.Unit("km"))
 class ApproximatedAltitude(TargetedProperty):
     def __repr__(self) -> str:
-        return (
-            f"Approximated (distance-radius) altitude of {self.observer} over {self.target} surface (from sub-sc point)"
-        )
+        return f"Approximated (distance-radius) altitude of {self.observer} over {self.target} surface (from sub-sc point)"
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
@@ -243,7 +242,11 @@ class SubObserverIlluminationAngles(TargetedProperty):
         return ComponentSelector(self, 2, "phase")
 
 
-@declare(name="sub_obs_point_in_daylight", unit=pint.Unit("dimensionless"), property_type=PropertyTypes.BOOLEAN)
+@declare(
+    name="sub_obs_point_in_daylight",
+    unit=pint.Unit("dimensionless"),
+    property_type=PropertyTypes.BOOLEAN,
+)
 class SubObserverIsInDaylight(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub {self.observer} point on {self.target} is in daylight"
@@ -252,3 +255,79 @@ class SubObserverIsInDaylight(TargetedProperty):
     def __call__(self, time: TIMES_TYPES) -> float:
         i, e, p = SubObserverIlluminationAngles(self.observer, self.target)(time)
         return i < 90.0
+
+
+# Utility functions for constraint optimization
+
+
+def pixel_count_to_distance(
+    observer: SpiceInstrument | SpiceSpacecraft, target: SpiceBody, n_pixels: float,
+) -> float:
+    """Convert pixel count on sensor to distance threshold.
+
+    This is used for constraint optimization: instead of computing expensive
+    TargetSizeOnSensor properties, we can use a simple Distance constraint.
+
+    Formula:
+        angular_size = 2 * arctan(target_radius / distance)
+        n_pixels = angular_size / pixel_scale
+        distance = target_radius / tan(n_pixels * pixel_scale / 2)
+
+    Args:
+        observer: SpiceInstrument or SpiceSpacecraft
+        target: SpiceBody target
+        n_pixels: Number of pixels the target should span
+
+    Returns:
+        Distance in km where target spans n_pixels on sensor
+
+    Examples:
+        >>> dist_km = pixel_count_to_distance(
+        ...     "JUICE_JANUS",
+        ...     "METIS",
+        ...     5,
+        ... )
+        >>> # Now Distance < dist_km replaces TargetSizeOnSensor > 5px
+    """
+    observer = as_spice_ref(observer)
+    target = as_spice_ref(target)
+
+    ifov = np.mean(observer.ifov)  # Average pixel scale in radians
+    target_radius = target.radius  # in km
+
+    # distance = radius / tan(pixels * ifov / 2)
+    distance = target_radius / np.tan(n_pixels * ifov / 2)
+
+    return float(distance)
+
+
+def angular_size_to_distance(
+    observer: SpiceInstrument | SpiceSpacecraft,
+    target: SpiceBody,
+    angular_size_rad: float,
+) -> float:
+    """Convert angular size to distance threshold.
+
+    Inverse of the AngularSize property calculation.
+
+    Formula:
+        angular_size = 2 * arctan(target_radius / distance)
+        distance = target_radius / tan(angular_size / 2)
+
+    Args:
+        observer: SpiceInstrument or SpiceSpacecraft
+        target: SpiceBody target
+        angular_size_rad: Angular size in radians
+
+    Returns:
+        Distance in km where target has given angular size
+    """
+    observer = as_spice_ref(observer)
+    target = as_spice_ref(target)
+
+    target_radius = target.radius  # in km
+
+    # distance = radius / tan(angular_size / 2)
+    distance = target_radius / np.tan(angular_size_rad / 2)
+
+    return float(distance)

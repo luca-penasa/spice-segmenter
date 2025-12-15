@@ -1,4 +1,3 @@
-from typing import Tuple
 
 import numpy as np
 import pint
@@ -6,14 +5,18 @@ import spiceypy
 from attr import define, field
 from numpy.typing import ArrayLike
 from planetary_coverage import SpiceRef, et
-from planetary_coverage.spice import SpiceBody, SpiceFrame, SpiceInstrument
+from planetary_coverage.spice import (
+    SpiceBody,
+    SpiceFrame,
+    SpiceInstrument,
+    SpiceSpacecraft,
+)
 from spiceypy import NotFoundError
 
 from spice_segmenter.component_selector import ComponentSelector
-from .property_base import Property, PropertyTypes
 
 from .decorators import declare, vectorize
-from .property_base import BooleanProperty
+from .property_base import BooleanProperty, Property, PropertyTypes
 from .types import TIMES_TYPES
 
 
@@ -63,7 +66,7 @@ class VectorBase(Property):
         return PlanetographicCoordinates(self)
 
     @property
-    def unit(self) -> Tuple[pint.Unit, pint.Unit, pint.Unit]:
+    def unit(self) -> tuple[pint.Unit, pint.Unit, pint.Unit]:
         return pint.Unit("km"), pint.Unit("km"), pint.Unit("km")
 
     def config(self, config: dict) -> None:
@@ -71,14 +74,14 @@ class VectorBase(Property):
             {
                 "frame": self.frame.name,
                 "abcorr": self.abcorr,
-            }
+            },
         )
 
 
 @define(repr=False, order=False, eq=False)
 class Vector(VectorBase):
-    origin: SpiceRef = field(converter=SpiceRef)
-    target: SpiceRef = field(converter=SpiceRef)
+    origin: SpiceBody | SpiceInstrument | SpiceSpacecraft = field(converter=SpiceRef)
+    target: SpiceBody | SpiceInstrument | SpiceSpacecraft= field(converter=SpiceRef)
 
     def __repr__(self) -> str:
         return f"Vector from {self.origin} to {self.target} in frame {self.frame}"
@@ -90,7 +93,7 @@ class Vector(VectorBase):
     @vectorize(signature="(),()->(n)")
     def __call__(self, time: TIMES_TYPES) -> ArrayLike:
         return spiceypy.spkpos(
-            self.target.name, et(time), self.frame, self.abcorr, self.origin.name
+            self.target.name, et(time), self.frame, self.abcorr, self.origin.name,
         )[0]
 
     def config(self, config: dict) -> None:
@@ -99,7 +102,7 @@ class Vector(VectorBase):
             {
                 "origin": self.origin.name,
                 "target": self.target.name,
-            }
+            },
         )
         config["vector_definition"] = "position"
         config["property"] = self.name
@@ -210,7 +213,7 @@ class BoresightIntersects(BooleanProperty):
 
     def __attrs_post_init__(self):
         self.intersection = BoresightIntersection(
-            target=self.target, instrument=self.observer
+            target=self.target, instrument=self.observer,
         )
 
     @vectorize
@@ -231,7 +234,7 @@ class LatitudinalCoordinates(Property):
         return "latitudinal"
 
     @property
-    def unit(self) -> Tuple[pint.Unit, pint.Unit, pint.Unit]:
+    def unit(self) -> tuple[pint.Unit, pint.Unit, pint.Unit]:
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
 
     @vectorize(signature="(),()->(n)")
@@ -271,7 +274,7 @@ class SphericalCoordinates(Property):
         return "spherical"
 
     @property
-    def unit(self) -> Tuple[pint.Unit, pint.Unit, pint.Unit]:
+    def unit(self) -> tuple[pint.Unit, pint.Unit, pint.Unit]:
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
 
     @vectorize(signature="(),()->(n)")
@@ -399,15 +402,14 @@ class PlanetographicCoordinates(Property):
         value = self.vector.__call__(time)
         if np.isnan(value).any():
             return np.array([np.nan, np.nan, np.nan])
-        else:
-            return np.array(
-                spiceypy.recpgr(
-                    self.vector.target.name,
-                    value,
-                    self.vector.target.re,
-                    self.vector.target.f,
-                )
-            )
+        return np.array(
+            spiceypy.recpgr(
+                self.vector.target.name,
+                value,
+                self.vector.target.re,
+                self.vector.target.f,
+            ),
+        )
 
     @property
     def longitude(self) -> Property:

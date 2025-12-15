@@ -23,6 +23,24 @@ class UnitAdaptor(Property):
         return self.parent.name
 
     @property
+    def target(self) -> str:
+        """Return a target if the property has one"""
+        return self.parent.target
+
+    @target.setter
+    def target(self, target):
+        self.parent.target = target
+
+    @property
+    def observer(self) -> str:
+        """Return an observer if the property has one"""
+        return self.parent.observer
+
+    @observer.setter
+    def observer(self, observer):
+        self.parent.observer = observer
+
+    @property
     def unit(self) -> pint.Unit:
         return self._unit
 

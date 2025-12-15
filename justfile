@@ -9,28 +9,28 @@ default:
 # Task to bump the version (major, minor, patch)
 bump version_kind:
     @echo "Bumping {{version_kind}} version..."
-    poetry run kacl-cli verify
-    poetry run bump-my-version bump {{version_kind}}
+    uv run kacl-cli verify
+    uv run bump-my-version bump {{version_kind}}
 
-    @echo "New version will be: {{`poetry version -s`}}"
-    just release-changelog {{`poetry version -s`}}
+    @echo "New version will be: {{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}}"
+    just release-changelog {{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}}
 
     # Commit the changes
     git add {{VERSION_FILE}} {{CHANGELOG}}
-    git commit -m "Bump version to {{`poetry version -s`}} and update changelog"
-    git tag v{{`poetry version -s`}}
+    git commit -m "Bump version to {{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}} and update changelog"
+    git tag v{{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}}
     @echo "Version bump and changelog update complete."
 
 # Task to release changelog with the new version
 release-changelog version:
     @echo "Releasing changelog for version kind {{version}}..."
-    poetry run kacl-cli release  {{version}}  -m --allow-no-changes
+    uv run kacl-cli release  {{version}}  -m --allow-no-changes
 
 # Clean up task (optional)
 clean:
     @echo "Cleaning..."
-    rm -rf __pycache__ .pytest_cache
+    rm -rf __pycache__ .pytest_cache .venv
 
 @audit:
-  poetry run pip-audit
-  poetry run deptry -- src tests
+  uv run pip-audit
+  uv run deptry -- src tests

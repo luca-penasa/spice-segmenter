@@ -2,25 +2,25 @@
 Adapted from the original implementation by Klaus-Dieter Matz (DLR), end of 2024.
 """
 
+import numpy as np
 import pint
+import spiceypy
+from attrs import field
 from planetary_coverage import et
 from planetary_coverage.spice import SpiceBody
-import spiceypy
-import numpy as np
 
 from spice_segmenter.component_selector import ComponentSelector
 from spice_segmenter.decorators import declare, vectorize
-from spice_segmenter.property_base import Property, PropertyTypes, BooleanProperty
-from spice_segmenter.trajectory_properties import TargetedPropertyMixin, TargetedProperty
-
-
-from attrs import field
-
+from spice_segmenter.property_base import BooleanProperty, Property, PropertyTypes
+from spice_segmenter.trajectory_properties import (
+    TargetedProperty,
+    TargetedPropertyMixin,
+)
 from spice_segmenter.types import TIMES_TYPES
 
 
 def relfected_light_properties(
-    time, target_name="CALLISTO", observer="JUICE_JANUS", reflector="JUPITER", light_source="SUN", abcorr="LT+S"
+    time, target_name="CALLISTO", observer="JUICE_JANUS", reflector="JUPITER", light_source="SUN", abcorr="LT+S",
 ):
     """Calculate 'Jupiter Shine' parameters."""
 
@@ -31,7 +31,7 @@ def relfected_light_properties(
 
     reflector_pos, reflector2sub_sc_lt = spiceypy.spkpos(reflector, time, target_frame, abcorr, target_name)
     sub_sc_point, _, sc2sub_sc = spiceypy.subpnt(
-        "NEARPOINT/ELLIPSOID", target_name, time, target_frame, abcorr, observer
+        "NEARPOINT/ELLIPSOID", target_name, time, target_frame, abcorr, observer,
     )
 
     sub_sc2reflector = sub_sc_point + reflector_pos
@@ -43,7 +43,7 @@ def relfected_light_properties(
             jupiter_phase_angle(sub_sc2reflector, reflector2sun),
             pseudo_phase_angle(sc2sub_sc, sub_sc2reflector),
             jupiter_angular_radius(sub_sc2reflector, reflector_radii),
-        ]
+        ],
     )
 
 
@@ -162,9 +162,29 @@ class JupiterShineIdealCondition(TargetedPropertyMixin, BooleanProperty):
     def __repr__(self) -> str:
         return f"Sub-{self.observer} on {self.target} is in ideal condition for Jupiter shine (apparent phase of Jupiter < {self.max_apparent_jupiter_phase} and el/radius of jupiter > {self.min_rise_ratio})"
 
-    @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
-        props = ShineProperties(self.observer, self.target, "JUPITER")
+        # Call the underlying relfected_light_properties directly without going through
+        # the vectorized ShineProperties to avoid nested vectorization issues
+        time_et = et(time)
+        is_scalar = np.isscalar(time_et)
 
-        el, phase, _, angular_radius = props(time)
-        return (el / angular_radius > self.min_rise_ratio) & (phase < self.max_apparent_jupiter_phase)
+        result = relfected_light_properties(
+            time_et,
+            target_name=self.target,
+            observer=self.observer,
+            reflector="JUPITER",
+            light_source="SUN",
+            abcorr=self.light_time_correction,
+        )
+
+        # result is shape (4,) for scalar or (4, n) for array
+        el = result[0]
+        phase = result[1]
+        angular_radius = result[3]
+
+        condition = (el / angular_radius > self.min_rise_ratio) & (
+            phase < self.max_apparent_jupiter_phase
+        )
+
+        # Return scalar boolean if input was scalar, otherwise return array
+        return bool(condition) if is_scalar else condition

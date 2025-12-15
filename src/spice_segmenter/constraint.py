@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-
 from abc import abstractmethod
 from collections.abc import Iterable
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Union
+from functools import singledispatchmethod
+from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 import pint
 from anytree import Node, RenderTree
 from attrs import define, field
 from loguru import logger as log
-
 
 from spice_segmenter.property_base import Property, PropertyTypes
 from spice_segmenter.spice_window import SpiceWindow
@@ -35,13 +35,21 @@ class ConstraintTypes(Enum):
 
 @define(repr=False, order=False, eq=False)
 class ConstraintBase(Property):
-    @property
-    @abstractmethod
-    def left(self) -> Property | "ConstraintBase": ...
+    time_step: float | None = field(
+        default=None,
+        kw_only=True,
+        converter=lambda x: x
+        if isinstance(x, float | None)
+        else pd.Timedelta(x).total_seconds(),
+    )  # seconds
 
     @property
     @abstractmethod
-    def right(self) -> Property | "ConstraintBase": ...
+    def left(self) -> Property | ConstraintBase: ...
+
+    @property
+    @abstractmethod
+    def right(self) -> Property | ConstraintBase: ...
 
     @property
     @abstractmethod
@@ -56,18 +64,99 @@ class ConstraintBase(Property):
 
     def config(self, config: dict) -> None:
         if self.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
-            log.error("Cannot serialize a constraint that compares to another constraint")
+            log.error(
+                "Cannot serialize a constraint that compares to another constraint",
+            )
             raise TypeError
 
         self.left.config(config)
         self.right.config(config)
         config["operator"] = self.operator
 
-    def solve(self, window: SpiceWindow, **kwargs) -> SpiceWindow:  # type: ignore
+    @singledispatchmethod
+    def solve(self, arg: Any, **kwargs) -> SpiceWindow:
+        """
+        Solve the constraint over a time window.
+
+        This method automatically dispatches to the appropriate implementation
+        based on the type of the first argument.
+
+        Parameters
+        ----------
+        arg : SpiceWindow or pd.Timestamp or str or object
+            Either a SpiceWindow object, the start time of the window,
+            or any object with `start` and `end` attributes.
+        optimize : bool, optional
+            If True, apply constraint optimizations before solving (e.g.,
+            convert TargetSizeOnSensor to Distance for better performance).
+            Default is False to maintain backward compatibility.
+        **kwargs
+            Additional keyword arguments passed to MasterSolver
+
+        Returns
+        -------
+        SpiceWindow
+            Window containing intervals where the constraint is satisfied
+
+        Examples
+        --------
+        >>> # Using a pre-constructed window
+        >>> constraint.solve(my_window)
+
+        >>> # Using start/end times
+        >>> constraint.solve("2033-01-01", "2033-12-31")
+        >>> constraint.solve(pd.Timestamp("2033-01-01"), pd.Timestamp("2033-12-31"))
+        
+        >>> # Using an object with start/end attributes
+        >>> constraint.solve(scenario)
+        
+        >>> # With optimization (faster for TargetSizeOnSensor, AngularSize, etc.)
+        >>> constraint.solve(scenario, optimize=True)
+        """
+        # Handle optimization flag
+        optimize = kwargs.pop("optimize", False)
+
+        # Fallback: check if object has start/end attributes
+        if hasattr(arg, "start") and hasattr(arg, "end"):
+            window = SpiceWindow.from_start_end(arg.start, arg.end)
+            return self.solve(window, optimize=optimize, **kwargs)
+
+        # If not, raise error for unsupported type
+        msg = (
+            f"solve() called with unsupported type: {type(arg)}. "
+            "Expected SpiceWindow, str, pd.Timestamp, or object with "
+            "start/end attributes"
+        )
+        raise TypeError(msg)
+
+    @solve.register
+    def _(self, window: SpiceWindow, **kwargs) -> SpiceWindow:
+        """Solve with a pre-constructed SpiceWindow."""
         from .constraint_solver import MasterSolver
 
-        solver = MasterSolver(constraint=self, **kwargs)
+        # Handle optimization flag
+        optimize = kwargs.pop("optimize", False)
+
+        # Apply constraint optimizer if requested
+        constraint = self
+        if optimize:
+            from .constraint_optimizer import optimize_constraint
+            constraint = optimize_constraint(self, verbose=True)
+
+        solver = MasterSolver(constraint=constraint, **kwargs)
         return solver.solve(window)
+
+    @solve.register(str)
+    @solve.register(pd.Timestamp)
+    def _(
+        self,
+        start: pd.Timestamp | str,
+        end: pd.Timestamp | str,
+        **kwargs,
+    ) -> SpiceWindow:
+        """Solve by creating a SpiceWindow from start/end times."""
+        window = SpiceWindow.from_start_end(start, end)
+        return self.solve(window, **kwargs)
 
     def __invert__(self) -> Inverted:
         from spice_segmenter.ops import Inverted
@@ -78,7 +167,9 @@ class ConstraintBase(Property):
         """
         Returns an anynode tree with the constraints
         """
-        if isinstance(self.left, ConstraintBase) and isinstance(self.right, ConstraintBase):
+        if isinstance(self.left, ConstraintBase) and isinstance(
+            self.right, ConstraintBase,
+        ):
             if self.operator == "|":
                 name = "OR"
 
@@ -119,6 +210,7 @@ class Constraint(ConstraintBase):
     right: Property | ConstraintBase
     operator: str = field(default=None)
 
+
     def __attrs_post_init__(self) -> None:
         log.debug("Checking constraint {} for compatibility", self)
         log.debug("Left type is {}", type(self.left))
@@ -135,7 +227,10 @@ class Constraint(ConstraintBase):
         if not self.left.has_unit() and not self.right.has_unit():
             log.debug("Both sides of constraint {} have no units, skipping check", self)
 
-        elif self.ctype is not ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT and not self.right.has_unit():
+        elif (
+            self.ctype is not ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
+            and not self.right.has_unit()
+        ):
             log.warning(
                 "Constraint {} compares {} to {}",
                 self,
@@ -144,7 +239,9 @@ class Constraint(ConstraintBase):
             )
             return
 
-        if hasattr(self.right, "value") and isinstance(self.right.value, MinMaxConditionTypes):
+        if hasattr(self.right, "value") and isinstance(
+            self.right.value, MinMaxConditionTypes,
+        ):
             log.debug("Right side of constraint {} is a minmax condition", self)
             return
 
@@ -174,7 +271,9 @@ class Constraint(ConstraintBase):
 
         if isinstance(self.right, Constant) or isinstance(self.left, Constant):
             return ConstraintTypes.COMPARE_TO_CONSTANT
-        if isinstance(self.left, ConstraintBase) and isinstance(self.left, ConstraintBase):
+        if isinstance(self.left, ConstraintBase) and isinstance(
+            self.left, ConstraintBase,
+        ):
             return ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
 
         log.error("Cannot determine constraint type")
@@ -207,7 +306,9 @@ class Constraint(ConstraintBase):
         else:
             right = self.right
 
-        if right is None:  # this is added just to make flake8 aware we are actually using it in the eval below
+        if (
+            right is None
+        ):  # this is added just to make flake8 aware we are actually using it in the eval below
             raise ValueError("Could not convert right side of constraint")
 
         if self.operator == "=":

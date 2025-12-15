@@ -3,7 +3,12 @@ from enum import Enum
 import pint
 import spiceypy
 from attrs import define, field
-from planetary_coverage.spice import SpiceRef
+from planetary_coverage.spice import (
+    SpiceBody,
+    SpiceInstrument,
+    SpiceRef,
+    SpiceSpacecraft,
+)
 
 from spice_segmenter.decorators import vectorize
 from spice_segmenter.property_base import Property, PropertyTypes
@@ -42,9 +47,9 @@ class OccultationTypes(Enum):
 
 @define(repr=False, order=False, eq=False)
 class Occultation(Property):
-    observer: SpiceRef = field(converter=SpiceRef)
-    front: SpiceRef = field(converter=SpiceRef)
-    back: SpiceRef = field(converter=SpiceRef)
+    observer: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
+    front: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
+    back: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
     light_time_correction: str = field(default="NONE")
 
     def __repr__(self) -> str:

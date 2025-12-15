@@ -106,6 +106,12 @@ class Property(ABC):
         return Constraint(self, self._handle_other_operand(other), "&")
 
     def __eq__(self, other: left_types) -> Constraint:  # type: ignore
+        # Check if comparing with MinMaxConditionTypes enum for convenient syntax
+        from spice_segmenter.trajectory_properties import MinMaxConditionTypes
+        if isinstance(other, MinMaxConditionTypes):
+            from spice_segmenter.ops import MinMaxConstraint
+            return MinMaxConstraint(self, other)
+
         other = self._handle_other_operand(other)
         if not isinstance(other, Property):
             return NotImplemented
@@ -122,6 +128,51 @@ class Property(ABC):
         log.debug("adding prop unit for {}", self.unit)
         config["property_unit"] = str(self.unit)
         config["property"] = self.name
+
+    def to_json(self, indent: int | None = None) -> str:
+        """
+        Serialize this Property to a JSON string.
+        
+        Args:
+            indent: Number of spaces for JSON indentation. None for compact format.
+            
+        Returns:
+            JSON string representation of the Property
+            
+        Example:
+            >>> c = PhaseAngle("JUICE_JANUS", "GANYMEDE") > "20 deg"
+            >>> json_str = c.to_json(indent=2)
+        """
+        import json
+
+        from spice_segmenter.serialization import create_property_converter
+
+        converter = create_property_converter()
+        data = converter.unstructure(self)
+        return json.dumps(data, indent=indent)
+
+    @classmethod
+    def from_json(cls, json_str: str) -> Property:
+        """
+        Deserialize a Property from a JSON string.
+        
+        Args:
+            json_str: JSON string representation of a Property
+            
+        Returns:
+            Reconstructed Property object
+            
+        Example:
+            >>> json_str = '{"type": "PhaseAngle", ...}'
+            >>> prop = Property.from_json(json_str)
+        """
+        import json
+
+        from spice_segmenter.serialization import create_property_converter
+
+        converter = create_property_converter()
+        data = json.loads(json_str)
+        return converter.structure(data, cls)
 
 
 @define(repr=False, order=False, eq=False)

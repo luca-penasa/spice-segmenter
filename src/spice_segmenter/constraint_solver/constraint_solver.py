@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
+import pandas as pd
 import pint
 import spiceypy
 from attr import define, field
@@ -30,7 +31,22 @@ class BaseSolver(ABC):
     """The interface for any ConstraintSolvers"""
 
     constraint: ConstraintBase | None
-    step: float | None = field(factory=lambda: config.solver_step)
+    _step: float | None = field(
+        factory=lambda: config.solver_step,
+        converter=lambda x: x
+        if isinstance(x, float | None)
+        else pd.Timedelta(x).total_seconds(),
+    )
+
+    @property
+    def step(self) -> float:
+        if self.constraint and self.constraint.time_step:
+            return self.constraint.time_step
+
+        if self._step:
+            return self._step
+
+        return config.solver_step
 
     @abstractmethod
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -197,14 +213,16 @@ class SpiceEventSolverConfigurator:
         self.add_str_parameter("ABCORR", pars["abcorr"])
         self.add_str_parameter("COORDINATE SYSTEM", pars["coordinate_type"])
         self.add_str_parameter(
-            "COORDINATE", pars["component"].upper().replace("_", " "),
+            "COORDINATE",
+            pars["component"].upper().replace("_", " "),
         )
         self.add_str_parameter("REFERENCE FRAME", pars["frame"])
         self.add_str_parameter("VECTOR DEFINITION", pars["vector_definition"])
         self.add_str_parameter("METHOD", pars["method"])
 
         if pars["vector_definition"] == "SURFACE INTERCEPT POINT".lower().replace(
-            " ", "_",
+            " ",
+            "_",
         ):
             log.error("Surface intercept point not implemented")
             raise NotImplementedError
@@ -269,7 +287,9 @@ class SpiceEventSolver(BaseSolver):
             return self.result
 
         log.debug(
-            "Solvig with gfevnt {} and type {}", self.constraint, type(self.constraint),
+            "Solvig with gfevnt {} and type {}",
+            self.constraint,
+            type(self.constraint),
         )
         if not self.constraint:
             log.error("You need to provide a valid constraint")
@@ -286,6 +306,8 @@ class SpiceEventSolver(BaseSolver):
         maxval = 100000
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
+
+        # step = self.constraint.time_step if self.constraint.time_step else self.step
 
         log.debug(f"Setting step size at {self.step} seconds.")
 
@@ -438,6 +460,7 @@ class SpiceOccultationSolver(BaseSolver):
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
 
+        # step = self.constraint.time_step if self.constraint.time_step else self.step
         spiceypy.gfsstp(self.step)  # set the step size
 
         right = self.constraint.right
@@ -499,7 +522,8 @@ class SpiceWindowSolver(BaseSolver):
             raise ValueError
 
         if not isinstance(self.constraint.left, ConstraintBase) or not isinstance(
-            self.constraint.right, ConstraintBase,
+            self.constraint.right,
+            ConstraintBase,
         ):
             # a double check to make sure we are dealing with constraints that can be processed
             log.error("Left or right operands not of type Constraint")
@@ -509,6 +533,8 @@ class SpiceWindowSolver(BaseSolver):
             return SpiceWindow()
 
         solver: type[BaseSolver] = get_appropriate_solver(self.constraint.left)
+
+        # step = self.constraint.time_step if self.constraint.time_step else self.step
 
         # solve the first constraint
         result = solver(self.constraint.left, step=self.step).solve(window)
@@ -652,7 +678,7 @@ class BooleanPropertySolver(BaseSolver):
 
 @define(repr=False, order=False, eq=False)
 class GenericScalarSolver(BaseSolver):
-    """Solver for boolean properties"""
+    """Solver for any scalar property"""
 
     @staticmethod
     def can_solve(constraint: ConstraintBase) -> bool:
@@ -764,8 +790,8 @@ def get_appropriate_solver(constraint: ConstraintBase) -> type[BaseSolver]:
     log.debug(f"Looking for a solver to solve {constraint}")
     for solver in SOLVERS:
         if solver.can_solve(constraint):
-            log.debug(
-                "Found solver {} for constraint {}, of type {}",
+            log.info(
+                "Selected solver {} for constraint {}, of type {}",
                 solver,
                 constraint,
                 type(constraint),

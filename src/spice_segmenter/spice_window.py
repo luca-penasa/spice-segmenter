@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Iterator
+from collections.abc import Iterable, Iterator
+from typing import Any
 
 import matplotlib
 import numpy as np
@@ -28,10 +29,9 @@ class SpiceWindowIter:
     def __next__(self) -> SpiceWindow:
         if self._index >= len(self._window):
             raise StopIteration
-        else:
-            win = self._window[self._index]
-            self._index += 1
-            return win
+        win = self._window[self._index]
+        self._index += 1
+        return win
 
 
 @define(repr=False, order=False, eq=False)

@@ -9,17 +9,20 @@ This is just a stub, that might never see the light
 
 import importlib
 import sys
+
 import pandas as pd
 from attrs import define, field
 from loguru import logger as log
 
-# from .constraint import Constraint
-
-# from .constant import Constant
-
-from .property_base import Property
-from .constraint import ConstraintBase
-
+# onlyu after here to avoid circular imports
+from .collections import OccultationProperties, TargetProperties
+from .constant import Constant
+from .constraint import Constraint, ConstraintBase
+from .constraint_optimizer import (
+    ConstraintOptimizer,
+    get_optimizer,
+    optimize_constraint,
+)
 from .coordinates import (
     CylindricalCoordinates,
     GeodeticCoordinates,
@@ -33,41 +36,62 @@ from .coordinates import (
 )
 from .occultation import Occultation, OccultationTypes
 from .ops import MinMaxConditionTypes, MinMaxConstraint
+
+# from .constraint import Constraint
+# from .constant import Constant
+from .property_base import Property
+from .serialization import (
+    create_property_converter,
+    structure_constraint,
+    unstructure_constraint,
+)
 from .spice_window import SpiceWindow
 from .trajectory_properties import (
     AngularSize,
     Distance,
     PhaseAngle,
+    TargetSizeOnSensor,
+    angular_size_to_distance,
+    pixel_count_to_distance,
 )
-
-
-from .constraint import Constraint
 
 __version__ = importlib.metadata.version("spice_segmenter")
 
 __all__ = [
-    "MinMaxConstraint",
-    "MinMaxConditionTypes",
-    "SubObserverPointMethods",
-    "SubObserverPoint",
-    "LatitudinalCoordinates",
-    "SphericalCoordinates",
-    "Vector",
-    "GeodeticCoordinates",
-    "RaDecCoordinates",
-    "CylindricalCoordinates",
-    "PlanetographicCoordinates",
-    "Distance",
-    "PhaseAngle",
-    "Occultation",
-    "OccultationTypes",
-    "SpiceWindow",
     "AngularSize",
-    "constraint",
-    "constant",
+    "Constant",
     "Constraint",
     "ConstraintBase",
-    "Property"
+    "ConstraintOptimizer",
+    "CylindricalCoordinates",
+    "Distance",
+    "GeodeticCoordinates",
+    "LatitudinalCoordinates",
+    "MinMaxConditionTypes",
+    "MinMaxConstraint",
+    "Occultation",
+    "OccultationProperties",
+    "OccultationTypes",
+    "PhaseAngle",
+    "PlanetographicCoordinates",
+    "Property",
+    "RaDecCoordinates",
+    "SphericalCoordinates",
+    "SpiceWindow",
+    "SubObserverPoint",
+    "SubObserverPointMethods",
+    "TargetProperties",
+    "TargetSizeOnSensor",
+    "Vector",
+    "angular_size_to_distance",
+    "constant",
+    "constraint",
+    "create_property_converter",
+    "get_optimizer",
+    "optimize_constraint",
+    "pixel_count_to_distance",
+    "structure_constraint",
+    "unstructure_constraint",
 ]
 
 log.disable("spice_segmenter")
@@ -95,7 +119,6 @@ def log_disable(mod: str = "spice_segmenter") -> None:
     log.disable(mod)
 
 
-
 def is_any_number(value):
     # Check if the value is a numeric type
     if isinstance(value, (int, float, complex)):
@@ -112,13 +135,11 @@ def is_any_number(value):
     return False
 
 
-
-
-def to_seconds(timedelta: str | pd.Timedelta | float | int):
+def to_seconds(timedelta: str | pd.Timedelta | float):
     if is_any_number(timedelta):
         return float(timedelta)
-    else:
-        return pd.Timedelta(timedelta).total_seconds()
+    return pd.Timedelta(timedelta).total_seconds()
+
 
 @define
 class Config:

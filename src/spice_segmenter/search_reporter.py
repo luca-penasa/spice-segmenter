@@ -1,5 +1,5 @@
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import spiceypy
 import spiceypy.utils.callbacks
@@ -115,5 +115,4 @@ def get_default_reporter_class() -> SearchReporter | NoSearchReporter:
 
     if config.show_progressbar:
         return SearchReporter()
-    else:
-        return NoSearchReporter()
+    return NoSearchReporter()

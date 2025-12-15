@@ -1,7 +1,14 @@
+from typing import TYPE_CHECKING, Union
+
 import pint
+from loguru import logger as log
 from planetary_coverage.spice import SpiceRef
 from planetary_coverage.spice.times import et as _et
 
+if TYPE_CHECKING:
+    from spice_segmenter.trajectory_properties import TargetedProperty
+
+from spice_segmenter.property_base import Property
 from spice_segmenter.types import TIMES_TYPES
 
 
@@ -9,21 +16,41 @@ def et(time: TIMES_TYPES) -> float:
     return _et(time)  # type: ignore
 
 
+def add_properties_to_table(
+    tab,
+    properties: list[Union["TargetedProperty",  type["TargetedProperty"]]],
+    observer: str,
+    timecol=None,
+    targetcol="target",
+    *,
+    retarget_instances=True,
+):
 
-def add_properties_to_table(tab, properties, observer):
     """Table rows must have start, end and target columns."""
     for i, row in tab.iterrows():
-        for Prop in properties:
-            try:
-                aa = Prop(observer=observer, target= row.target)
-            except:
-                continue
+        target = row[targetcol]
 
-            mid = row.start + (row.end - row.start)/2
+        for property in properties:
+            log.debug(f"Working on property {property}")
+            if isinstance(property, Property):
+                log.debug(f"found instance of property {property}")
+                prop_instance = property
+                if retarget_instances:
+                    prop_instance.target = target
 
-            res = aa(str(mid.tz_localize(None)))
+                # prop_instance.observer = observer
+            else:
+                log.debug("found class. Instantiation.")
+                prop_instance = property(observer=observer, target=target)
 
-            name = f"{aa.name} [{aa.unit}] "
+            if timecol is None:
+                ref_time = row.start + (row.end - row.start) / 2
+            else:
+                ref_time = row[timecol]
+
+            res = prop_instance(str(ref_time.tz_localize(None)))
+
+            name = f"{prop_instance.name} [{prop_instance.unit}] "
             tab.loc[i, name] = res
 
 

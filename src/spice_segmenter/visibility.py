@@ -35,7 +35,7 @@ class BodyFOVVisibility(TargetedProperty):
 
 
 @declare(
-    name="angular_separation", property_type=PropertyTypes.SCALAR, unit=pint.Unit("rad")
+    name="angular_separation", property_type=PropertyTypes.SCALAR, unit=pint.Unit("rad"),
 )
 class AngularSeparation(TargetedProperty):
     """Angular separation between two bodies"""

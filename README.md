@@ -28,19 +28,21 @@ pip install spice-segmenter
 
 * Clone this repository
 * Requirements:
-  * [Poetry](https://python-poetry.org/)
+  * [uv](https://docs.astral.sh/uv/)
   * Python 3.10+
 * Create a virtual environment and install the dependencies
 
 ```sh
-poetry install
+uv sync --all-extras
 ```
 
 * Activate the virtual environment
 
 ```sh
-poetry shell
+source .venv/bin/activate
 ```
+
+(or `.venv\Scripts\activate` on Windows)
 
 ### Testing
 
@@ -62,7 +64,7 @@ The documentation is automatically generated from the content of the [docs direc
 Releases are done with the command, e.g. incrementing patch:
 
 ```bash
-poetry run just bump patch
+just bump patch
 # also push, of course:
 git push origin main --tags
 ```
@@ -72,7 +74,8 @@ this will update the changelog, commit it, and make a corresponding tag.
 as the CI is not yet configured for publish on pypi it can be done by hand:
 
 ```bash
-poetry publish --build
+uv build
+twine upload dist/*
 ```
 #### Automatic release - to be fixed
 
@@ -113,6 +116,12 @@ Or if you want e.g. want to run all checks manually for all files:
 
 ```sh
 pre-commit run --all-files
+```
+
+### Running tests
+
+```sh
+uv run pytest
 ```
 
 ---

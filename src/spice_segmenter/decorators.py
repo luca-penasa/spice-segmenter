@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from functools import partial, wraps
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pint
@@ -12,9 +13,9 @@ if TYPE_CHECKING:
 
 
 def vectorize(
-    function: Optional[Callable[..., Any]] = None,
-    otypes: Optional[str] = None,
-    signature: Optional[str] = None,
+    function: Callable[..., Any] | None = None,
+    otypes: str | None = None,
+    signature: str | None = None,
 ) -> Callable[..., Any]:
     """Numpy vectorization wrapper that works with instance methods."""
 
@@ -78,7 +79,7 @@ def declare(
         cls.type = property(_type)
     P = define(repr=False, order=False, eq=False)(cls)
 
-    
+
     from spice_segmenter.trajectory_properties import PROPERTIES_REGISTRY
     PROPERTIES_REGISTRY.append((name, P))
     return  P
