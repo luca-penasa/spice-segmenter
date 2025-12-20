@@ -1,7 +1,7 @@
 """Infrastructure and support utilities (internal use)."""
 
 from .config import Config, config
-from .decorators import declare, vectorize
+from .decorators import declare, vectorize, PropertyMeta
 from .time_types import TIMES_TYPES
 from .spice_utilities import (
     as_pint_unit,
@@ -19,6 +19,7 @@ from .search_reporter import SearchReporter, NoSearchReporter, get_default_repor
 __all__ = [
     "declare",
     "vectorize",
+    "PropertyMeta",
     "TIMES_TYPES",
     "Config",
     "config",

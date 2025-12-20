@@ -27,7 +27,6 @@ class PropertyTypes(Enum):
     VECTOR = auto()
     DISCRETE = auto()
 
-
 @define(repr=False, order=False, eq=False)
 class Property(ABC):
     @abstractmethod

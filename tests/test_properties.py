@@ -98,3 +98,115 @@ def test_inverted_wrapped():
     p_ = Inverted(c)
     value = p_("2020-01-01")
     assert value == False
+
+
+# Additional property tests for coverage
+
+
+def test_angular_size() -> None:
+    """Test AngularSize property computation."""
+    from spice_segmenter.properties.observation_properties import AngularSize
+    
+    ang_size = AngularSize(tc.spacecraft, tc.target, light_time_correction="NONE")
+    
+    result = ang_size(t1)
+    assert result is not None
+    assert result > 0
+    assert np.isfinite(result)
+
+
+def test_angular_size_constraint() -> None:
+    """Test AngularSize in constraint."""
+    from spice_segmenter.properties.observation_properties import AngularSize
+    
+    ang_size = AngularSize(tc.spacecraft, tc.target)
+    
+    # Should support unit conversion
+    ang_size_deg = UnitAdaptor(ang_size, "deg")
+    assert ang_size_deg.unit == pint.Unit("deg")
+    
+    result = ang_size_deg(t1)
+    assert result > 0
+
+
+def test_distance_light_time_corrections() -> None:
+    """Test Distance property with different light-time corrections."""
+    corrections = ["NONE", "LT", "LT+S"]
+    results = []
+    
+    for corr in corrections:
+        d = Distance(tc.spacecraft, tc.target, light_time_correction=corr)
+        result = d(t1)
+        results.append(result)
+        assert result > 0
+        assert np.isfinite(result)
+    
+    # All corrections should give positive distances
+    assert len(results) == 3
+    assert all(r > 0 for r in results)
+
+
+def test_phase_angle_range() -> None:
+    """Test PhaseAngle returns values in expected range."""
+    phase = PhaseAngle(tc.spacecraft, tc.target, "SUN", light_time_correction="NONE")
+    
+    result = phase(t1)
+    
+    # Phase angle should be in [0, π] radians
+    assert result >= 0
+    assert result <= np.pi
+
+
+def test_distance_multiple_times() -> None:
+    """Test Distance evaluation at multiple times."""
+    d = Distance(tc.spacecraft, tc.target)
+    
+    times = [start + np.timedelta64(i * 20, "D") for i in range(3)]
+    results = [d(t) for t in times]
+    
+    # All should be valid
+    assert all(np.isfinite(r) for r in results)
+    assert all(r > 0 for r in results)
+    
+    # Should have multiple distinct values (spacecraft moves)
+    assert len(results) == 3
+
+
+def test_unit_adaptor_chaining() -> None:
+    """Test chaining multiple UnitAdaptors."""
+    d = Distance(tc.spacecraft, tc.target)
+    
+    # Convert km -> m -> km
+    d_m = UnitAdaptor(d, "m")
+    d_km_again = UnitAdaptor(d_m, "km")
+    
+    result_direct = d(t1)
+    result_adapted = d_km_again(t1)
+    
+    assert result_direct == approx(result_adapted)
+
+
+def test_property_has_unit() -> None:
+    """Test that properties correctly report unit information."""
+    d = Distance(tc.spacecraft, tc.target)
+    phase = PhaseAngle(tc.spacecraft, tc.target, "SUN")
+    
+    assert d.has_unit()
+    assert phase.has_unit()
+    
+    assert d.unit == pint.Unit("km")
+    assert phase.unit == pint.Unit("rad")
+
+
+def test_property_repr() -> None:
+    """Test that properties have meaningful string representations."""
+    d = Distance(tc.spacecraft, tc.target)
+    phase = PhaseAngle(tc.spacecraft, tc.target, "SUN")
+    
+    d_str = str(d)
+    phase_str = str(phase)
+    
+    assert len(d_str) > 0
+    assert len(phase_str) > 0
+    assert "Distance" in d_str or "distance" in d_str.lower()
+    assert "Phase" in phase_str or "phase" in phase_str.lower()
