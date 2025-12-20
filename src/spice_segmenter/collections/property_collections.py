@@ -3,8 +3,6 @@ from functools import cached_property
 
 from attrs import define, field
 
-from ..properties.occultation_types import Occultation, OccultationTypes
-from ..properties.reflector_properties import JupiterShineIdealCondition
 from ..properties.observation_properties import (
     AngularSize,
     Distance,
@@ -13,6 +11,8 @@ from ..properties.observation_properties import (
     SubObserverPixelScale,
     SubObserverPointVelocity,
 )
+from ..properties.occultation_types import Occultation, OccultationTypes
+from ..properties.reflector_properties import JupiterShineIdealCondition
 
 
 @define

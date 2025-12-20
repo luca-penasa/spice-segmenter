@@ -6,8 +6,8 @@ import pint
 from attr import define, field
 from attrs.validators import instance_of
 
-from ..support.decorators import vectorize
 from ..core.property import Property, PropertyTypes
+from ..support.decorators import vectorize
 from ..support.time_types import TIMES_TYPES
 
 

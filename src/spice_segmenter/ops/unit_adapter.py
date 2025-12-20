@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 import pint
 from attrs import define, field
 
-from ..support.decorators import vectorize
 from ..core.property import Property
+from ..support.decorators import vectorize
 from ..support.spice_utilities import as_pint_unit
 
 if TYPE_CHECKING:

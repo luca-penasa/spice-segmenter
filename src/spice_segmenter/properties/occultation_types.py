@@ -10,10 +10,10 @@ from planetary_coverage.spice import (
     SpiceSpacecraft,
 )
 
-from ..support.decorators import vectorize
 from ..core.property import Property, PropertyTypes
-from ..support.time_types import TIMES_TYPES
+from ..support.decorators import vectorize
 from ..support.spice_utilities import et
+from ..support.time_types import TIMES_TYPES
 
 
 class OccultationTypes(Enum):

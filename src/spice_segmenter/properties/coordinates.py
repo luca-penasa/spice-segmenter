@@ -13,9 +13,9 @@ from planetary_coverage.spice import (
 )
 from spiceypy import NotFoundError
 
+from ..core.property import BooleanProperty, Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
 from ..support.decorators import declare, vectorize
-from ..core.property import BooleanProperty, Property, PropertyTypes
 from ..support.time_types import TIMES_TYPES
 
 

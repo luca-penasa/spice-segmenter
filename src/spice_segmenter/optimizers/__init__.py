@@ -10,6 +10,6 @@ from .constraint_optimizer import (
 __all__ = [
     "ConstraintOptimizer",
     "PropertyTransformer",
-    "optimize_constraint",
     "get_optimizer",
+    "optimize_constraint",
 ]

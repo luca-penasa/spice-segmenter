@@ -19,13 +19,11 @@ from planetary_coverage.spice.toolbox import (
     sc_state,
 )
 
-from ..properties.component_selector import ComponentSelector
 from ..core.property import Property, PropertyTypes
-from ..support.time_types import TIMES_TYPES
-from ..support.spice_utilities import as_spice_ref
-
+from ..properties.component_selector import ComponentSelector
 from ..support.decorators import declare, vectorize
-from ..support.spice_utilities import et
+from ..support.spice_utilities import as_spice_ref, et
+from ..support.time_types import TIMES_TYPES
 
 PROPERTIES_REGISTRY = []
 

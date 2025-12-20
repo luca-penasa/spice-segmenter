@@ -14,13 +14,12 @@ from anytree import Node, RenderTree
 from attrs import define, field
 from loguru import logger as log
 
+from spice_segmenter.properties.observation_properties import MinMaxConditionTypes
 from .property import Property, PropertyTypes
 from .spice_window import SpiceWindow
-from ..properties.observation_properties import MinMaxConditionTypes
 
 if TYPE_CHECKING:
     from ..ops.constraint_operations import Inverted
-    from ..ops.unit_adapter import UnitAdaptor
     from ..support.time_types import TIMES_TYPES
 
 
@@ -296,7 +295,7 @@ class Constraint(ConstraintBase):
 
         if self.left.unit != self.right.unit:
             from ..ops.unit_adapter import UnitAdaptor
-            
+
             log.warning(
                 "Comparing {} with {}. This is not recommended. Will attempt automatic conversion.",
                 self.left.unit,

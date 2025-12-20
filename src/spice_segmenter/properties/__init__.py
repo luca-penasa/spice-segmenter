@@ -1,6 +1,16 @@
 """Properties: concrete implementations for observation and motion constraints."""
 
-from .occultation_types import Occultation, OccultationTypes
+from .coordinates import (
+    CylindricalCoordinates,
+    GeodeticCoordinates,
+    LatitudinalCoordinates,
+    PlanetographicCoordinates,
+    RaDecCoordinates,
+    SphericalCoordinates,
+    SubObserverPoint,
+    SubObserverPointMethods,
+    Vector,
+)
 from .observation_properties import (
     AngularSize,
     ApproximatedAltitude,
@@ -16,20 +26,10 @@ from .observation_properties import (
     TargetedPropertyMixin,
     TargetSizeOnSensor,
 )
-from .coordinates import (
-    CylindricalCoordinates,
-    GeodeticCoordinates,
-    LatitudinalCoordinates,
-    PlanetographicCoordinates,
-    RaDecCoordinates,
-    SphericalCoordinates,
-    SubObserverPoint,
-    SubObserverPointMethods,
-    Vector,
-)
-from .visibility_properties import BodyFOVVisibility, AngularSeparation
+from .occultation_types import Occultation, OccultationTypes
 from .reflector_properties import JupiterShineIdealCondition
 from .surface_properties import SurfaceIlluminationAngles
+from .visibility_properties import AngularSeparation, BodyFOVVisibility
 
 __all__ = [
     # Occultation

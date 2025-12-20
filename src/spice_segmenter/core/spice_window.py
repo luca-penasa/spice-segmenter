@@ -12,8 +12,8 @@ from datetimerange import DateTimeRange
 from planetary_coverage import utc
 from spiceypy import Cell_Double, SpiceCell
 
-from ..support.time_types import TIMES_TYPES
 from ..support.spice_utilities import et
+from ..support.time_types import TIMES_TYPES
 
 
 class SpiceWindowIter:

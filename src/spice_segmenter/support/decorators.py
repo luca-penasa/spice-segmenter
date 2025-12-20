@@ -21,34 +21,34 @@ class PropertyMeta(type):
             _name = "my_property"
             _unit = pint.Unit("km")
     """
-    
+
     # Class-level registry
     registry: dict[str, type] = {}
-    
+
     def __new__(mcs, name: str, bases: tuple, namespace: dict):
         # Extract metadata before creating class
-        _name = namespace.get('_name', '')
-        _unit = namespace.get('_unit', pint.Unit('dimensionless'))
-        _type = namespace.get('_type', None)
-        
+        _name = namespace.get("_name", "")
+        _unit = namespace.get("_unit", pint.Unit("dimensionless"))
+        _type = namespace.get("_type")
+
         # Create the class
         cls = super().__new__(mcs, name, bases, namespace)
-        
+
         # If this class defines _name, set up property accessors and register
         if _name:
             # Create name property
             cls.name = property(lambda self: _name)
             # Register in global registry
             mcs.registry[_name] = cls
-        
+
         # Create unit property if _unit is defined
         if _unit is not None:
             cls.unit = property(lambda self: _unit)
-        
+
         # Create type property if _type is specified
         if _type:
             cls.type = property(lambda self: _type)
-        
+
         return cls
 
 
@@ -100,22 +100,22 @@ def declare(
     # Set the properties BEFORE applying @define
     def _name(self):
         return name
-    
+
     def _unit(self):
         return unit
-    
+
     cls.name = property(_name)
     cls.unit = property(_unit)
-    
+
     if property_type:
         def _type(self):
             return property_type
         cls.type = property(_type)
-    
+
     # Now apply attrs define
     P = define(repr=False, order=False, eq=False)(cls)
-    
+
     # Register in the global registry
     PropertyMeta.registry[name] = P
-    
+
     return P

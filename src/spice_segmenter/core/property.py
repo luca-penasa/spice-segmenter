@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 from ..support.time_types import TIMES_TYPES
 
 if TYPE_CHECKING:
-    from .constraints import Constraint, left_types
     from ..ops.unit_adapter import UnitAdaptor
+    from .constraints import Constraint, left_types
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable

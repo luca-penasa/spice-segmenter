@@ -10,20 +10,20 @@ from planetary_coverage import SpiceRef
 from spiceypy import gfrefn, gfstep
 
 from spice_segmenter import config
-from spice_segmenter.ops.constant_values import BoolConstant, Constant
 from spice_segmenter.core.constraints import (
     ConstraintBase,
     ConstraintTypes,
 )
-from spice_segmenter.properties.occultation_types import OccultationTypes
-from spice_segmenter.ops.constraint_operations import Inverted
 from spice_segmenter.core.property import BooleanProperty, PropertyTypes
+from spice_segmenter.core.spice_window import SpiceWindow
+from spice_segmenter.ops.constant_values import BoolConstant, Constant
+from spice_segmenter.ops.constraint_operations import Inverted
+from spice_segmenter.properties.occultation_types import OccultationTypes
 from spice_segmenter.support.search_reporter import (
     NoSearchReporter,
     SearchReporter,
     get_default_reporter_class,
 )
-from spice_segmenter.core.spice_window import SpiceWindow
 
 
 @define(repr=False, order=False, eq=False)

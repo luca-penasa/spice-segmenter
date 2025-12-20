@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import pint
 from attrs import define, field
 
-from ..support.decorators import vectorize
 from ..core.property import Property
+from ..support.decorators import vectorize
 
 if TYPE_CHECKING:
     from ..properties.occultation_types import OccultationTypes

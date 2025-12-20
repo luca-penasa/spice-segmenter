@@ -8,9 +8,8 @@ from planetary_coverage import SpiceRef, et
 from planetary_coverage.spice import SpiceBody
 
 from ..core.property import Property, PropertyTypes
-from ..support.time_types import TIMES_TYPES
-
 from ..support.decorators import declare
+from ..support.time_types import TIMES_TYPES
 
 
 @declare(

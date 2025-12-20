@@ -10,10 +10,10 @@ from planetary_coverage.spice import SpiceBody, SpiceObserver, et
 # from jana.toolbox import compute_sun_vector
 from planetary_coverage.spice.toolbox import sun_pos
 
-from ..support.decorators import declare, vectorize
 from ..core.property import BooleanProperty, PropertyTypes
-from ..support.time_types import TIMES_TYPES
+from ..support.decorators import declare, vectorize
 from ..support.spice_utilities import et
+from ..support.time_types import TIMES_TYPES
 
 
 def ring_plane_angles(

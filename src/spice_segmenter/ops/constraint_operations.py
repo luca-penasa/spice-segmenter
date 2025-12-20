@@ -11,8 +11,8 @@ from ..core.property import Property
 from ..properties.observation_properties import (
     MinMaxConditionTypes,
 )
-from ..support.time_types import TIMES_TYPES
 from ..support.decorators import vectorize
+from ..support.time_types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)

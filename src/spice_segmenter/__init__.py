@@ -5,13 +5,17 @@ import sys
 
 from loguru import logger as log
 
+from .collections import (
+    OccultationProperties,
+    TargetProperties,
+)
+
 # Import order matters to avoid circular imports:
 # 1. Core abstractions first
 # 2. Then properties (which depend on core)
 # 3. Then ops (which depend on core)
 # 4. Then optimizers (which depend on ops and properties)
 # 5. Then collections (which depend on properties)
-
 from .core import (
     BooleanProperty,
     Constraint,
@@ -20,6 +24,17 @@ from .core import (
     Property,
     PropertyTypes,
     SpiceWindow,
+)
+from .ops import (
+    Constant,
+    Inverted,
+    MinMaxConstraint,
+    UnitAdaptor,
+)
+from .optimizers import (
+    ConstraintOptimizer,
+    get_optimizer,
+    optimize_constraint,
 )
 from .properties import (
     AngularSeparation,
@@ -39,39 +54,24 @@ from .properties import (
     PlanetographicCoordinates,
     RaDecCoordinates,
     SphericalCoordinates,
-    SurfaceIlluminationAngles,
     SubObserverIlluminationAngles,
     SubObserverIsInDaylight,
     SubObserverPixelScale,
     SubObserverPoint,
     SubObserverPointMethods,
     SubObserverPointVelocity,
+    SurfaceIlluminationAngles,
     TargetedProperty,
     TargetedPropertyMixin,
     TargetSizeOnSensor,
     Vector,
 )
-from .ops import (
-    Constant,
-    Inverted,
-    MinMaxConstraint,
-    UnitAdaptor,
-)
-from .optimizers import (
-    ConstraintOptimizer,
-    get_optimizer,
-    optimize_constraint,
-)
-from .collections import (
-    OccultationProperties,
-    TargetProperties,
-)
+from .support.config import config
 from .support.serialization import (
     create_property_converter,
     structure_constraint,
     unstructure_constraint,
 )
-from .support.config import config
 
 # Get version
 __version__ = importlib.metadata.version("spice_segmenter")
