@@ -1,4 +1,5 @@
 from spice_segmenter import Distance, SpiceWindow
+from spice_segmenter.properties.ring_properties import RingSystemPhaseGreaterThan
 from spice_segmenter.support.config import config
 from . import tour_config as tc
 
@@ -33,3 +34,5 @@ def test_with_unit_or_not():
     assert(N1 == N3)
     assert(N1 == N4)
     
+def test_1():
+    c = RingSystemPhaseGreaterThan(170) == True

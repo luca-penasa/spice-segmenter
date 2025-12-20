@@ -21,7 +21,7 @@ from planetary_coverage.spice.toolbox import (
 
 from ..core.property import Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
-from ..support.decorators import declare, vectorize
+from ..support.decorators import vectorize
 from ..support.spice_utilities import as_spice_ref, et
 from ..support.time_types import TIMES_TYPES
 
@@ -61,8 +61,11 @@ class TargetedProperty(TargetedPropertyMixin, Property):
     pass
 
 
-@declare(name="phase_angle", unit=pint.Unit("rad"))
+@define(repr=False, order=False, eq=False)
 class PhaseAngle(TargetedProperty):
+    _name = "phase_angle"
+    _unit = pint.Unit("rad")
+    
     third_body: SpiceBody = field(
         factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref,
     )
@@ -85,9 +88,11 @@ class PhaseAngle(TargetedProperty):
         config["third_body"] = self.third_body.name
         config["property"] = self.name
 
-
-@declare(name="distance", unit=pint.Unit("km"))
+@define(repr=False, order=False, eq=False)
 class Distance(TargetedProperty):
+    _name = "distance"
+    _unit = pint.Unit("km")
+    
     def __repr__(self) -> str:
         return f"Distance of {self.target} from {self.observer}"
 
@@ -108,8 +113,9 @@ class Distance(TargetedProperty):
         config["property"] = self.name
 
 
-@declare(name="sub_sc_velocity", unit=pint.Unit("km/s"))
 class SubObserverPointVelocity(TargetedProperty):
+    _name = "sub_sc_velocity"
+    _unit = pint.Unit("km/s")
     # method = field(default=SubObserverPointMethods.INTERCEPT)
 
     @vectorize
@@ -123,8 +129,10 @@ class SubObserverPointVelocity(TargetedProperty):
         return f"Velocity of sub observer ({self.observer}) point on {self.target} surface."
 
 
-@declare(name="angular_size", unit=pint.Unit("rad"))
 class AngularSize(TargetedProperty):
+    _name = "angular_size"
+    _unit = pint.Unit("rad")
+    
     def __repr__(self) -> str:
         return f"Angular size of {self.target}, seen from {self.observer}"
 
@@ -138,8 +146,10 @@ class AngularSize(TargetedProperty):
         config["property"] = self.name
 
 
-@declare(name="sub_observer_pixel_scale", unit=pint.Unit("km/px"))
 class SubObserverPixelScale(TargetedProperty):
+    _name = "sub_observer_pixel_scale"
+    _unit = pint.Unit("km/px")
+    
     def __repr__(self) -> str:
         return f"Resultion of {self.target}, at the sub-{self.observer} point."
 
@@ -155,8 +165,10 @@ class SubObserverPixelScale(TargetedProperty):
         config["property"] = self.name
 
 
-@declare(name="approx_altitude", unit=pint.Unit("km"))
 class ApproximatedAltitude(TargetedProperty):
+    _name = "approx_altitude"
+    _unit = pint.Unit("km")
+    
     def __repr__(self) -> str:
         return f"Approximated (distance-radius) altitude of {self.observer} over {self.target} surface (from sub-sc point)"
 
@@ -172,8 +184,10 @@ class ApproximatedAltitude(TargetedProperty):
         config["property"] = self.name
 
 
-@declare(name="target_size_on_sensor", unit=pint.Unit("px"))
 class TargetSizeOnSensor(TargetedProperty):
+    _name = "target_size_on_sensor"
+    _unit = pint.Unit("px")
+    
     def __repr__(self) -> str:
         return f"Size in pixels of {self.target}, on the {self.observer} sensor."
 
@@ -188,8 +202,10 @@ class TargetSizeOnSensor(TargetedProperty):
         config["property"] = self.name
 
 
-@declare(name="distance_in_target_radii", unit=pint.Unit("dimensionless"))
 class DistanceInTargetBodyRadii(TargetedProperty):
+    _name = "distance_in_target_radii"
+    _unit = pint.Unit("dimensionless")
+    
     def __repr__(self) -> str:
         return f"Distance of {self.target}, from {self.observer} sensor, in {self.target} radii."
 
@@ -203,12 +219,11 @@ class DistanceInTargetBodyRadii(TargetedProperty):
         config["property"] = self.name
 
 
-@declare(
-    name="sub_observer_illumination_angles",
-    unit=[pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")],
-    property_type=PropertyTypes.VECTOR,
-)
 class SubObserverIlluminationAngles(TargetedProperty):
+    _name = "sub_observer_illumination_angles"
+    _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
+    _type = PropertyTypes.VECTOR
+    
     def __repr__(self) -> str:
         return f"Sub {self.observer} point illumination angles on {self.target}"
 
@@ -240,12 +255,11 @@ class SubObserverIlluminationAngles(TargetedProperty):
         return ComponentSelector(self, 2, "phase")
 
 
-@declare(
-    name="sub_obs_point_in_daylight",
-    unit=pint.Unit("dimensionless"),
-    property_type=PropertyTypes.BOOLEAN,
-)
 class SubObserverIsInDaylight(TargetedProperty):
+    _name = "sub_obs_point_in_daylight"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.BOOLEAN
+    
     def __repr__(self) -> str:
         return f"Sub {self.observer} point on {self.target} is in daylight"
 

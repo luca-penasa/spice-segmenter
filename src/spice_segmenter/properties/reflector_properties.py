@@ -5,7 +5,7 @@ Adapted from the original implementation by Klaus-Dieter Matz (DLR), end of 2024
 import numpy as np
 import pint
 import spiceypy
-from attrs import field
+from attrs import define, field
 from planetary_coverage import et
 from planetary_coverage.spice import SpiceBody
 
@@ -15,7 +15,7 @@ from ..properties.observation_properties import (
     TargetedProperty,
     TargetedPropertyMixin,
 )
-from ..support.decorators import declare, vectorize
+from ..support.decorators import vectorize
 from ..support.time_types import TIMES_TYPES
 
 
@@ -67,12 +67,12 @@ def pseudo_phase_angle(sc2sub_sc, sub_sc2reflector):
     return np.rad2deg(spiceypy.vsep(-sc2sub_sc, sub_sc2reflector))
 
 
-@declare(
-    name="shine_properties",
-    unit=[pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")],
-    property_type=PropertyTypes.VECTOR,
-)
+@define(repr=False, order=False, eq=False)
 class ShineProperties(TargetedProperty):
+    _name = "shine_properties"
+    _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
+    _type = PropertyTypes.VECTOR
+    
     reflector = field(converter=SpiceBody)
     light_source = field(converter=SpiceBody, default="SUN")
 
@@ -112,12 +112,12 @@ class ShineProperties(TargetedProperty):
         return ComponentSelector(self, 3, "reflector_angular_radius")
 
 
-@declare(
-    name="jupiter_rise",
-    unit=pint.Unit("dimensionless"),
-    property_type=PropertyTypes.BOOLEAN,
-)
+@define(repr=False, order=False, eq=False)
 class JupiterRise(TargetedPropertyMixin, BooleanProperty):
+    _name = "jupiter_rise"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.BOOLEAN
+    
     def __repr__(self) -> str:
         return f"Jupiter rise status for the sub-{self.observer} {self.target}"
 
@@ -131,12 +131,11 @@ class JupiterRise(TargetedPropertyMixin, BooleanProperty):
         return el > r
 
 
-@declare(
-    name="jupiter_rise_ratio",
-    unit=pint.Unit("dimensionless"),
-    property_type=PropertyTypes.SCALAR,
-)
 class JupiterRiseRatio(TargetedProperty):
+    _name = "jupiter_rise_ratio"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.SCALAR
+    
     def __repr__(self) -> str:
         return f"Jupiter rise ratio (elevation/apparent jupiter radius) for the sub-{self.observer} on {self.target}"
 
@@ -150,12 +149,12 @@ class JupiterRiseRatio(TargetedProperty):
         return el / r
 
 
-@declare(
-    name="jupiter_shine_ideal_condition",
-    unit=pint.Unit("dimensionless"),
-    property_type=PropertyTypes.BOOLEAN,
-)
+@define(repr=False, order=False, eq=False)
 class JupiterShineIdealCondition(TargetedPropertyMixin, BooleanProperty):
+    _name = "jupiter_shine_ideal_condition"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.BOOLEAN
+    
     max_apparent_jupiter_phase = field(default=90)  # half disk is illuminated
     min_rise_ratio = field(default=1)  # half above the sub-observer horizon
 

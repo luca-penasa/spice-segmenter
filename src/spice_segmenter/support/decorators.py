@@ -4,52 +4,62 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pint
-from attr import define
 
 if TYPE_CHECKING:
-    from ..core.property import PropertyTypes
+    from ..core.property import Property, PropertyTypes
 
 
-class PropertyMeta(type):
-    """Metaclass for Property classes that auto-generates metadata properties.
+# Global property registry
+# Maps property name → Property class
+PROPERTY_REGISTRY: dict[str, type["Property"]] = {}
+
+
+def register_property(name: str, property_class: type["Property"]) -> type["Property"]:
+    """Register a property class in the global registry.
     
-    This metaclass automatically creates property accessors for _name and _unit
-    class attributes, and registers properties in a global registry.
-    
-    Usage:
-        class MyProperty(Property, metaclass=PropertyMeta):
-            _name = "my_property"
-            _unit = pint.Unit("km")
+    Args:
+        name: Property name (e.g., "distance", "phase_angle")
+        property_class: The Property subclass to register
+        
+    Returns:
+        The property_class (allows use as a decorator)
+        
+    Raises:
+        TypeError: If name is not a string
+        
+    Example:
+        >>> @register_property("distance")
+        ... class Distance(Property):
+        ...     _name = "distance"
+        ...     _unit = pint.Unit("km")
     """
+    if not isinstance(name, str):
+        # Silently ignore non-string keys (likely descriptors)
+        return property_class
+    
+    PROPERTY_REGISTRY[name] = property_class
+    return property_class
 
-    # Class-level registry
-    registry: dict[str, type] = {}
 
-    def __new__(mcs, name: str, bases: tuple, namespace: dict):
-        # Extract metadata before creating class
-        _name = namespace.get("_name", "")
-        _unit = namespace.get("_unit", pint.Unit("dimensionless"))
-        _type = namespace.get("_type")
+def get_property_class(name: str) -> type["Property"] | None:
+    """Get a property class by name from the registry.
+    
+    Args:
+        name: Property name to look up
+        
+    Returns:
+        Property class if found, None otherwise
+    """
+    return PROPERTY_REGISTRY.get(name)
 
-        # Create the class
-        cls = super().__new__(mcs, name, bases, namespace)
 
-        # If this class defines _name, set up property accessors and register
-        if _name:
-            # Create name property
-            cls.name = property(lambda self: _name)
-            # Register in global registry
-            mcs.registry[_name] = cls
-
-        # Create unit property if _unit is defined
-        if _unit is not None:
-            cls.unit = property(lambda self: _unit)
-
-        # Create type property if _type is specified
-        if _type:
-            cls.type = property(lambda self: _type)
-
-        return cls
+def list_registered_properties() -> dict[str, type["Property"]]:
+    """Get all registered properties.
+    
+    Returns:
+        Dictionary mapping property names to classes
+    """
+    return PROPERTY_REGISTRY.copy()
 
 
 def vectorize(
@@ -57,7 +67,24 @@ def vectorize(
     otypes: str | None = None,
     signature: str | None = None,
 ) -> Callable[..., Any]:
-    """Numpy vectorization wrapper that works with instance methods."""
+    """Numpy vectorization wrapper that works with instance methods.
+    
+    Wraps numpy.vectorize to handle instance methods properly by preserving
+    function metadata via functools.wraps.
+    
+    Args:
+        function: Function to vectorize (optional, allows use as @vectorize())
+        otypes: Output types for numpy.vectorize
+        signature: Signature for numpy.vectorize (e.g., "(),()->()")
+        
+    Returns:
+        Vectorized function
+        
+    Example:
+        >>> @vectorize(signature="(),()->()")
+        ... def __call__(self, time: TIMES_TYPES) -> float:
+        ...     return spiceypy.vnorm(spiceypy.spkpos(...))
+    """
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         vectorized = np.vectorize(fn, otypes=otypes, signature=signature)
@@ -73,49 +100,3 @@ def vectorize(
 
     return decorator
 
-
-def declare(
-    cls=None,
-    name: str = "",
-    unit: pint.Unit = pint.Unit("dimensionless"),
-    property_type: "PropertyTypes|None" = None,
-):
-    """DEPRECATED: Use PropertyMeta metaclass instead.
-    
-    Legacy decorator for backward compatibility. Properties should now use:
-    
-        class MyProperty(Property, metaclass=PropertyMeta):
-            _name = "my_property"
-            _unit = pint.Unit("km")
-    
-    This decorator is kept for backward compatibility and works by:
-    1. Setting name, unit, and type properties on the class
-    2. Applying the @define decorator
-    3. Registering in PropertyMeta.registry
-    """
-    if cls is None:
-        from functools import partial
-        return partial(declare, name=name, unit=unit, property_type=property_type)
-
-    # Set the properties BEFORE applying @define
-    def _name(self):
-        return name
-
-    def _unit(self):
-        return unit
-
-    cls.name = property(_name)
-    cls.unit = property(_unit)
-
-    if property_type:
-        def _type(self):
-            return property_type
-        cls.type = property(_type)
-
-    # Now apply attrs define
-    P = define(repr=False, order=False, eq=False)(cls)
-
-    # Register in the global registry
-    PropertyMeta.registry[name] = P
-
-    return P

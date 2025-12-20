@@ -4,14 +4,14 @@ import numpy as np
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
-from attrs import field
+from attrs import define, field
 from planetary_coverage.spice import SpiceBody, SpiceObserver, et
 
 # from jana.toolbox import compute_sun_vector
 from planetary_coverage.spice.toolbox import sun_pos
 
 from ..core.property import BooleanProperty, PropertyTypes
-from ..support.decorators import declare, vectorize
+from ..support.decorators import vectorize
 from ..support.spice_utilities import et
 from ..support.time_types import TIMES_TYPES
 
@@ -76,8 +76,12 @@ def is_rings_phase_angles_in_betweeen(time, min_angle, max_angle):
     minR, maxR, minL, maxL = min_max_ring_plane_phase_angle(time)
     return ((minR > min_angle ) and (maxR < max_angle)) | ((minL > min_angle) and (maxL < max_angle))
 
-@declare(name="ring_system_phases_lower_than", unit=pint.Unit("dimensionless"), property_type=PropertyTypes.BOOLEAN)
+@define(repr=False, order=False, eq=False)
 class RingSystemPhaseLowerThan(BooleanProperty):
+    _name = "ring_system_phases_lower_than"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.BOOLEAN
+    
     value_deg: float = field()
     observer: SpiceObserver = field(default="JUICCE_JANUS", converter = SpiceObserver)
 
@@ -89,8 +93,12 @@ class RingSystemPhaseLowerThan(BooleanProperty):
         return is_rings_phase_angles_lower_than(time, self.value_deg)
 
 
-@declare(name="ring_system_phases_greater_than", unit=pint.Unit("dimensionless"), property_type=PropertyTypes.BOOLEAN)
+@define(repr=False, order=False, eq=False)
 class RingSystemPhaseGreaterThan(BooleanProperty):
+    _name = "ring_system_phases_greater_than"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.BOOLEAN
+    
     value_deg: float = field()
     observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)
 
@@ -103,9 +111,12 @@ class RingSystemPhaseGreaterThan(BooleanProperty):
 
 
 
-
-@declare(name="ring_system_phases_within_range", unit=pint.Unit("dimensionless"), property_type=PropertyTypes.BOOLEAN)
+@define(repr=False, order=False, eq=False)
 class RingSystemPhaseWithinRange(BooleanProperty):
+    _name = "ring_system_phases_within_range"
+    _unit = pint.Unit("dimensionless")
+    _type = PropertyTypes.BOOLEAN
+    
     lower_deg: float = field()
     upper_deg: float = field()
     observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)

@@ -8,19 +8,17 @@ from planetary_coverage import SpiceRef, et
 from planetary_coverage.spice import SpiceBody
 
 from ..core.property import Property, PropertyTypes
-from ..support.decorators import declare
 from ..support.time_types import TIMES_TYPES
 
 
-@declare(
-    name="illumination_angles",
-    unit=["rad", "rad", "rad"],
-    property_type=PropertyTypes.VECTOR,
-)
 class SurfaceIlluminationAngles(Property):
     """Computes illumination angles for points on the surface of a target body
 
     return phase, solar incidence, and emission"""
+    
+    _name = "illumination_angles"
+    _unit = ["rad", "rad", "rad"]
+    _type = PropertyTypes.VECTOR
 
     target: SpiceBody = field(converter=SpiceBody)
     surface_points: ArrayLike = field(converter=np.atleast_2d)

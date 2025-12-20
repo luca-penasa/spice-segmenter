@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-
+from typing import ClassVar
 from typing import TYPE_CHECKING
 
 from ..support.time_types import TIMES_TYPES
@@ -29,6 +29,19 @@ class PropertyTypes(Enum):
 
 @define(repr=False, order=False, eq=False)
 class Property(ABC):
+    _name : ClassVar[str]
+    _unit : ClassVar[pint.Unit | Iterable[pint.Unit]]
+    _type : ClassVar[PropertyTypes] = PropertyTypes.SCALAR
+    
+    def __init_subclass__(cls, **kwargs):
+        """Register property subclasses automatically via registry."""
+        super().__init_subclass__(**kwargs)
+        
+        # Register in PROPERTY_REGISTRY if class has _name
+        if hasattr(cls, '_name') and isinstance(cls._name, str) and cls._name:
+            from ..support.decorators import register_property
+            register_property(cls._name, cls)
+    
     @abstractmethod
     def __call__(self, time: TIMES_TYPES) -> float | bool | Enum: ...
 
@@ -36,12 +49,19 @@ class Property(ABC):
         return self.__repr__()
 
     @property
-    @abstractmethod
-    def unit(self) -> pint.Unit | Iterable[pint.Unit]: ...
+    def name(self) -> str:
+        """Property name, read from _name class attribute."""
+        return self._name
+
+    @property
+    def unit(self) -> pint.Unit | Iterable[pint.Unit]:
+        """Property unit, read from _unit class attribute."""
+        return self._unit
 
     @property
     def type(self) -> PropertyTypes:
-        return PropertyTypes.SCALAR
+        """Property type, read from _type class attribute or default to SCALAR."""
+        return getattr(self.__class__, '_type', PropertyTypes.SCALAR)
 
     def as_unit(self, unit: pint.Unit | str) -> UnitAdaptor:
         from ..ops.unit_adapter import UnitAdaptor
@@ -49,10 +69,6 @@ class Property(ABC):
 
     def has_unit(self) -> bool:
         return bool(str(self.unit))
-
-    @property
-    @abstractmethod
-    def name(self) -> str: ...
 
     def compute_as_spice_function(self) -> UDFUNS:
         def as_function(time: TIMES_TYPES) -> float | bool | Enum:

@@ -1,7 +1,7 @@
 """Infrastructure and support utilities (internal use)."""
 
 from .config import Config, config
-from .decorators import PropertyMeta, declare, vectorize
+from .decorators import register_property, get_property_class, list_registered_properties, vectorize
 from .search_reporter import (
     NoSearchReporter,
     SearchReporter,

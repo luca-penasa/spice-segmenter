@@ -1,10 +1,10 @@
 import numpy as np
 import pint
 from pytest import approx
+from attrs import define
 
 from spice_segmenter.ops.constant_values import Constant
 from spice_segmenter.core.constraints import Constraint
-from spice_segmenter.support.decorators import declare
 from spice_segmenter.ops import Inverted
 from spice_segmenter.core.property import Property
 from spice_segmenter.properties.observation_properties import (
@@ -69,12 +69,13 @@ def test_unit_adaptor() -> None:
     assert ph_deg == approx(np.rad2deg(ph(t1)))
 
 
-# property declare is a wrapper that can automatically create a new Property class from a function and some more arguments.
-# it is used to create properties from functions that are not properties themselves.
+# property registration using class attributes instead of decorator
 
 
-@declare(name="one_property")
 class FakeOneProperty(Property):
+    _name = "one_property"
+    _unit = pint.Unit("dimensionless")
+    
     def __call__(self, time: TIMES_TYPES) -> float:
         return 1
 

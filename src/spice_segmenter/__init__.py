@@ -140,6 +140,8 @@ __all__ = [
     "log_enable",
     "log_disable",
     "log_enable_debug",
+    # Registry
+    "get_property_registry",
     # Configuration
     "config",
 ]
@@ -192,3 +194,20 @@ def log_disable(mod: str = "spice_segmenter") -> None:
     """
     log.disable(mod)
 
+
+def get_property_registry() -> dict:
+    """Get the property registry.
+    
+    Returns
+    -------
+    dict
+        Dictionary mapping property names to Property classes
+        
+    Example
+    -------
+    >>> registry = get_property_registry()
+    >>> for name, cls in registry.items():
+    ...     print(f"{name}: {cls.__name__}")
+    """
+    from .support.decorators import list_registered_properties
+    return list_registered_properties()
