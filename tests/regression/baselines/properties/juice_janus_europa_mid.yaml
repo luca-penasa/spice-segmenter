@@ -1,0 +1,86 @@
+meta:
+  generated: '2026-03-17T13:36:08Z'
+  mk_version: v432_20230505_001
+values:
+  juice_janus_callisto_europa_occultation: NONE
+  juice_janus_europa_angular_size: 7.0104929022579875e-06
+  juice_janus_europa_approx_altitude: 445273676.9846599
+  juice_janus_europa_boresight_altitude: nan
+  juice_janus_europa_boresight_dec: -23.196824427325826
+  juice_janus_europa_boresight_geo_latitude: nan
+  juice_janus_europa_boresight_geo_longitude: nan
+  juice_janus_europa_boresight_geodetic:
+  - nan
+  - nan
+  - nan
+  juice_janus_europa_boresight_groundtrack_velocity: nan
+  juice_janus_europa_boresight_intersects_body: false
+  juice_janus_europa_boresight_latitude: nan
+  juice_janus_europa_boresight_latitudinal:
+  - nan
+  - nan
+  - nan
+  juice_janus_europa_boresight_longitude: nan
+  juice_janus_europa_boresight_ra: 277.53296896721406
+  juice_janus_europa_boresight_radec:
+  - 277.53296896721406
+  - -23.196824427325826
+  juice_janus_europa_boresight_radius: nan
+  juice_janus_europa_boresight_rectangular:
+  - nan
+  - nan
+  - nan
+  juice_janus_europa_boresight_x: nan
+  juice_janus_europa_boresight_y: nan
+  juice_janus_europa_boresight_z: nan
+  juice_janus_europa_callisto_occultation: NONE
+  juice_janus_europa_distance: 445275237.7841069
+  juice_janus_europa_distance_in_target_radii: 285286.64501573564
+  juice_janus_europa_fov_visibility: false
+  juice_janus_europa_ganymede_occultation: NONE
+  juice_janus_europa_io_occultation: NONE
+  juice_janus_europa_jupiter_occultation: NONE
+  juice_janus_europa_jupiter_rise: false
+  juice_janus_europa_jupiter_rise_ratio: -1.5499469829528447
+  juice_janus_europa_jupiter_shine_ideal_condition: false
+  juice_janus_europa_sub_obs_point_in_daylight: true
+  juice_janus_europa_sub_observer_emission: 0.02969409062841184
+  juice_janus_europa_sub_observer_illumination_angles:
+  - 1.5628237007413612
+  - 0.02969409062841184
+  - 1.5892849184569657
+  juice_janus_europa_sub_observer_incidence: 1.5628237007413612
+  juice_janus_europa_sub_observer_phase_local: 1.5892849184569657
+  juice_janus_europa_sub_observer_pixel_scale: nan
+  juice_janus_europa_sub_sc_altitude: -2.2197091323595326
+  juice_janus_europa_sub_sc_geo_latitude: -3.368998912530455
+  juice_janus_europa_sub_sc_geo_longitude: -100.2470742643543
+  juice_janus_europa_sub_sc_geodetic:
+  - -100.2470742643543
+  - -3.368998912530455
+  - -2.2197091323595326
+  juice_janus_europa_sub_sc_latitude: -3.3556564638273643
+  juice_janus_europa_sub_sc_latitudinal:
+  - 1560.3696379962898
+  - -100.2470742643543
+  - -3.3556564638273643
+  juice_janus_europa_sub_sc_longitude: -100.2470742643543
+  juice_janus_europa_sub_sc_radius: 1560.3696379962898
+  juice_janus_europa_sub_sc_rectangular:
+  - -277.1033690695167
+  - -1532.8487108494362
+  - -91.33432913322669
+  juice_janus_europa_sub_sc_velocity: 0.03196425583206791
+  juice_janus_europa_sub_sc_x: -277.1033690695167
+  juice_janus_europa_sub_sc_y: -1532.8487108494362
+  juice_janus_europa_sub_sc_z: -91.33432913322669
+  juice_janus_europa_sun_phase_angle: 0.02773820144736039
+  juice_janus_europa_target_dec: -8.87087937326261
+  juice_janus_europa_target_ra: 206.08118248556795
+  juice_janus_europa_target_radec:
+  - 206.08118248556795
+  - -8.87087937326261
+  juice_janus_europa_target_size_on_sensor: 0.46768198218741414
+  juice_janus_ganymede_europa_occultation: NONE
+  juice_janus_io_europa_occultation: NONE
+  juice_janus_jupiter_europa_occultation: NONE

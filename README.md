@@ -50,6 +50,47 @@ source .venv/bin/activate
 pytest
 ```
 
+#### Regression testing
+
+The `tests/regression/` suite locks down numerical results for both property
+evaluation and constraint solving against a fixed set of SPICE kernels.  Each
+test calls `compute_all` or solves a constraint, then compares the output
+against a YAML baseline stored in `tests/regression/baselines/`.
+
+**Normal CI run** — compare against stored baselines:
+
+```sh
+pytest tests/regression/
+```
+
+**After a kernel delivery / planned geometry change** — regenerate all baselines,
+review the diff, then commit:
+
+```sh
+pytest tests/regression/ --update-regression
+git diff tests/regression/baselines/   # review what changed
+git add tests/regression/baselines/
+git commit -m "chore: update regression baselines for kernel v<new>"
+```
+
+**Regenerate a single case** (useful when adding a new property or constraint):
+
+```sh
+pytest tests/regression/ --update-regression -k "ganymede_start"
+```
+
+Tolerances applied during comparison:
+
+| Quantity | Tolerance |
+|---|---|
+| Scalar / vector numeric values | 1 ppm relative |
+| Solver total coverage duration | 0.01 % relative |
+| Individual interval start / end | 60 s absolute |
+
+Both `n_intervals` and each interval boundary are stored, so a code change that
+shifts event times or changes the number of detected intervals will always
+produce a clear failure message.
+
 ### Documentation
 
 The documentation is automatically generated from the content of the [docs directory](https://github.com/luca-penasa/spice-segmenter/tree/master/docs) and from the docstrings

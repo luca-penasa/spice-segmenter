@@ -1,0 +1,86 @@
+meta:
+  generated: '2026-03-17T13:36:07Z'
+  mk_version: v432_20230505_001
+values:
+  juice_janus_callisto_angular_size: 1.0832261340096659e-05
+  juice_janus_callisto_approx_altitude: 445020087.6440764
+  juice_janus_callisto_boresight_altitude: nan
+  juice_janus_callisto_boresight_dec: -23.196824427325826
+  juice_janus_callisto_boresight_geo_latitude: nan
+  juice_janus_callisto_boresight_geo_longitude: nan
+  juice_janus_callisto_boresight_geodetic:
+  - nan
+  - nan
+  - nan
+  juice_janus_callisto_boresight_groundtrack_velocity: nan
+  juice_janus_callisto_boresight_intersects_body: false
+  juice_janus_callisto_boresight_latitude: nan
+  juice_janus_callisto_boresight_latitudinal:
+  - nan
+  - nan
+  - nan
+  juice_janus_callisto_boresight_longitude: nan
+  juice_janus_callisto_boresight_ra: 277.53296896721406
+  juice_janus_callisto_boresight_radec:
+  - 277.53296896721406
+  - -23.196824427325826
+  juice_janus_callisto_boresight_radius: nan
+  juice_janus_callisto_boresight_rectangular:
+  - nan
+  - nan
+  - nan
+  juice_janus_callisto_boresight_x: nan
+  juice_janus_callisto_boresight_y: nan
+  juice_janus_callisto_boresight_z: nan
+  juice_janus_callisto_distance: 445022497.9440764
+  juice_janus_callisto_distance_in_target_radii: 184633.6547085742
+  juice_janus_callisto_europa_occultation: NONE
+  juice_janus_callisto_fov_visibility: false
+  juice_janus_callisto_ganymede_occultation: NONE
+  juice_janus_callisto_io_occultation: NONE
+  juice_janus_callisto_jupiter_occultation: NONE
+  juice_janus_callisto_jupiter_rise: false
+  juice_janus_callisto_jupiter_rise_ratio: -5.04226291598071
+  juice_janus_callisto_jupiter_shine_ideal_condition: false
+  juice_janus_callisto_sub_obs_point_in_daylight: true
+  juice_janus_callisto_sub_observer_emission: 2.0333810773525778e-10
+  juice_janus_callisto_sub_observer_illumination_angles:
+  - 1.7291969279296613
+  - 2.0333810773525778e-10
+  - 1.729196927726444
+  juice_janus_callisto_sub_observer_incidence: 1.7291969279296613
+  juice_janus_callisto_sub_observer_phase_local: 1.729196927726444
+  juice_janus_callisto_sub_observer_pixel_scale: nan
+  juice_janus_callisto_sub_sc_altitude: 0.0
+  juice_janus_callisto_sub_sc_geo_latitude: -3.2972276188857017
+  juice_janus_callisto_sub_sc_geo_longitude: 102.77591429339509
+  juice_janus_callisto_sub_sc_geodetic:
+  - 102.77591429339509
+  - -3.2972276188857017
+  - 0.0
+  juice_janus_callisto_sub_sc_latitude: -3.2972276188857017
+  juice_janus_callisto_sub_sc_latitudinal:
+  - 2410.3
+  - 102.77591429339509
+  - -3.2972276188857017
+  juice_janus_callisto_sub_sc_longitude: 102.77591429339509
+  juice_janus_callisto_sub_sc_radius: 2410.3
+  juice_janus_callisto_sub_sc_rectangular:
+  - -532.127901755183
+  - 2346.7355348472797
+  - -138.63013979174718
+  juice_janus_callisto_sub_sc_velocity: 0.01051385306887036
+  juice_janus_callisto_sub_sc_x: -532.127901755183
+  juice_janus_callisto_sub_sc_y: 2346.7355348472797
+  juice_janus_callisto_sub_sc_z: -138.63013979174718
+  juice_janus_callisto_sun_phase_angle: 0.030180090470470322
+  juice_janus_callisto_target_dec: -8.747198650127045
+  juice_janus_callisto_target_ra: 205.77873540271014
+  juice_janus_callisto_target_radec:
+  - 205.77873540271014
+  - -8.747198650127045
+  juice_janus_callisto_target_size_on_sensor: 0.7226386968420995
+  juice_janus_europa_callisto_occultation: NONE
+  juice_janus_ganymede_callisto_occultation: NONE
+  juice_janus_io_callisto_occultation: NONE
+  juice_janus_jupiter_callisto_occultation: NONE

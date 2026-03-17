@@ -1,0 +1,86 @@
+meta:
+  generated: '2026-03-17T13:36:07Z'
+  mk_version: v432_20230505_001
+values:
+  juice_janus_callisto_ganymede_occultation: NONE
+  juice_janus_europa_ganymede_occultation: NONE
+  juice_janus_ganymede_angular_size: 1.1791416802193546e-05
+  juice_janus_ganymede_approx_altitude: 446288097.74446994
+  juice_janus_ganymede_boresight_altitude: nan
+  juice_janus_ganymede_boresight_dec: -23.196824427325826
+  juice_janus_ganymede_boresight_geo_latitude: nan
+  juice_janus_ganymede_boresight_geo_longitude: nan
+  juice_janus_ganymede_boresight_geodetic:
+  - nan
+  - nan
+  - nan
+  juice_janus_ganymede_boresight_groundtrack_velocity: nan
+  juice_janus_ganymede_boresight_intersects_body: false
+  juice_janus_ganymede_boresight_latitude: nan
+  juice_janus_ganymede_boresight_latitudinal:
+  - nan
+  - nan
+  - nan
+  juice_janus_ganymede_boresight_longitude: nan
+  juice_janus_ganymede_boresight_ra: 277.53296896721406
+  juice_janus_ganymede_boresight_radec:
+  - 277.53296896721406
+  - -23.196824427325826
+  juice_janus_ganymede_boresight_radius: nan
+  juice_janus_ganymede_boresight_rectangular:
+  - nan
+  - nan
+  - nan
+  juice_janus_ganymede_boresight_x: nan
+  juice_janus_ganymede_boresight_y: nan
+  juice_janus_ganymede_boresight_z: nan
+  juice_janus_ganymede_callisto_occultation: NONE
+  juice_janus_ganymede_distance: 446290728.9444699
+  juice_janus_ganymede_distance_in_target_radii: 169614.90154472095
+  juice_janus_ganymede_europa_occultation: NONE
+  juice_janus_ganymede_fov_visibility: false
+  juice_janus_ganymede_io_occultation: NONE
+  juice_janus_ganymede_jupiter_occultation: NONE
+  juice_janus_ganymede_jupiter_rise: true
+  juice_janus_ganymede_jupiter_rise_ratio: 15.13009943752352
+  juice_janus_ganymede_jupiter_shine_ideal_condition: false
+  juice_janus_ganymede_sub_obs_point_in_daylight: true
+  juice_janus_ganymede_sub_observer_emission: 2.0164392022095437e-10
+  juice_janus_ganymede_sub_observer_illumination_angles:
+  - 1.5911993586849245
+  - 2.0164392022095437e-10
+  - 1.5911993584832953
+  juice_janus_ganymede_sub_observer_incidence: 1.5911993586849245
+  juice_janus_ganymede_sub_observer_phase_local: 1.5911993584832953
+  juice_janus_ganymede_sub_observer_pixel_scale: nan
+  juice_janus_ganymede_sub_sc_altitude: -0.0
+  juice_janus_ganymede_sub_sc_geo_latitude: -3.5599598971861393
+  juice_janus_ganymede_sub_sc_geo_longitude: -34.980276097779324
+  juice_janus_ganymede_sub_sc_geodetic:
+  - -34.980276097779324
+  - -3.5599598971861393
+  - -0.0
+  juice_janus_ganymede_sub_sc_latitude: -3.5599598971861397
+  juice_janus_ganymede_sub_sc_latitudinal:
+  - 2631.2
+  - -34.980276097779324
+  - -3.5599598971861397
+  juice_janus_ganymede_sub_sc_longitude: -34.980276097779324
+  juice_janus_ganymede_sub_sc_radius: 2631.2
+  juice_janus_ganymede_sub_sc_rectangular:
+  - 2151.7122197062645
+  - -1505.5414934014257
+  - -163.37923739981142
+  juice_janus_ganymede_sub_sc_velocity: 0.02665983976959296
+  juice_janus_ganymede_sub_sc_x: 2151.7122197062645
+  juice_janus_ganymede_sub_sc_y: -1505.5414934014257
+  juice_janus_ganymede_sub_sc_z: -163.37923739981142
+  juice_janus_ganymede_sun_phase_angle: 0.02777157826753962
+  juice_janus_ganymede_target_dec: -8.87445046867436
+  juice_janus_ganymede_target_ra: 206.06642405467366
+  juice_janus_ganymede_target_radec:
+  - 206.06642405467366
+  - -8.87445046867436
+  juice_janus_ganymede_target_size_on_sensor: 0.7866255996167782
+  juice_janus_io_ganymede_occultation: NONE
+  juice_janus_jupiter_ganymede_occultation: NONE

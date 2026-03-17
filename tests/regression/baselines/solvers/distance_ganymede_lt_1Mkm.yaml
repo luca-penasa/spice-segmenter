@@ -1,0 +1,22 @@
+meta:
+  generated: '2026-03-17T13:37:44Z'
+  mk_version: v432_20230505_001
+values:
+  intervals.0.end: '2032-02-16 23:11:33.304000'
+  intervals.0.start: '2032-02-12 11:57:47.921000'
+  intervals.1.end: '2032-04-14 13:09:43.952000'
+  intervals.1.start: '2032-04-09 17:24:42.236000'
+  intervals.2.end: '2032-05-11 23:17:18.458000'
+  intervals.2.start: '2032-05-08 07:41:58.331000'
+  intervals.3.end: '2032-05-13 07:38:42.470000'
+  intervals.3.start: '2032-05-12 08:45:56.841000'
+  intervals.4.end: '2032-06-04 09:26:42.147000'
+  intervals.4.start: '2032-05-30 08:06:30.583000'
+  intervals.5.end: '2032-09-08 22:27:49.215000'
+  intervals.5.start: '2032-09-06 10:43:02.123000'
+  intervals.6.end: '2032-10-28 10:36:19.558000'
+  intervals.6.start: '2032-10-26 06:24:17.134000'
+  intervals.7.end: '2032-11-14 13:10:12.350000'
+  intervals.7.start: '2032-11-14 05:01:53.629000'
+  n_intervals: 8
+  total_duration_s: 2069532.655

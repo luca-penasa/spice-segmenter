@@ -75,7 +75,8 @@ def test_unit_adaptor() -> None:
 class FakeOneProperty(Property):
     _name = "one_property"
     _unit = pint.Unit("dimensionless")
-    
+    _skip_auto_compute = True   # exclude from compute_all; this is a test-only stub
+
     def __call__(self, time: TIMES_TYPES) -> float:
         return 1
 
