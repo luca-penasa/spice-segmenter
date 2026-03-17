@@ -1,4 +1,4 @@
-from spice_segmenter import SpiceWindow, log_enable
+from spice_segmenter import TimeSegmentsCollection, log_enable
 from spice_segmenter.core.constraints import ConstraintBase
 from spice_segmenter.constraint_solver import GenericScalarSolver
 from spice_segmenter.constraint_solver.constraint_solver import SpiceEventSolver, SpiceOccultationSolver, SpiceWindowSolver
@@ -20,7 +20,7 @@ p_lat = Vector('CALLISTO', 'JUICE_JANUS', frame=SpiceBody('CALLISTO').frame).as_
 
 c_lat = p_lat < '20 deg'
 
-w = SpiceWindow.from_start_end("2032-01-01T00:00:00", "2033-01-01T00:00:00")
+w = TimeSegmentsCollection.from_start_end("2032-01-01T00:00:00", "2033-01-01T00:00:00")
 
 p_occ = Occultation('JUICE_JANUS', 'CALLISTO', 'JUPITER')
 
@@ -33,7 +33,7 @@ config.solver_step = 48 * 60 * 60  # 48 hours to make it faster
 
 def _test_solve_with_generic_scalar_solver(constraint: ConstraintBase) -> None:
     solver = GenericScalarSolver(constraint=constraint)
-    got = solver.solve(w)
+    got = solver.solve(w._to_spice_window())
 
     astab = got.to_pandas()
     print("Found intervals:")

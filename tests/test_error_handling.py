@@ -1,12 +1,13 @@
 """Tests for error handling and edge cases."""
 
 import numpy as np
+import pandas as pd
 import pytest
 from spice_segmenter import (
     Distance,
+    TimeSegmentsCollection,
     PhaseAngle,
     Constraint,
-    SpiceWindow,
 )
 from spice_segmenter.support.config import config
 from . import tour_config as tc
@@ -49,7 +50,7 @@ def test_constraint_with_mismatched_units() -> None:
 
 def test_constraint_evaluation_at_boundary() -> None:
     """Test constraint evaluation at window boundaries."""
-    w = SpiceWindow.from_start_end("2032-01-01", "2034-01-01")
+    w = TimeSegmentsCollection.from_start_end("2032-01-01", "2034-01-01")
     c = Distance(tc.spacecraft, tc.target) < "5000 km"
     
     # Should be able to evaluate constraint
@@ -70,19 +71,16 @@ def test_multiple_properties_same_time() -> None:
 
 
 def test_spice_window_operations() -> None:
-    """Test SpiceWindow edge cases."""
-    w1 = SpiceWindow()
-    w1.add_interval(0, 10)
-    
-    w2 = SpiceWindow()
-    w2.add_interval(15, 25)
+    """Test TimeSegmentsCollection edge cases."""
+    w1 = TimeSegmentsCollection.from_start_end("2032-01-01", "2032-06-01")
+    w2 = TimeSegmentsCollection.from_start_end("2032-07-01", "2032-12-31")
     
     # Union of non-overlapping intervals
     w3 = w1 + w2
     assert len(w3) == 2
-    
+
     # Empty window
-    w_empty = SpiceWindow()
+    w_empty = TimeSegmentsCollection()
     assert len(w_empty) == 0
 
 
@@ -148,11 +146,13 @@ def test_phase_angle_physical_range() -> None:
 
 def test_constraint_solve_empty_window() -> None:
     """Test solving constraint over very small window."""
-    w = SpiceWindow()
-    w.add_interval(start, start + np.timedelta64(1, "h"))
-    
+    from spice_segmenter.core.time_segments_collection import TimeSegmentsCollection
+    t_start = pd.Timestamp(str(start))
+    t_end = t_start + pd.Timedelta(hours=1)
+    w = TimeSegmentsCollection.from_start_end(t_start, t_end)
+
     c = Distance(tc.spacecraft, tc.target) < "5000 km"
-    
+
     # Should handle very small time windows
     result = c.solve(w)
     assert result is not None

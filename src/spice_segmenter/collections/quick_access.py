@@ -7,7 +7,7 @@ import pandas as pd
 from loguru import logger as log
 from planetary_coverage.spice import SpiceBody
 
-from ..core.spice_window import SpiceWindow
+from ..core.time_segments_collection import TimeSegmentsCollection
 from ..ops.constraint_operations import MinMaxConstraint
 from ..properties.observation_properties import Distance, MinMaxConditionTypes
 from ..properties.visibility_properties import BodyFOVVisibility
@@ -24,7 +24,7 @@ def flybys_windows(
     d = Distance(observer, target)
     distance_treshold_km = altitude_treshold_km + SpiceBody(target).radius
     return (d < f"{distance_treshold_km} km").solve(
-        SpiceWindow.from_start_end(start, end),
+        TimeSegmentsCollection.from_start_end(start, end),
     )
 
 
@@ -34,9 +34,10 @@ def flybys_cas(
     end="2034-10-30T22:30:44.625",
     observer="JUICE_JANUS",
     altitude_treshold_km=80000,
-):
+) -> list:
+    """Return one point ``TimeSegment`` per flyby closest approach."""
     windows = flybys_windows(target, start, end, observer, altitude_treshold_km)
-    return [find_ca(*win.to_start_end(), target) for win in windows]
+    return [find_ca(win.start, win.end, target, observer) for win in windows]
 
 
 def find_visibility_intervals(
@@ -53,7 +54,7 @@ def find_visibility_intervals(
     end = pd.Timestamp(end)
 
     v = BodyFOVVisibility(observer, target)
-    w = SpiceWindow.from_start_end(start, end)
+    w = TimeSegmentsCollection.from_start_end(start, end)
 
     interval = (v == True).solve(w)
     return interval.to_pandas()
@@ -105,7 +106,7 @@ def find_apsis(
         ctype = MinMaxConditionTypes.LOCAL_MINIMUM
 
     target_distance = Distance(observer, target)
-    w = SpiceWindow.from_start_end(start, end)
+    w = TimeSegmentsCollection.from_start_end(start, end)
     c = MinMaxConstraint(target_distance, ctype)
     ca = c.solve(w)
     return ca.to_pandas()["start"]
@@ -178,19 +179,24 @@ def get_periapsis_interval_table(start, end, target="JUPITER", observer="JUICE_J
     return intervals, peri_table, apo_table
 
 
-def find_ca(start, end, target="JUPITER", observer="JUICE_JANUS") -> pd.Timestamp:
-    """Returns the closest approaches within start and end."""
+def find_ca(start, end, target="JUPITER", observer="JUICE_JANUS") -> "TimeSegment":  # type: ignore[name-defined]  # noqa: F821
+    """Return the closest approach within [*start*, *end*] as a point ``TimeSegment``.
+
+    The returned segment has :attr:`~TimeSegment.is_point` ``= True``,
+    :attr:`~TimeSegment.label` ``= "closest approach"``,
+    :attr:`~TimeSegment.property_name` ``= "distance"``, and
+    :attr:`~TimeSegment.value` set to the distance in km at the CA.
+    """
+    from ..core.time_segment import TimeSegment
+
     dist = Distance(observer, target)
-
-    c = MinMaxConstraint(dist, MinMaxConditionTypes.GLOBAL_MINIMUM)
-    w = SpiceWindow.from_start_end(start, end)
-
-    ca = c.solve(w)
-    if not ca.is_point():
-        msg = "Could not determine CA."
-        raise ValueError(msg)
-
-    return ca.to_start_end()[0]
+    pt = dist.find_minimum(TimeSegmentsCollection.from_start_end(start, end))
+    return TimeSegment.at_time(
+        pt.start,
+        label="closest approach",
+        value=pt.value,
+        property_name="distance",
+    )
 
 
 def juice_flybys_table() -> pd.DataFrame:

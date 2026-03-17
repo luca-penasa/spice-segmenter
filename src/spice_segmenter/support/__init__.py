@@ -1,6 +1,6 @@
 """Infrastructure and support utilities (internal use)."""
 
-from .config import Config, config
+from .config import Config, config, get_active_config
 from .context import (
     SpiceContext,
     get_context,

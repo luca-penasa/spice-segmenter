@@ -10,10 +10,12 @@ from planetary_coverage import SpiceRef
 from spiceypy import gfrefn, gfstep
 
 from spice_segmenter import config
+from spice_segmenter.support.config import get_active_config
 from spice_segmenter.core.constraints import (
     ConstraintBase,
     ConstraintTypes,
 )
+from spice_segmenter.core.time_segments_collection import TimeSegmentsCollection
 from spice_segmenter.core.property import BooleanProperty, PropertyTypes
 from spice_segmenter.core.spice_window import SpiceWindow
 from spice_segmenter.ops.constant_values import BoolConstant, Constant
@@ -32,7 +34,7 @@ class BaseSolver(ABC):
 
     constraint: ConstraintBase | None
     _step: float | None = field(
-        factory=lambda: config.solver_step,
+        factory=lambda: get_active_config().solver_step_seconds,
         converter=lambda x: x
         if isinstance(x, float | None)
         else pd.Timedelta(x).total_seconds(),
@@ -46,7 +48,7 @@ class BaseSolver(ABC):
         if self._step:
             return self._step
 
-        return config.solver_step
+        return get_active_config().solver_step_seconds
 
     @abstractmethod
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -683,6 +685,9 @@ class GenericScalarSolver(BaseSolver):
         if constraint.ctype == ConstraintTypes.COMPARE_TO_CONSTANT:
             if constraint.left.type == PropertyTypes.SCALAR:
                 return True
+        elif constraint.ctype == ConstraintTypes.MINMAX:
+            if constraint.left.type == PropertyTypes.SCALAR:
+                return True
         return False
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
@@ -699,23 +704,6 @@ class GenericScalarSolver(BaseSolver):
 
         result = SpiceWindow()
 
-        right_value: BoolConstant = self.constraint.right.value
-
-        runit = self.constraint.right.unit
-        lunit = self.constraint.left.unit
-
-        if runit == pint.Unit("dimensionless"):
-            log.debug(
-                f"ritgh unit is dimensionless. Assuming same as left property unit {lunit}",
-            )
-            runit = lunit
-
-        if runit != lunit:
-            log.debug(
-                f"different units between constraint and property are used. attempting conversion {runit} vs {lunit}",
-            )
-            right_value = pint.Quantity(right_value, runit).to(lunit).magnitude
-
         left_prop = self.constraint.left
 
         as_spice_f = left_prop.compute_as_spice_function()
@@ -723,17 +711,61 @@ class GenericScalarSolver(BaseSolver):
         def is_dec(func: spiceypy.utils.callbacks.UDFUNC, t: float) -> bool:
             return spiceypy.uddc(func, t, 1.0)
 
-        spiceypy.gfuds(
-            as_spice_f,
-            spiceypy.utils.callbacks.SpiceUDFUNB(is_dec),
-            self.constraint.operator,
-            right_value,
-            0.0,
-            self.step,
-            10000,
-            window.spice_window,
-            result.spice_window,
-        )
+        if self.constraint.ctype == ConstraintTypes.MINMAX:
+            # Convert minmax condition types to SPICE operator codes
+            minmax_to_spice = {
+                "local_minimum": "LOCMIN",
+                "local_maximum": "LOCMAX",
+                "global_minimum": "ABSMIN",
+                "global_maximum": "ABSMAX",
+            }
+            operator = minmax_to_spice.get(self.constraint.operator)
+            if not operator:
+                log.error(f"Unknown minmax operator: {self.constraint.operator}")
+                raise ValueError
+
+            # For minmax constraints, use 0.0 as the right value (unused)
+            spiceypy.gfuds(
+                as_spice_f,
+                spiceypy.utils.callbacks.SpiceUDFUNB(is_dec),
+                operator,
+                0.0,
+                0.0,
+                self.step,
+                10000,
+                window.spice_window,
+                result.spice_window,
+            )
+        else:
+            # For constant comparison constraints
+            right_value: BoolConstant = self.constraint.right.value
+
+            runit = self.constraint.right.unit
+            lunit = self.constraint.left.unit
+
+            if runit == pint.Unit("dimensionless"):
+                log.debug(
+                    f"ritgh unit is dimensionless. Assuming same as left property unit {lunit}",
+                )
+                runit = lunit
+
+            if runit != lunit:
+                log.debug(
+                    f"different units between constraint and property are used. attempting conversion {runit} vs {lunit}",
+                )
+                right_value = pint.Quantity(right_value, runit).to(lunit).magnitude
+
+            spiceypy.gfuds(
+                as_spice_f,
+                spiceypy.utils.callbacks.SpiceUDFUNB(is_dec),
+                self.constraint.operator,
+                right_value,
+                0.0,
+                self.step,
+                10000,
+                window.spice_window,
+                result.spice_window,
+            )
 
         return result
 
@@ -746,25 +778,31 @@ class MasterSolver(BaseSolver):
     minimum_interval_size: float = 0.0  # seconds
     solver_config: dict = {}
 
-    def solve(self, window: SpiceWindow) -> SpiceWindow:
+    def solve(self, window: TimeSegmentsCollection) -> TimeSegmentsCollection:
         if not self.constraint or not self.can_solve(self.constraint):
             log.error("No constraint set or constraint not solvable")
             raise ValueError
 
         if not len(window):
-            return SpiceWindow()
+            return TimeSegmentsCollection()
 
-        solver = get_appropriate_solver(self.constraint)
-        log.debug(f"Using as solver step size {self.step} seconds")
-        result = solver(self.constraint, step=self.step, **self.solver_config).solve(
-            window,
-        )
+        # Convert to internal SpiceWindow for the SPICE solver chain
+        sw = window._to_spice_window()
+        result_sw = self._solve_spice(sw)
 
         if self.minimum_interval_size > 0.0:
             log.debug("Removing small intervals")
-            result.remove_small_intervals(self.minimum_interval_size)
+            result_sw.remove_small_intervals(self.minimum_interval_size)
 
-        return result
+        return TimeSegmentsCollection._from_spice_window(result_sw)
+
+    def _solve_spice(self, window: SpiceWindow) -> SpiceWindow:
+        """Internal solve using the SpiceWindow-based solver chain."""
+        solver = get_appropriate_solver(self.constraint)
+        log.debug(f"Using as solver step size {self.step} seconds")
+        return solver(self.constraint, step=self.step, **self.solver_config).solve(
+            window,
+        )
 
     @staticmethod
     def can_solve(constraint: ConstraintBase) -> bool:

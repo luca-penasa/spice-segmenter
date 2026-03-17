@@ -217,28 +217,12 @@ class Property(ABC):
         config["property"] = self.name
 
     def to_json(self, indent: int | None = None) -> str:
-        """
-        Serialize this Property to a JSON string.
+        """Serialize this Property to a JSON string.
 
-        Args:
-            indent: Number of spaces for JSON indentation. None for compact format.
-
-        Returns:
-            JSON string representation of the Property
-
-        Example:
-            >>> c = (
-            ...     PhaseAngle(
-            ...         "JUICE_JANUS",
-            ...         "GANYMEDE",
-            ...     )
-            ...     > "20 deg"
-            ... )
-            >>> json_str = (
-            ...     c.to_json(
-            ...         indent=2
-            ...     )
-            ... )
+        Parameters
+        ----------
+        indent:
+            Number of spaces for JSON indentation. ``None`` for compact format.
         """
         import json
 
@@ -247,6 +231,135 @@ class Property(ABC):
         converter = create_property_converter()
         data = converter.unstructure(self)
         return json.dumps(data, indent=indent)
+
+    def find_minimum(
+        self,
+        window: "TimeSegmentsCollection" = None,
+        *,
+        evaluate: bool = True,
+    ) -> "TimeSegment":  # type: ignore[name-defined]  # noqa: F821
+        """Find the global minimum of this property within *window*.
+
+        Parameters
+        ----------
+        window:
+            Search window as a :class:`~spice_segmenter.core.TimeSegmentsCollection`.
+        evaluate:
+            If ``True`` (default) the property is evaluated at the result time
+            and stored in :attr:`~TimeSegment.value`.
+
+        Returns
+        -------
+        TimeSegment
+            A zero-duration point segment with :attr:`~TimeSegment.is_point` ``= True``.
+
+        Examples
+        --------
+        >>> ca = Distance("JUICE_JANUS", "GANYMEDE").find_minimum(window)
+        >>> ca.time, ca.value   # timestamp and distance in km
+        """
+        return self._find_extremum("GLOBAL_MINIMUM", window, evaluate=evaluate)
+
+    def find_maximum(
+        self,
+        window: "TimeSegmentsCollection" = None,
+        *,
+        evaluate: bool = True,
+    ) -> "TimeSegment":
+        """Find the global maximum of this property within *window*."""
+        return self._find_extremum("GLOBAL_MAXIMUM", window, evaluate=evaluate)
+
+    def find_local_minima(
+        self,
+        window: "TimeSegmentsCollection" = None,
+        *,
+        evaluate: bool = True,
+    ) -> "TimeSegmentsCollection":
+        """Find all local minima of this property within *window*.
+
+        Returns a :class:`~spice_segmenter.core.TimeSegmentsCollection` of
+        zero-duration point segments, one per local minimum.
+
+        Examples
+        --------
+        >>> minima = Distance("JUICE_JANUS", "GANYMEDE").find_local_minima(window)
+        >>> minima.point_events    # list of point segments
+        """
+        return self._find_extrema("LOCAL_MINIMUM", window, evaluate=evaluate)
+
+    def find_local_maxima(
+        self,
+        window: "TimeSegmentsCollection" = None,
+        *,
+        evaluate: bool = True,
+    ) -> "TimeSegmentsCollection":
+        """Find all local maxima of this property within *window*."""
+        return self._find_extrema("LOCAL_MAXIMUM", window, evaluate=evaluate)
+
+    def _find_extremum(
+        self,
+        condition: str,
+        window: "TimeSegmentsCollection" = None,
+        *,
+        evaluate: bool,
+    ) -> "TimeSegment":
+        """Solve a global min/max condition and return a single point segment."""
+        results = self._find_extrema(condition, window, evaluate=evaluate)
+        pts = results.point_events
+        if not pts:
+            raise ValueError(
+                f"Could not find {condition} for {self!r} in the given window."
+            )
+        if len(pts) > 1:
+            log.warning(
+                "find_minimum/maximum returned {} point events; returning the first.",
+                len(pts),
+            )
+        return pts[0]
+
+    def _find_extrema(
+        self,
+        condition: str,
+        window: "TimeSegmentsCollection" = None,
+        *,
+        evaluate: bool,
+    ) -> "TimeSegmentsCollection":
+        """Solve a MinMaxConstraint and return a TimeSegmentsCollection of point segments."""
+        from ..ops.constraint_operations import MinMaxConstraint
+        from ..properties.observation_properties import MinMaxConditionTypes
+        from ..support.config import get_active_config
+        from .time_segment import TimeSegment
+        from .time_segments_collection import TimeSegmentsCollection
+
+        if window is None:
+            cfg = get_active_config()
+            if cfg.start is None or cfg.end is None:
+                raise RuntimeError(
+                    f"{self.__class__.__name__}.{condition.lower()} called without a window "
+                    "and no default window is set. "
+                    "Either pass a window explicitly or activate a context:\n\n"
+                    "    with Config(start='2032-01-01', end='2035-01-01'):\n"
+                    f"        prop.find_{condition.lower()}()\n"
+                )
+            window = TimeSegmentsCollection.from_start_end(cfg.start, cfg.end)
+
+        cond = MinMaxConditionTypes[condition]
+        constraint = MinMaxConstraint(self, cond)
+        raw: TimeSegmentsCollection = constraint.solve(window)
+
+        # Annotate each point segment with property metadata + evaluated value
+        annotated = []
+        for seg in raw:
+            val = float(self(seg.start)) if evaluate else None
+            annotated.append(
+                TimeSegment.at_time(
+                    seg.start,
+                    label=condition.lower().replace("_", " "),
+                    value=val,
+                    property_name=self.name,
+                )
+            )
+        return TimeSegmentsCollection(segments=annotated)
 
     @classmethod
     def from_json(cls, json_str: str) -> Property:

@@ -3,8 +3,8 @@
 import pytest
 from spice_segmenter import (
     Distance,
+    TimeSegmentsCollection,
     TargetSizeOnSensor,
-    SpiceWindow,
     config,
     optimize_constraint,
     ConstraintOptimizer,
@@ -18,7 +18,7 @@ config.solver_step = "24 h"
 start, end = tc.coverage
 tc.load_kernels()
 
-w = SpiceWindow.from_start_end("2032-01-01", "2034-01-01")
+w = TimeSegmentsCollection.from_start_end("2032-01-01", "2034-01-01")
 
 
 def test_target_size_on_sensor_to_distance_transformer():

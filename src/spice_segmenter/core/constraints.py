@@ -15,6 +15,7 @@ from attrs import define, field
 from loguru import logger as log
 
 from spice_segmenter.properties.observation_properties import MinMaxConditionTypes
+from .time_segments_collection import TimeSegmentsCollection
 from .property import Property, PropertyTypes
 from .spice_window import SpiceWindow
 
@@ -73,7 +74,7 @@ class ConstraintBase(Property):
         config["operator"] = self.operator
 
     @singledispatchmethod
-    def solve(self, arg: Any, **kwargs) -> SpiceWindow:
+    def solve(self, arg: Any = None, **kwargs) -> TimeSegmentsCollection:
         """
         Solve the constraint over a time window.
 
@@ -82,61 +83,65 @@ class ConstraintBase(Property):
 
         Parameters
         ----------
-        arg : SpiceWindow or pd.Timestamp or str or object
-            Either a SpiceWindow object, the start time of the window,
-            or any object with `start` and `end` attributes.
+        arg : TimeSegmentsCollection or pd.Timestamp or str or object, optional
+            Either an ``TimeSegmentsCollection``, the start time of the window,
+            or any object with ``start`` and ``end`` attributes.
+            If omitted, the default window set in the active :class:`~spice_segmenter.support.config.Config`
+            context is used (raises ``RuntimeError`` if none is set).
         optimize : bool, optional
             If True, apply constraint optimizations before solving (e.g.,
             convert TargetSizeOnSensor to Distance for better performance).
             Default is False to maintain backward compatibility.
         **kwargs
-            Additional keyword arguments passed to MasterSolver
+            Additional keyword arguments passed to MasterSolver.
 
         Returns
         -------
-        SpiceWindow
-            Window containing intervals where the constraint is satisfied
+        TimeSegmentsCollection
+            Window containing intervals where the constraint is satisfied.
 
         Examples
         --------
-        >>> # Using a pre-constructed window
-        >>> constraint.solve(my_window)
-
-        >>> # Using start/end times
+        >>> constraint.solve(TimeSegmentsCollection.from_start_end("2033-01-01", "2033-12-31"))
         >>> constraint.solve("2033-01-01", "2033-12-31")
-        >>> constraint.solve(pd.Timestamp("2033-01-01"), pd.Timestamp("2033-12-31"))
-        
-        >>> # Using an object with start/end attributes
-        >>> constraint.solve(scenario)
-        
-        >>> # With optimization (faster for TargetSizeOnSensor, AngularSize, etc.)
-        >>> constraint.solve(scenario, optimize=True)
+        >>> constraint.solve(scenario)   # object with .start / .end
+        >>> constraint.solve(window, optimize=True)  # enable optimizer
+        >>> with Config(start="2033-01-01", end="2033-12-31"):
+        ...     constraint.solve()       # uses default window from context
         """
-        # Handle optimization flag
+        from ..support.config import get_active_config
+
         optimize = kwargs.pop("optimize", False)
 
-        # Fallback: check if object has start/end attributes
-        if hasattr(arg, "start") and hasattr(arg, "end"):
-            window = SpiceWindow.from_start_end(arg.start, arg.end)
+        if arg is None:
+            cfg = get_active_config()
+            if cfg.start is None or cfg.end is None:
+                raise RuntimeError(
+                    "solve() called without a window and no default window is set. "
+                    "Either pass a window explicitly or activate a context:\n\n"
+                    "    with Config(start='2032-01-01', end='2035-01-01'):\n"
+                    "        constraint.solve()\n"
+                )
+            window = TimeSegmentsCollection.from_start_end(cfg.start, cfg.end)
             return self.solve(window, optimize=optimize, **kwargs)
 
-        # If not, raise error for unsupported type
-        msg = (
+        if hasattr(arg, "start") and hasattr(arg, "end"):
+            window = TimeSegmentsCollection.from_start_end(arg.start, arg.end)
+            return self.solve(window, optimize=optimize, **kwargs)
+
+        raise TypeError(
             f"solve() called with unsupported type: {type(arg)}. "
-            "Expected SpiceWindow, str, pd.Timestamp, or object with "
+            "Expected TimeSegmentsCollection, str, pd.Timestamp, or object with "
             "start/end attributes"
         )
-        raise TypeError(msg)
 
     @solve.register
-    def _(self, window: SpiceWindow, **kwargs) -> SpiceWindow:
-        """Solve with a pre-constructed SpiceWindow."""
+    def _(self, window: TimeSegmentsCollection, **kwargs) -> TimeSegmentsCollection:
+        """Solve with a pre-constructed TimeSegmentsCollection."""
         from ..constraint_solver.constraint_solver import MasterSolver
 
-        # Handle optimization flag
         optimize = kwargs.pop("optimize", False)
 
-        # Apply constraint optimizer if requested
         constraint = self
         if optimize:
             from ..optimizers.constraint_optimizer import optimize_constraint
@@ -152,9 +157,9 @@ class ConstraintBase(Property):
         start: pd.Timestamp | str,
         end: pd.Timestamp | str,
         **kwargs,
-    ) -> SpiceWindow:
-        """Solve by creating a SpiceWindow from start/end times."""
-        window = SpiceWindow.from_start_end(start, end)
+    ) -> TimeSegmentsCollection:
+        """Solve by constructing an TimeSegmentsCollection from start/end times."""
+        window = TimeSegmentsCollection.from_start_end(start, end)
         return self.solve(window, **kwargs)
 
     def __invert__(self) -> Inverted:

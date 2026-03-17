@@ -43,7 +43,7 @@ from spice_segmenter import (
     OccultationTypes,
     PhaseAngle,
     SpiceContext,
-    SpiceWindow,
+    TimeSegmentsCollection,
     config,
 )
 from spice_segmenter.properties.geometry_properties import (
@@ -59,7 +59,7 @@ MAX_INTERVALS_STORED = 20   # cap stored intervals to keep YAML files compact
 
 # Use a 1-year window during the Jupiter tour where close approaches occur.
 # 2032 is representative: multiple Ganymede and Callisto flybys in this period.
-SEARCH_WINDOW = SpiceWindow.from_start_end("2032-01-01T00:00:00", "2033-01-01T00:00:00")
+SEARCH_WINDOW = TimeSegmentsCollection.from_start_end("2032-01-01T00:00:00", "2033-01-01T00:00:00")
 
 
 # ---------------------------------------------------------------------------
@@ -71,14 +71,14 @@ def _et_to_iso(et_val: float) -> str:
     return utc(et_val)
 
 
-def _window_to_dict(window: SpiceWindow) -> dict[str, Any]:
-    """Serialise a SpiceWindow to a plain dict suitable for YAML storage."""
-    df = window.to_pandas(round_to="S")
+def _window_to_dict(window: TimeSegmentsCollection) -> dict[str, Any]:
+    """Serialise a TimeSegmentsCollection to a plain dict suitable for YAML storage."""
+    df = window.to_pandas(round_to=None)
 
     n = len(window)
     total_s: float = 0.0
     for iw in window:
-        total_s += iw.end - iw.start  # SPICE ET difference = seconds
+        total_s += (iw.end - iw.start).total_seconds()
 
     intervals: list[dict[str, str]] = []
     for _, row in df.head(MAX_INTERVALS_STORED).iterrows():

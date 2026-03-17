@@ -1,4 +1,4 @@
-from spice_segmenter import Distance, SpiceWindow
+from spice_segmenter import Distance, TimeSegmentsCollection
 from spice_segmenter.properties.ring_properties import RingAnsaePhaseGreaterThan
 from spice_segmenter.support.config import config
 from . import tour_config as tc
@@ -7,7 +7,7 @@ config.solver_step = '24 h'
 start, end = tc.coverage
 tc.load_kernels()
 
-w = SpiceWindow.from_start_end('2032-01-01', '2034-01-01')
+w = TimeSegmentsCollection.from_start_end('2032-01-01', '2034-01-01')
 
 
 def test_with_unit_or_not():

@@ -23,9 +23,10 @@ from .core import (
     Constraint,
     ConstraintBase,
     ConstraintTypes,
+    TimeSegmentsCollection,
     Property,
     PropertyTypes,
-    SpiceWindow,
+    TimeSegment,
     all_properties,
     get_property,
     property_registry,
@@ -105,7 +106,7 @@ from .properties import (
     TargetSizeOnSensor,
     Vector,
 )
-from .support.config import config
+from .support.config import Config, config, get_active_config
 from .support.context import (
     SpiceContext,
     get_context,
@@ -220,7 +221,9 @@ __all__ = [
     "get_property",
     "all_properties",
     # Configuration
+    "Config",
     "config",
+    "get_active_config",
     # Context management
     "SpiceContext",
     "get_context",
