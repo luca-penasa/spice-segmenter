@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import pint
 from attr import define, field
@@ -13,6 +13,10 @@ from ..support.time_types import TIMES_TYPES
 
 @define(repr=False, order=False, eq=False)
 class ComponentSelector(Property):
+    # ComponentSelector is a helper/wrapper, not a standalone computable property.
+    # Exclude it from compute_all auto-iteration.
+    _skip_auto_compute: ClassVar[bool] = True
+
     vector: Property = field(default=None)
     component: int = field(default=0, converter=int)
     _name: str = "component_selector"

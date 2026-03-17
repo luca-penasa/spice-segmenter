@@ -1,0 +1,17 @@
+# Occultation properties: observer in shared context, front/back per entry.
+context:
+  observer: JUICE
+
+properties:
+  - type: occultation
+    front: GANYMEDE
+    back: JUPITER
+
+  - type: occultation
+    front: CALLISTO
+    back: JUPITER
+
+  - type: occultation
+    front: GANYMEDE
+    back: JUPITER
+    light_time_correction: LT    # non-default ltc

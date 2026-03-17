@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import ClassVar
 
 import numpy as np
 import pint
@@ -19,11 +20,16 @@ from planetary_coverage.spice.toolbox import (
     sc_state,
 )
 
-from ..core.property import Property, PropertyTypes
-from ..properties.component_selector import ComponentSelector
-from ..support.decorators import vectorize
-from ..support.spice_utilities import as_spice_ref, et
-from ..support.time_types import TIMES_TYPES
+from spice_segmenter.core.property import Property, PropertyTypes
+from spice_segmenter.properties.component_selector import ComponentSelector
+from spice_segmenter.support.context import (
+    get_current_light_time_correction,
+    get_current_observer,
+    get_current_target,
+)
+from spice_segmenter.support.decorators import vectorize
+from spice_segmenter.support.spice_utilities import as_spice_ref, et
+from spice_segmenter.support.time_types import TIMES_TYPES
 
 PROPERTIES_REGISTRY = []
 
@@ -37,13 +43,20 @@ class MinMaxConditionTypes(Enum):
 
 @define(repr=False, order=False, eq=False)
 class TargetedPropertyMixin:
-    observer: SpiceInstrument | SpiceSpacecraft = field(converter=as_spice_ref)
-    target: SpiceBody = field(converter=as_spice_ref)
-    light_time_correction: str = field(default="NONE", kw_only=True)
+    observer: SpiceInstrument | SpiceSpacecraft = field(
+        factory=get_current_observer,
+        converter=as_spice_ref,
+    )
+    target: SpiceBody = field(factory=get_current_target, converter=as_spice_ref)
+    light_time_correction: str = field(
+        factory=get_current_light_time_correction,
+        kw_only=True,
+    )
 
     def config(self, config: dict) -> None:
         log.debug(
-            "targeted property config here with instance of {}", self.__class__.__name__,
+            "targeted property config here with instance of {}",
+            self.__class__.__name__,
         )
         super().config(config)
         config.update(
@@ -65,9 +78,10 @@ class TargetedProperty(TargetedPropertyMixin, Property):
 class PhaseAngle(TargetedProperty):
     _name = "phase_angle"
     _unit = pint.Unit("rad")
-    
+
     third_body: SpiceBody = field(
-        factory=lambda: as_spice_ref("SUN"), converter=as_spice_ref,
+        factory=lambda: as_spice_ref("SUN"),
+        converter=as_spice_ref,
     )
 
     def __repr__(self) -> str:
@@ -88,11 +102,12 @@ class PhaseAngle(TargetedProperty):
         config["third_body"] = self.third_body.name
         config["property"] = self.name
 
+
 @define(repr=False, order=False, eq=False)
 class Distance(TargetedProperty):
     _name = "distance"
     _unit = pint.Unit("km")
-    
+
     def __repr__(self) -> str:
         return f"Distance of {self.target} from {self.observer}"
 
@@ -113,6 +128,7 @@ class Distance(TargetedProperty):
         config["property"] = self.name
 
 
+@define(repr=False, order=False, eq=False)
 class SubObserverPointVelocity(TargetedProperty):
     _name = "sub_sc_velocity"
     _unit = pint.Unit("km/s")
@@ -121,7 +137,10 @@ class SubObserverPointVelocity(TargetedProperty):
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> np.ndarray:
         state = sc_state(
-            time, self.observer.spacecraft, self.target, self.light_time_correction,
+            time,
+            self.observer.spacecraft,
+            self.target,
+            self.light_time_correction,
         )
         return groundtrack_velocity(self.target, state)
 
@@ -129,10 +148,113 @@ class SubObserverPointVelocity(TargetedProperty):
         return f"Velocity of sub observer ({self.observer}) point on {self.target} surface."
 
 
+@define
+class BoresightGroundtrackVelocity(TargetedProperty):
+    """Groundtrack velocity of the boresight intersection on the target surface.
+
+    Computes how fast the instrument boresight footprint moves across
+    the target body surface. Unlike :class:`SubObserverPointVelocity`
+    (which tracks the sub-observer/nadir point), this property follows
+    the actual boresight pointing direction and accounts for any
+    spacecraft slew or off-nadir pointing.
+
+    The velocity is obtained by numerically differentiating the
+    boresight-surface intersection point (via SPICE ``sincpt``).
+
+    Three computation methods are available (selectable via the
+    ``method`` parameter):
+
+    ``"pc"``
+        Uses :func:`~planetary_coverage.spice.toolbox.groundtrack_velocity`
+        which accounts for the full geodetic shape (oblate spheroid).
+    ``"sphere"``
+        Projects the velocity onto the local tangent plane of a sphere
+        with the target's mean radius.
+    ``"euclidean"``
+        Returns the raw Euclidean norm of the finite-difference
+        velocity vector (no surface projection).
+
+    Returns ``NaN`` when the boresight does not intersect the target.
+    """
+
+    _name: ClassVar[str] = "boresight_groundtrack_velocity"
+    _unit: ClassVar[pint.Unit] = pint.Unit("km/s")
+
+    dt: float = field(
+        default=1.0,
+        kw_only=True,
+    )  # time step (seconds) for central finite difference
+
+    method: str = field(default="pc", kw_only=True)
+
+    METHODS: ClassVar[tuple[str, ...]] = ("pc", "sphere", "euclidean")
+
+    def __attrs_post_init__(self) -> None:
+        if self.method not in self.METHODS:
+            msg = f"Unknown method {self.method!r}. Choose from {self.METHODS}"
+            raise ValueError(msg)
+
+    @vectorize
+    def __call__(self, time: TIMES_TYPES) -> float:
+        t = et(time)
+        dt = self.dt
+
+        p_minus = self._boresight_surface_point(t - dt / 2)
+        p_plus = self._boresight_surface_point(t + dt / 2)
+
+        if np.any(np.isnan(p_minus)) or np.any(np.isnan(p_plus)):
+            return np.nan
+
+        velocity = (p_plus - p_minus) / dt
+
+        if self.method == "euclidean":
+            return float(np.linalg.norm(velocity))
+
+        if self.method == "sphere":
+            position = (p_minus + p_plus) / 2
+            # radial unit vector at the surface point
+            r_hat = position / np.linalg.norm(position)
+            # tangential velocity = reject the radial component
+            v_tan = velocity - np.dot(velocity, r_hat) * r_hat
+            return float(np.linalg.norm(v_tan))
+
+        # method == "pc"
+        position = (p_minus + p_plus) / 2
+        state = np.concatenate([position, velocity])
+        return groundtrack_velocity(self.target, state)
+
+    def _boresight_surface_point(self, t_et: float) -> np.ndarray:
+        """Compute boresight-surface intersection in the target body-fixed frame."""
+        try:
+            return spiceypy.sincpt(
+                "ELLIPSOID",
+                self.target.name,
+                t_et,
+                self.target.frame.name,
+                self.light_time_correction,
+                self.observer.name,
+                str(self.observer.frame),
+                np.array([0.0, 0.0, 1.0]),
+            )[0]
+        except (
+            spiceypy.exceptions.NotFoundError,
+            spiceypy.utils.exceptions.NotFoundError,
+        ):
+            return np.array([np.nan, np.nan, np.nan])
+
+    def __repr__(self) -> str:
+        return (
+            f"Groundtrack velocity of {self.observer} boresight "
+            f"intersection on {self.target} surface "
+            f"(method={self.method!r})."
+        )
+
+
+@define
 class AngularSize(TargetedProperty):
     _name = "angular_size"
     _unit = pint.Unit("rad")
-    
+
     def __repr__(self) -> str:
         return f"Angular size of {self.target}, seen from {self.observer}"
 
@@ -146,10 +268,11 @@ class AngularSize(TargetedProperty):
         config["property"] = self.name
 
 
+@define
 class SubObserverPixelScale(TargetedProperty):
     _name = "sub_observer_pixel_scale"
     _unit = pint.Unit("km/px")
-    
+
     def __repr__(self) -> str:
         return f"Resultion of {self.target}, at the sub-{self.observer} point."
 
@@ -165,10 +288,11 @@ class SubObserverPixelScale(TargetedProperty):
         config["property"] = self.name
 
 
+@define
 class ApproximatedAltitude(TargetedProperty):
     _name = "approx_altitude"
     _unit = pint.Unit("km")
-    
+
     def __repr__(self) -> str:
         return f"Approximated (distance-radius) altitude of {self.observer} over {self.target} surface (from sub-sc point)"
 
@@ -184,12 +308,13 @@ class ApproximatedAltitude(TargetedProperty):
         config["property"] = self.name
 
 
+@define
 class TargetSizeOnSensor(TargetedProperty):
     _name = "target_size_on_sensor"
     _unit = pint.Unit("px")
-    
+
     def __repr__(self) -> str:
-        return f"Size in pixels of {self.target}, on the {self.observer} sensor."
+        return f"Diameter in pixels of {self.target}, on the {self.observer} sensor."
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
@@ -202,10 +327,11 @@ class TargetSizeOnSensor(TargetedProperty):
         config["property"] = self.name
 
 
+@define
 class DistanceInTargetBodyRadii(TargetedProperty):
     _name = "distance_in_target_radii"
     _unit = pint.Unit("dimensionless")
-    
+
     def __repr__(self) -> str:
         return f"Distance of {self.target}, from {self.observer} sensor, in {self.target} radii."
 
@@ -219,11 +345,12 @@ class DistanceInTargetBodyRadii(TargetedProperty):
         config["property"] = self.name
 
 
+@define
 class SubObserverIlluminationAngles(TargetedProperty):
     _name = "sub_observer_illumination_angles"
     _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
     _type = PropertyTypes.VECTOR
-    
+
     def __repr__(self) -> str:
         return f"Sub {self.observer} point illumination angles on {self.target}"
 
@@ -255,11 +382,12 @@ class SubObserverIlluminationAngles(TargetedProperty):
         return ComponentSelector(self, 2, "phase")
 
 
+@define
 class SubObserverIsInDaylight(TargetedProperty):
     _name = "sub_obs_point_in_daylight"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     def __repr__(self) -> str:
         return f"Sub {self.observer} point on {self.target} is in daylight"
 
@@ -273,7 +401,9 @@ class SubObserverIsInDaylight(TargetedProperty):
 
 
 def pixel_count_to_distance(
-    observer: SpiceInstrument | SpiceSpacecraft, target: SpiceBody, n_pixels: float,
+    observer: SpiceInstrument | SpiceSpacecraft,
+    target: SpiceBody,
+    n_pixels: float,
 ) -> float:
     """Convert pixel count on sensor to distance threshold.
 

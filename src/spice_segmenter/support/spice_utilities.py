@@ -2,7 +2,13 @@ from typing import TYPE_CHECKING, Union
 
 import pint
 from loguru import logger as log
-from planetary_coverage.spice import SpiceRef
+from planetary_coverage.spice import (
+    SpiceBody,
+    SpiceFrame,
+    SpiceInstrument,
+    SpiceRef,
+    SpiceSpacecraft,
+)
 from planetary_coverage.spice.times import et as _et
 
 if TYPE_CHECKING:
@@ -17,32 +23,31 @@ def et(time: TIMES_TYPES) -> float:
 
 def add_properties_to_table(
     tab,
-    properties: list[Union["TargetedProperty",  type["TargetedProperty"]]],
+    properties: list[Union["TargetedProperty", type["TargetedProperty"]]],
     observer: str,
     timecol=None,
     targetcol="target",
     *,
     retarget_instances=True,
 ):
-
     """Table rows must have start, end and target columns."""
     from ..core.property import Property
 
     for i, row in tab.iterrows():
         target = row[targetcol]
 
-        for property in properties:
-            log.debug(f"Working on property {property}")
-            if isinstance(property, Property):
-                log.debug(f"found instance of property {property}")
-                prop_instance = property
+        for prop in properties:
+            log.debug(f"Working on property {prop}")
+            if isinstance(prop, Property):
+                log.debug(f"found instance of property {prop}")
+                prop_instance = prop
                 if retarget_instances:
                     prop_instance.target = target
 
                 # prop_instance.observer = observer
             else:
                 log.debug("found class. Instantiation.")
-                prop_instance = property(observer=observer, target=target)
+                prop_instance = prop(observer=observer, target=target)
 
             if timecol is None:
                 ref_time = row.start + (row.end - row.start) / 2
@@ -61,7 +66,9 @@ def as_pint_unit(item: str | pint.Unit) -> pint.Unit:
     return pint.Unit(item)
 
 
-def as_spice_ref(item: str | int | SpiceRef) -> SpiceRef:
+def as_spice_ref(
+    item: str | int | SpiceRef,
+) -> SpiceBody | SpiceInstrument | SpiceSpacecraft | SpiceFrame:
     if isinstance(item, SpiceRef):
         return item
-    return SpiceRef(item)
+    return SpiceRef(item) 

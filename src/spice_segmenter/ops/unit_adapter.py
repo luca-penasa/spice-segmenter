@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pint
 from attrs import define, field
 
 from ..core.property import Property
-from ..support.decorators import vectorize
 from ..support.spice_utilities import as_pint_unit
 
 if TYPE_CHECKING:
@@ -44,11 +44,34 @@ class UnitAdaptor(Property):
     def unit(self) -> pint.Unit:
         return self._unit
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return (  # type: ignore
-            pint.Quantity(self.parent(time), self.parent.unit).to(self.unit).magnitude
-        )
+    def __call__(self, time: TIMES_TYPES):  # type: ignore[override]
+        """Evaluate the parent property and convert its unit(s) to *self.unit*.
+
+        For scalar properties the parent's ``unit`` is a single
+        :class:`pint.Unit` and the conversion is straightforward.  The parent
+        is already vectorised over time, so no additional ``@vectorize``
+        wrapper is needed.
+
+        For vector properties (e.g. coordinate tuples such as
+        :class:`~spice_segmenter.properties.coordinates.PlanetographicCoordinates`)
+        the parent's ``unit`` is a *tuple* of units — one per component.
+        Each component is converted individually and the results are stacked
+        back into the same output shape, preserving any leading time axes.
+        """
+        value = self.parent(time)
+        parent_unit = self.parent.unit
+
+        if isinstance(parent_unit, tuple):
+            # Vector coordinate property: convert each component independently.
+            return np.stack(
+                [
+                    pint.Quantity(value[..., i], u).to(self.unit).magnitude
+                    for i, u in enumerate(parent_unit)
+                ],
+                axis=-1,
+            )
+
+        return pint.Quantity(value, parent_unit).to(self.unit).magnitude
 
     def config(self, config: dict) -> None:
         return self.parent.config(config)

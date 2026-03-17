@@ -2,7 +2,7 @@ from enum import Enum
 
 import numpy as np
 import spiceypy
-from attrs import field
+from attrs import define, field
 from numpy.typing import ArrayLike
 from planetary_coverage import SpiceRef, et
 from planetary_coverage.spice import SpiceBody
@@ -11,6 +11,7 @@ from ..core.property import Property, PropertyTypes
 from ..support.time_types import TIMES_TYPES
 
 
+@define
 class SurfaceIlluminationAngles(Property):
     """Computes illumination angles for points on the surface of a target body
 

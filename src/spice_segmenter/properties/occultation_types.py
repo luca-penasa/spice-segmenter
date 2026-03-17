@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import ClassVar
 
 import pint
 import spiceypy
@@ -46,6 +47,10 @@ class OccultationTypes(Enum):
 
 @define(repr=False, order=False, eq=False)
 class Occultation(Property):
+    _name: ClassVar[str] = "occultation"
+    _unit: ClassVar[pint.Unit] = pint.Unit("")
+    _type: ClassVar[PropertyTypes] = PropertyTypes.DISCRETE
+
     observer: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
     front: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
     back: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
@@ -53,18 +58,6 @@ class Occultation(Property):
 
     def __repr__(self) -> str:
         return f"Occultation of {self.back} by {self.front}, as seen by {self.observer}"
-
-    @property
-    def name(self) -> str:
-        return "occultation"
-
-    @property
-    def type(self) -> PropertyTypes:
-        return PropertyTypes.DISCRETE
-
-    @property
-    def unit(self) -> pint.Unit:
-        return pint.Unit("")
 
     def _remap_to_enum(self, value: int) -> OccultationTypes:
         if value == -3:

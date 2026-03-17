@@ -1,0 +1,11 @@
+# Constraint YAML: compound expression using boolean operators.
+context:
+  observer: JUICE_JANUS
+  target: GANYMEDE
+  light_time_correction: NONE
+
+properties:
+  phase_angle:
+    third_body: SUN
+
+expression: "(((distance > '10000.0 km') | (phase_angle < '0.5236 rad')) & fov_visibility)"

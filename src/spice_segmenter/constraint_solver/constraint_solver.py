@@ -417,8 +417,6 @@ class SpiceOccultationSolver(BaseSolver):
         config: dict = {}
         self.constraint.config(config)  # extract the config
 
-        self.constraint.left
-
         self.config.update(
             {
                 "front": config["front"],
@@ -441,7 +439,7 @@ class SpiceOccultationSolver(BaseSolver):
             },
         )
 
-        log.debug("Configured: {}", self.config)
+        log.info("Configured: {}", self.config)
 
         return config
 

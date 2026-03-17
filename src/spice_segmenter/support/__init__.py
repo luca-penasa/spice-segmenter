@@ -1,6 +1,13 @@
 """Infrastructure and support utilities (internal use)."""
 
 from .config import Config, config
+from .context import (
+    SpiceContext,
+    get_context,
+    get_current_light_time_correction,
+    get_current_observer,
+    get_current_target,
+)
 from .decorators import register_property, get_property_class, list_registered_properties, vectorize
 from .search_reporter import (
     NoSearchReporter,
@@ -23,6 +30,11 @@ from .time_types import TIMES_TYPES
 __all__ = [
     "TIMES_TYPES",
     "Config",
+    "SpiceContext",
+    "get_context",
+    "get_current_light_time_correction",
+    "get_current_observer",
+    "get_current_target",
     "NoSearchReporter",
     "ProgressReporter",
     "PropertyMeta",

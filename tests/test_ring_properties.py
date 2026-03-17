@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from spice_segmenter.properties.ring_properties import ring_plane_angles
+from spice_segmenter.properties.ring_properties import ring_ansae_phase_angles
 from . import tour_config as tc
 
 tc.load_kernels()
@@ -15,7 +15,7 @@ def test_ring_plane_angles_basic():
     time = start + np.timedelta64(100, "D")
     
     # Should return phase angles for different ring plane points
-    angles = ring_plane_angles(time)
+    angles = ring_ansae_phase_angles(time)
     
     assert angles is not None
     assert isinstance(angles, np.ndarray)
@@ -30,7 +30,7 @@ def test_ring_plane_angles_custom_radii():
     time = start + np.timedelta64(100, "D")
     custom_radii = np.array([-200000, 0, 200000])
     
-    angles = ring_plane_angles(time, pts_radiuses=custom_radii)
+    angles = ring_ansae_phase_angles(time, pts_radiuses=custom_radii)
     
     assert angles is not None
     assert len(angles) == len(custom_radii)
@@ -46,7 +46,7 @@ def test_ring_plane_angles_multiple_times():
     
     # Should handle array of times
     for t in times:
-        angles = ring_plane_angles(t)
+        angles = ring_ansae_phase_angles(t)
         assert angles is not None
         assert isinstance(angles, np.ndarray)
 
@@ -57,7 +57,7 @@ def test_ring_plane_angles_different_observer():
     
     # Test with different observer if available
     # This tests that the function doesn't hard-code observer
-    angles = ring_plane_angles(time, observer="JUICE")
+    angles = ring_ansae_phase_angles(time, observer="JUICE")
     
     assert angles is not None
     assert isinstance(angles, np.ndarray)
@@ -66,7 +66,7 @@ def test_ring_plane_angles_different_observer():
 def test_ring_plane_angles_return_type():
     """Test that ring_plane_angles returns correct data types."""
     time = start + np.timedelta64(100, "D")
-    angles = ring_plane_angles(time)
+    angles = ring_ansae_phase_angles(time)
     
     # Should be numpy array of floats
     assert isinstance(angles, np.ndarray)
@@ -82,7 +82,7 @@ def test_ring_plane_angles_symmetry():
     
     # Radii symmetric around 0 should have related angles
     radii_symmetric = np.array([-100000, 0, 100000])
-    angles = ring_plane_angles(time, pts_radiuses=radii_symmetric)
+    angles = ring_ansae_phase_angles(time, pts_radiuses=radii_symmetric)
     
     # Should have 3 angles
     assert len(angles) == 3

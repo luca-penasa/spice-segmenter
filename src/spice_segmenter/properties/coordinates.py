@@ -15,6 +15,7 @@ from spiceypy import NotFoundError
 
 from ..core.property import BooleanProperty, Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
+from ..support.context import get_current_observer, get_current_target
 from ..support.decorators import vectorize
 from ..support.time_types import TIMES_TYPES
 
@@ -205,8 +206,14 @@ class BoresightIntersects(BooleanProperty):
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
     
-    observer = field(converter=SpiceInstrument)
-    target = field(converter=SpiceBody)
+    observer = field(
+        factory=get_current_observer,
+        converter=SpiceInstrument,
+    )
+    target = field(
+        factory=get_current_target,
+        converter=SpiceBody,
+    )
 
     intersection = field(init=False, default=None)
 

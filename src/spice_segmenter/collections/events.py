@@ -13,8 +13,8 @@ from ..properties.visibility_properties import BodyFOVVisibility
 
 @define
 class PointEvent:
-    time: pd.Timestamp = field()
-    description: str = field(default="")
+    time: pd.Timestamp = field(converter=pd.Timestamp)
+    description: str = field(default="", converter=str)
     metadata: dict[str, Any] = field(factory=dict)
 
 
@@ -27,7 +27,7 @@ def fov_in_out(
     out = fov_vis.solve(w)
 
     output = []
-    for i, item in out.to_pandas().iterrows():
+    for _, item in out.to_pandas().iterrows():
         window_start, window_end = item
 
         in_event = PointEvent(

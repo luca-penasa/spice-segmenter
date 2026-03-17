@@ -49,6 +49,9 @@ def find_visibility_intervals(
     """Find the first interval in which the target is visibile in the FOV of the observer."""
     config.solver_step = solver_step_sec
 
+    start = pd.Timestamp(start)
+    end = pd.Timestamp(end)
+
     v = BodyFOVVisibility(observer, target)
     w = SpiceWindow.from_start_end(start, end)
 

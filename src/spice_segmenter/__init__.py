@@ -8,6 +8,8 @@ from loguru import logger as log
 from .collections import (
     OccultationProperties,
     TargetProperties,
+    PropertySnapshot,
+    compute_all,
 )
 
 # Import order matters to avoid circular imports:
@@ -24,6 +26,9 @@ from .core import (
     Property,
     PropertyTypes,
     SpiceWindow,
+    all_properties,
+    get_property,
+    property_registry,
 )
 from .ops import (
     Constant,
@@ -41,6 +46,22 @@ from .properties import (
     AngularSize,
     ApproximatedAltitude,
     BodyFOVVisibility,
+    BoresightAltitude,
+    BoresightDec,
+    BoresightGeoLatitude,
+    BoresightGeoLongitude,
+    BoresightGroundtrackVelocity,
+    BoresightIntersectionGeodetic,
+    BoresightIntersectionLatitudinal,
+    BoresightIntersectionRectangular,
+    BoresightLatitude,
+    BoresightLongitude,
+    BoresightRA,
+    BoresightRaDec,
+    BoresightRadius,
+    BoresightX,
+    BoresightY,
+    BoresightZ,
     CylindricalCoordinates,
     Distance,
     DistanceInTargetBodyRadii,
@@ -54,23 +75,63 @@ from .properties import (
     PlanetographicCoordinates,
     RaDecCoordinates,
     SphericalCoordinates,
+    SubObserverAltitude,
+    SubObserverEmissionAngle,
+    SubObserverGeodetic,
+    SubObserverGeoLatitude,
+    SubObserverGeoLongitude,
     SubObserverIlluminationAngles,
+    SubObserverIncidenceAngle,
     SubObserverIsInDaylight,
+    SubObserverLatitude,
+    SubObserverLatitudinal,
+    SubObserverLongitude,
+    SubObserverPhaseAngleLocal,
     SubObserverPixelScale,
     SubObserverPoint,
     SubObserverPointMethods,
     SubObserverPointVelocity,
+    SubObserverRadius,
+    SubObserverRectangular,
+    SubObserverX,
+    SubObserverY,
+    SubObserverZ,
     SurfaceIlluminationAngles,
+    TargetDec,
     TargetedProperty,
     TargetedPropertyMixin,
+    TargetRA,
+    TargetRaDec,
     TargetSizeOnSensor,
     Vector,
 )
 from .support.config import config
+from .support.context import (
+    SpiceContext,
+    get_context,
+    get_current_light_time_correction,
+    get_current_observer,
+    get_current_target,
+)
 from .support.serialization import (
     create_property_converter,
     structure_constraint,
     unstructure_constraint,
+)
+from .io.dsl import (
+    parse as parse_constraint,
+    constraint_to_expression,
+    constraint_to_context,
+)
+from .io.yaml_io import (
+    load as load_constraint,
+    loads as loads_constraint,
+    dump as dump_constraint,
+    dumps as dumps_constraint,
+    load_properties,
+    loads_properties,
+    dump_properties,
+    dumps_properties,
 )
 
 # Get version
@@ -95,6 +156,7 @@ __all__ = [
     "TargetSizeOnSensor",
     "AngularSeparation",
     "SubObserverPointVelocity",
+    "BoresightGroundtrackVelocity",
     "SubObserverPixelScale",
     "ApproximatedAltitude",
     "DistanceInTargetBodyRadii",
@@ -136,14 +198,35 @@ __all__ = [
     "create_property_converter",
     "structure_constraint",
     "unstructure_constraint",
+    # DSL
+    "parse_constraint",
+    "constraint_to_expression",
+    "constraint_to_context",
+    # YAML I/O
+    "load_constraint",
+    "loads_constraint",
+    "dump_constraint",
+    "dumps_constraint",
+    "load_properties",
+    "loads_properties",
+    "dump_properties",
+    "dumps_properties",
     # Logging
     "log_enable",
     "log_disable",
     "log_enable_debug",
     # Registry
-    "get_property_registry",
+    "property_registry",
+    "get_property",
+    "all_properties",
     # Configuration
     "config",
+    # Context management
+    "SpiceContext",
+    "get_context",
+    "get_current_observer",
+    "get_current_target",
+    "get_current_light_time_correction",
 ]
 
 # Disable logging by default
@@ -196,18 +279,5 @@ def log_disable(mod: str = "spice_segmenter") -> None:
 
 
 def get_property_registry() -> dict:
-    """Get the property registry.
-    
-    Returns
-    -------
-    dict
-        Dictionary mapping property names to Property classes
-        
-    Example
-    -------
-    >>> registry = get_property_registry()
-    >>> for name, cls in registry.items():
-    ...     print(f"{name}: {cls.__name__}")
-    """
-    from .support.decorators import list_registered_properties
-    return list_registered_properties()
+    """Deprecated: use ``property_registry`` or ``all_properties()`` instead."""
+    return all_properties()

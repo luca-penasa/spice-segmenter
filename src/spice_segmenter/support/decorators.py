@@ -9,57 +9,33 @@ if TYPE_CHECKING:
     from ..core.property import Property, PropertyTypes
 
 
-# Global property registry
-# Maps property name → Property class
-PROPERTY_REGISTRY: dict[str, type["Property"]] = {}
+# ---------------------------------------------------------------------------
+# Registry shims — thin wrappers kept for backwards compatibility.
+# The single source of truth is spice_segmenter.core.registry.
+# ---------------------------------------------------------------------------
 
 
 def register_property(name: str, property_class: type["Property"]) -> type["Property"]:
-    """Register a property class in the global registry.
-    
-    Args:
-        name: Property name (e.g., "distance", "phase_angle")
-        property_class: The Property subclass to register
-        
-    Returns:
-        The property_class (allows use as a decorator)
-        
-    Raises:
-        TypeError: If name is not a string
-        
-    Example:
-        >>> @register_property("distance")
-        ... class Distance(Property):
-        ...     _name = "distance"
-        ...     _unit = pint.Unit("km")
+    """Register *property_class* under *name* in the global property registry.
+
+    Uses :meth:`~PropertyRegistry.register_or_skip` so that alternative /
+    functional implementations of an already-registered property silently defer
+    to the first registration rather than raising.
     """
-    if not isinstance(name, str):
-        # Silently ignore non-string keys (likely descriptors)
-        return property_class
-    
-    PROPERTY_REGISTRY[name] = property_class
-    return property_class
+    from spice_segmenter.core.registry import property_registry
+    return property_registry.register_or_skip(name, property_class)
 
 
 def get_property_class(name: str) -> type["Property"] | None:
-    """Get a property class by name from the registry.
-    
-    Args:
-        name: Property name to look up
-        
-    Returns:
-        Property class if found, None otherwise
-    """
-    return PROPERTY_REGISTRY.get(name)
+    """Return the property class registered under *name*, or ``None``."""
+    from spice_segmenter.core import registry
+    return registry.property_registry.get(name)
 
 
 def list_registered_properties() -> dict[str, type["Property"]]:
-    """Get all registered properties.
-    
-    Returns:
-        Dictionary mapping property names to classes
-    """
-    return PROPERTY_REGISTRY.copy()
+    """Return a snapshot copy of the full property registry."""
+    from spice_segmenter.core.registry import all as _all
+    return _all()
 
 
 def vectorize(

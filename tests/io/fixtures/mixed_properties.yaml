@@ -1,0 +1,35 @@
+# Mixed properties:
+#  - shared observer; targets differ per entry
+#  - one entry overrides an optional field
+#  - shine_properties requires 'reflector' (not in context)
+#  - angular_separation requires 'other' (not in context)
+context:
+  observer: JUICE_JANUS
+  light_time_correction: NONE
+
+properties:
+  - type: distance
+    target: GANYMEDE
+
+  - type: phase_angle
+    target: GANYMEDE
+    third_body: JUPITER        # override default (SUN)
+
+  - type: distance
+    target: CALLISTO           # different target; not in shared context
+
+  - type: angular_size
+    target: GANYMEDE
+
+  - type: shine_properties
+    target: GANYMEDE
+    reflector: JUPITER         # required extra field
+
+  - type: shine_properties
+    target: GANYMEDE
+    reflector: JUPITER
+    light_source: CALLISTO     # non-default optional field
+
+  - type: angular_separation
+    target: GANYMEDE
+    other: CALLISTO            # required extra field

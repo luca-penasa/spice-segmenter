@@ -1,0 +1,11 @@
+# Occultation constraint: observer in context, front/back in property overrides.
+context:
+  observer: JUICE
+  light_time_correction: NONE
+
+properties:
+  occultation:
+    front: GANYMEDE
+    back: JUPITER
+
+expression: occultation == OccultationTypes.FULL

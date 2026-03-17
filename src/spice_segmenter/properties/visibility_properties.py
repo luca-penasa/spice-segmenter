@@ -13,11 +13,13 @@ from ..support.spice_utilities import et
 from ..support.time_types import TIMES_TYPES
 
 
+@define(repr=False, order=False, eq=False)
 class BodyFOVVisibility(TargetedProperty):
     """Visibility of a body from the FOV of an instrument"""
     
     _name = "fov_visibility"
     _type = PropertyTypes.BOOLEAN
+    _unit = pint.Unit("")
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float | bool | Enum:
@@ -34,6 +36,9 @@ class BodyFOVVisibility(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Visibility of {self.target} from {self.observer} FOV"
+    
+
+    
 
 
 @define(repr=False, order=False, eq=False)
@@ -44,7 +49,7 @@ class AngularSeparation(TargetedProperty):
     _type = PropertyTypes.SCALAR
     _unit = pint.Unit("rad")
 
-    other = field(converter=SpiceRef)
+    other = field(converter=SpiceRef, kw_only=True)
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float | bool | Enum:

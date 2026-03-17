@@ -73,8 +73,8 @@ class ShineProperties(TargetedProperty):
     _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
     _type = PropertyTypes.VECTOR
     
-    reflector = field(converter=SpiceBody)
-    light_source = field(converter=SpiceBody, default="SUN")
+    reflector = field(converter=SpiceBody, kw_only=True)
+    light_source = field(converter=SpiceBody, default="SUN", kw_only=True)
 
     def __repr__(self) -> str:
         return f"Shine properties for the sub observer point on {self.target}, illuminated by reflected light of {self.reflector}, as seen from {self.observer}"
@@ -123,14 +123,19 @@ class JupiterRise(TargetedPropertyMixin, BooleanProperty):
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
-        props = ShineProperties(self.observer, self.target, "JUPITER")
-
-        el = props.reflector_elevation(time)
-        r = props.reflector_angular_radius(time)
-
+        result = relfected_light_properties(
+            time,
+            target_name=self.target,
+            observer=self.observer,
+            reflector="JUPITER",
+            abcorr=self.light_time_correction,
+        )
+        el = result[0]   # reflector_elevation
+        r  = result[3]   # reflector_angular_radius
         return el > r
 
 
+@define(repr=False, order=False, eq=False)
 class JupiterRiseRatio(TargetedProperty):
     _name = "jupiter_rise_ratio"
     _unit = pint.Unit("dimensionless")
@@ -141,11 +146,15 @@ class JupiterRiseRatio(TargetedProperty):
 
     @vectorize
     def __call__(self, time: TIMES_TYPES) -> float:
-        props = ShineProperties(self.observer, self.target, "JUPITER")
-
-        el = props.reflector_elevation(time)
-        r = props.reflector_angular_radius(time)
-
+        result = relfected_light_properties(
+            time,
+            target_name=self.target,
+            observer=self.observer,
+            reflector="JUPITER",
+            abcorr=self.light_time_correction,
+        )
+        el = result[0]   # reflector_elevation
+        r  = result[3]   # reflector_angular_radius
         return el / r
 
 

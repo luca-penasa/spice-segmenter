@@ -1,0 +1,16 @@
+# Simple properties: observer+target only, no required extras.
+context:
+  observer: JUICE_JANUS
+  target: GANYMEDE
+  light_time_correction: NONE
+
+properties:
+  - type: distance
+
+  - type: phase_angle
+
+  - type: angular_size
+
+  - type: fov_visibility
+
+  - type: approx_altitude

@@ -1,36 +1,50 @@
-
 from functools import cached_property
 
 from attrs import define, field
 
-from ..properties.observation_properties import (
+from spice_segmenter.support.context import (
+    get_current_observer,
+    get_current_target,
+)
+from spice_segmenter.properties.observation_properties import (
     AngularSize,
     Distance,
     PhaseAngle,
     SubObserverIlluminationAngles,
     SubObserverPixelScale,
     SubObserverPointVelocity,
+    ApproximatedAltitude,
 )
-from ..properties.occultation_types import Occultation, OccultationTypes
-from ..properties.reflector_properties import JupiterShineIdealCondition
+
+from spice_segmenter.properties import TargetSizeOnSensor
+from spice_segmenter.properties.occultation_types import Occultation, OccultationTypes
+from spice_segmenter.properties.reflector_properties import JupiterShineIdealCondition
 
 
 @define
 class TargetProperties:
-    target: str = field(converter=lambda x: str(x).upper())
-    observer: str = field(default="JUICE_JANUS", converter=lambda x: str(x).upper())
+    target: str = field(factory=get_current_target, converter=lambda x: str(x).upper())
+    observer: str = field(factory=get_current_observer, converter=lambda x: str(x).upper())
 
     @cached_property
     def distance(self) -> Distance:
-        return Distance(self.observer, self.target)
+        return Distance(observer=self.observer, target=self.target)
+
+    @cached_property
+    def altitude(self) -> ApproximatedAltitude:
+        return ApproximatedAltitude(observer=self.observer, target=self.target)
+
+    @cached_property
+    def target_size_on_sensor(self) -> TargetSizeOnSensor:
+        return TargetSizeOnSensor(observer=self.observer, target=self.target)
 
     @cached_property
     def phase_angle(self) -> PhaseAngle:
-        return PhaseAngle(self.observer, self.target)
+        return PhaseAngle(observer=self.observer, target=self.target)
 
     @cached_property
     def angular_size(self) -> AngularSize:
-        return AngularSize(self.observer, self.target)
+        return AngularSize(observer=self.observer, target=self.target)
 
     @cached_property
     def pixel_scale(self) -> SubObserverPixelScale:
@@ -38,11 +52,11 @@ class TargetProperties:
 
     @cached_property
     def sub_sc_velocity(self) -> SubObserverPointVelocity:
-        return SubObserverPointVelocity(self.observer, self.target)
+        return SubObserverPointVelocity(observer=self.observer, target=self.target)
 
     @cached_property
     def sub_sc_illumination_angles(self) -> SubObserverIlluminationAngles:
-        return SubObserverIlluminationAngles(self.observer, self.target)
+        return SubObserverIlluminationAngles(observer=self.observer, target=self.target)
 
     @cached_property
     def jupiter_shine_ideal_condition(self) -> JupiterShineIdealCondition:
@@ -73,26 +87,42 @@ class OccultationProperties:
 
     Examples
     --------
-    >>> occ = OccultationProperties("IO", "JUICE")
+    >>> occ = OccultationProperties(
+    ...     "IO", "JUICE"
+    ... )
     >>> # Check if IO is fully occulted by Jupiter
-    >>> constraint = occ.by("JUPITER") == OccultationTypes.FULL
+    >>> constraint = (
+    ...     occ.by(
+    ...         "JUPITER"
+    ...     )
+    ...     == OccultationTypes.FULL
+    ... )
     >>> # Get occultation by any body
     >>> fully_hidden = occ.fully_occulted_by_any()
 
     >>> # Custom occultors
     >>> occ = OccultationProperties(
-    ...     "AMALTHEA", "JUICE", occultors=["JUPITER", "IO"]
+    ...     "AMALTHEA",
+    ...     "JUICE",
+    ...     occultors=[
+    ...         "JUPITER",
+    ...         "IO",
+    ...     ],
     ... )
-    >>> constraint = occ.by("IO") == OccultationTypes.FULL
+    >>> constraint = (
+    ...     occ.by("IO")
+    ...     == OccultationTypes.FULL
+    ... )
     """
 
-    target: str = field(converter=lambda x: str(x).upper())
-    observer: str = field(default="JUICE", converter=lambda x: str(x).upper())
+    target: str = field(factory=get_current_target, converter=lambda x: str(x).upper())
+    observer: str = field(factory=get_current_observer, converter=lambda x: str(x).upper())
     occultors: list[str] = field(
         factory=lambda: ["JUPITER", "IO", "EUROPA", "GANYMEDE", "CALLISTO"],
     )
     light_time_correction: str = field(
-        default="NONE", converter=lambda x: str(x).upper(),
+        default="NONE",
+        converter=lambda x: str(x).upper(),
     )
 
     def __attrs_post_init__(self):
@@ -118,10 +148,10 @@ class OccultationProperties:
             Occultation object for the target by the specified occultor
         """
         return Occultation(
-            self.observer,
-            str(occultor).upper(),
-            self.target,
-            self.light_time_correction,
+            observer=self.observer,
+            front=str(occultor).upper(),
+            back=self.target,
+            light_time_correction=self.light_time_correction,
         )
 
     def all_occultations(self) -> list[Occultation]:
@@ -172,4 +202,3 @@ class OccultationProperties:
             Constraint that is True when target is visible (not fully occulted)
         """
         return ~self.fully_occulted_by_any(OccultationTypes.FULL)
-
