@@ -38,8 +38,8 @@ def isolated_spice_context():
       itself may have done — so nested ``with SpiceContext(...)`` blocks inside
       the code under test are still safe.
     """
-    from spice_segmenter.support.context import _context_var, _default_context
+    from spice_segmenter.support.context import _context_var, spice_context
 
-    token = _context_var.set(_default_context)
+    token = _context_var.set(spice_context)
     yield
     _context_var.reset(token)

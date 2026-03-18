@@ -2,36 +2,54 @@
 
 Usage
 -----
-Set a global default so properties can be constructed without explicit arguments::
+Three ways to set defaults, ordered from most permanent to most scoped:
 
-    from spice_segmenter import (
-        SpiceContext,
-        Distance,
-    )
+**1. Set-and-forget (singleton mutation)**::
 
-    with SpiceContext(
-        observer="MY_SC",
-        target="ENCELADUS",
-    ):
-        d = Distance()  # observer/target taken from context
-        d2 = Distance(
-            target="TITAN"
-        )  # explicit values always win
+    from spice_segmenter import spice_context
+
+    spice_context.target = "JUPITER"
+    spice_context.observer = "JUICE_JANUS"
+    d = Distance()   # picks up both automatically
+
+**2. Scoped override (inherits singleton, overrides selected fields)**::
+
+    with spice_context.override(target="GANYMEDE"):
+        d = Distance()   # GANYMEDE; observer still from singleton
+    # after block: Distance() → JUPITER again
+
+**3. Full explicit context**::
+
+    with SpiceContext(observer="MY_SC", target="ENCELADUS"):
+        d = Distance()   # fully specified, nests over any outer context
 
 Contexts nest cleanly and are thread-safe (and asyncio-safe) thanks to
-:class:`contextvars.ContextVar`.
+:class:`contextvars.ContextVar`.  Direct mutation of ``spice_context`` is
+intended for single-threaded scripts and notebooks only; use ``override()``
+inside threads for per-thread isolation.
 """
 
 from __future__ import annotations
 
 import contextvars
 
+import attrs
 from attrs import define, field
 
 
 @define
 class SpiceContext:
     """Holds default values for SPICE property attributes.
+
+    Can be used as a context manager to temporarily override settings::
+
+        with SpiceContext(observer="MY_SC", target="ENCELADUS"):
+            d = Distance()   # uses MY_SC / ENCELADUS
+
+    Or mutate the module-level ``spice_context`` singleton directly for a
+    permanent session-wide default::
+
+        spice_context.target = "JUPITER"
 
     Parameters
     ----------
@@ -59,19 +77,56 @@ class SpiceContext:
             _context_var.reset(self._token)
             self._token = None
 
+    def override(self, **kwargs) -> SpiceContext:
+        """Return a new :class:`SpiceContext` copying current fields and overriding *kwargs*.
 
-# Module-level default context (no observer/target set, correction="NONE").
-_default_context: SpiceContext = SpiceContext()
+        Intended for use as a context manager::
 
-# ContextVar makes this thread-safe and asyncio-safe.
+            # Temporarily change only the target; observer is inherited
+            with spice_context.override(target="GANYMEDE"):
+                d = Distance()
+
+            # Works equally well inside an existing context
+            with get_active_context().override(light_time_correction="LT+S"):
+                ...
+        """
+        current = {
+            a.name: getattr(self, a.name)
+            for a in attrs.fields(SpiceContext)
+            if a.init
+        }
+        current.update(kwargs)
+        return SpiceContext(**current)
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton — mutable for set-and-forget session defaults.
+# ContextVar makes nesting, thread-safety and asyncio-safety automatic.
+# ---------------------------------------------------------------------------
+
+#: Module-level singleton.  Mutate directly for session-wide defaults::
+#:
+#:     spice_context.target = "JUPITER"
+#:
+#: Use ``override()`` for scoped temporary changes.
+spice_context: SpiceContext = SpiceContext()
+
 _context_var: contextvars.ContextVar[SpiceContext] = contextvars.ContextVar(
     "_spice_context_var",
 )
 
 
-def get_context() -> SpiceContext:
-    """Return the currently active :class:`SpiceContext`."""
-    return _context_var.get(_default_context)
+def get_active_context() -> SpiceContext:
+    """Return the currently active :class:`SpiceContext`.
+
+    Inside a ``with SpiceContext(...):`` block this returns that context;
+    outside any block it returns the module-level ``spice_context`` singleton.
+    """
+    return _context_var.get(spice_context)
+
+
+# Backward-compatible alias.
+get_context = get_active_context
 
 
 # ---------------------------------------------------------------------------

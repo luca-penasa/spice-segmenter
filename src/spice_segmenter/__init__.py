@@ -109,6 +109,8 @@ from .properties import (
 from .support.config import Config, config, get_active_config
 from .support.context import (
     SpiceContext,
+    spice_context,
+    get_active_context,
     get_context,
     get_current_light_time_correction,
     get_current_observer,
@@ -226,6 +228,8 @@ __all__ = [
     "get_active_config",
     # Context management
     "SpiceContext",
+    "spice_context",
+    "get_active_context",
     "get_context",
     "get_current_observer",
     "get_current_target",

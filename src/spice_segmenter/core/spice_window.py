@@ -43,7 +43,7 @@ class SpiceWindow:
 
     spice_window: SpiceCell = field(default=None)
     size: int = field(default=None)
-    _default_size: int = field(default=2000, init=False)
+    _default_size: int = field(default=10000, init=False)
 
     def __attrs_post_init__(self) -> None:
         if not self.spice_window:

@@ -155,3 +155,7 @@ replace = 'version = "{new_version}"'
 dev = [
     "ruff>=0.15.6",
 ]
+notebooks = [
+    "anywidget>=0.9.21",
+    "ipympl>=0.10.0",
+]

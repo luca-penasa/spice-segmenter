@@ -443,7 +443,7 @@ def quick_plot(
             
             # Add to all axes
             for ax in axes:
-                ax.axvspan(start_ts, end_ts, alpha=0.2, color='yellow', zorder=-1)
+                ax.axvspan(start_ts, end_ts, alpha=0.8, color='yellow', zorder=-1)
     
     return fig, axes
 

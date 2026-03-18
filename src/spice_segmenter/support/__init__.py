@@ -3,6 +3,8 @@
 from .config import Config, config, get_active_config
 from .context import (
     SpiceContext,
+    spice_context,
+    get_active_context,
     get_context,
     get_current_light_time_correction,
     get_current_observer,

@@ -73,13 +73,9 @@ class ConstraintBase(Property):
         self.right.config(config)
         config["operator"] = self.operator
 
-    @singledispatchmethod
     def solve(self, arg: Any = None, **kwargs) -> TimeSegmentsCollection:
         """
         Solve the constraint over a time window.
-
-        This method automatically dispatches to the appropriate implementation
-        based on the type of the first argument.
 
         Parameters
         ----------
@@ -89,9 +85,8 @@ class ConstraintBase(Property):
             If omitted, the default window set in the active :class:`~spice_segmenter.support.config.Config`
             context is used (raises ``RuntimeError`` if none is set).
         optimize : bool, optional
-            If True, apply constraint optimizations before solving (e.g.,
-            convert TargetSizeOnSensor to Distance for better performance).
-            Default is False to maintain backward compatibility.
+            If True, apply constraint optimizations before solving.
+            Default is False.
         **kwargs
             Additional keyword arguments passed to MasterSolver.
 
@@ -111,8 +106,6 @@ class ConstraintBase(Property):
         """
         from ..support.config import get_active_config
 
-        optimize = kwargs.pop("optimize", False)
-
         if arg is None:
             cfg = get_active_config()
             if cfg.start is None or cfg.end is None:
@@ -122,12 +115,18 @@ class ConstraintBase(Property):
                     "    with Config(start='2032-01-01', end='2035-01-01'):\n"
                     "        constraint.solve()\n"
                 )
-            window = TimeSegmentsCollection.from_start_end(cfg.start, cfg.end)
-            return self.solve(window, optimize=optimize, **kwargs)
+            arg = TimeSegmentsCollection.from_start_end(cfg.start, cfg.end)
+
+        return self._solve_dispatch(arg, **kwargs)
+
+    @singledispatchmethod
+    def _solve_dispatch(self, arg: Any, **kwargs) -> TimeSegmentsCollection:
+        """Internal dispatcher — do not call directly, use solve()."""
+        optimize = kwargs.pop("optimize", False)
 
         if hasattr(arg, "start") and hasattr(arg, "end"):
             window = TimeSegmentsCollection.from_start_end(arg.start, arg.end)
-            return self.solve(window, optimize=optimize, **kwargs)
+            return self._solve_dispatch(window, optimize=optimize, **kwargs)
 
         raise TypeError(
             f"solve() called with unsupported type: {type(arg)}. "
@@ -135,7 +134,7 @@ class ConstraintBase(Property):
             "start/end attributes"
         )
 
-    @solve.register
+    @_solve_dispatch.register
     def _(self, window: TimeSegmentsCollection, **kwargs) -> TimeSegmentsCollection:
         """Solve with a pre-constructed TimeSegmentsCollection."""
         from ..constraint_solver.constraint_solver import MasterSolver
@@ -150,8 +149,8 @@ class ConstraintBase(Property):
         solver = MasterSolver(constraint=constraint, **kwargs)
         return solver.solve(window)
 
-    @solve.register(str)
-    @solve.register(pd.Timestamp)
+    @_solve_dispatch.register(str)
+    @_solve_dispatch.register(pd.Timestamp)
     def _(
         self,
         start: pd.Timestamp | str,
@@ -160,7 +159,7 @@ class ConstraintBase(Property):
     ) -> TimeSegmentsCollection:
         """Solve by constructing an TimeSegmentsCollection from start/end times."""
         window = TimeSegmentsCollection.from_start_end(start, end)
-        return self.solve(window, **kwargs)
+        return self._solve_dispatch(window, **kwargs)
 
     def __invert__(self) -> Inverted:
         from ..ops.constraint_operations import Inverted

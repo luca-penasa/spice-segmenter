@@ -36,7 +36,7 @@ class BaseSolver(ABC):
     _step: float | None = field(
         factory=lambda: get_active_config().solver_step_seconds,
         converter=lambda x: x
-        if isinstance(x, float | None)
+        if isinstance(x, float | int | None)
         else pd.Timedelta(x).total_seconds(),
     )
 
@@ -709,7 +709,7 @@ class GenericScalarSolver(BaseSolver):
         as_spice_f = left_prop.compute_as_spice_function()
 
         def is_dec(func: spiceypy.utils.callbacks.UDFUNC, t: float) -> bool:
-            return spiceypy.uddc(func, t, 1.0)
+            return spiceypy.uddc(as_spice_f, t, 1.0)
 
         if self.constraint.ctype == ConstraintTypes.MINMAX:
             # Convert minmax condition types to SPICE operator codes
