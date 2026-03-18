@@ -105,10 +105,9 @@ class PropertyRegistry:
            class (second call) does.  We update the registry to the new object.
         4. **Genuine conflict** — two separate class definitions claim the same
            property name.  This causes ``type(a) is type(b)`` to fail for
-           values produced by different code paths (e.g. a class-based property
-           and a ``@property_function``-generated class with the same name), and
-           leads to intermittent test failures depending on import order.  A
-           ``ValueError`` is raised so the problem surfaces immediately.
+           values produced by different code paths, and leads to intermittent
+           test failures depending on import order.  A ``ValueError`` is raised
+           so the problem surfaces immediately.
         """
         existing = self._store.get(name)
         if existing is None:
@@ -132,24 +131,10 @@ class PropertyRegistry:
                 f"{existing.__module__}.{existing.__qualname__} "
                 f"and cannot be overwritten by "
                 f"{cls.__module__}.{cls.__qualname__}. "
-                f"Remove the duplicate @property_function / _name declaration, "
+                f"Remove the duplicate _name declaration, "
                 f"or import the existing class instead of redefining it."
             )
         return cls
-
-    def register_or_skip(self, name: str, cls: type["Property"]) -> type["Property"]:
-        """Like :meth:`register` but silently skips on genuine conflicts.
-
-        Used by ``@property_function`` and other alternative/functional
-        definitions that are intentional secondary implementations of an
-        already-registered property.  The first registration wins; subsequent
-        ones are ignored rather than raising.
-        """
-        try:
-            self.register(name, cls)
-        except ValueError:
-            pass  # Already owned by a different class — the first one wins.
-        return self._store.get(name, cls)
 
     # ------------------------------------------------------------------
     # Mapping-like read API

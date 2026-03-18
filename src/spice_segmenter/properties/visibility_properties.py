@@ -21,29 +21,6 @@ class BodyFOVVisibility(TargetedProperty):
     _type = PropertyTypes.BOOLEAN
     _unit = pint.Unit("")
 
-    def _call_scalar(self, time_et: float) -> bool:
-        return spiceypy.fovtrg(
-            self.observer.name,
-            self.target.name,
-            "ELLIPSOID",
-            self.target.frame,
-            self.light_time_correction,
-            self.observer.name,
-            time_et,
-        )
-
-    def _call_vector(self, times_et) -> object:
-        from spiceypy import cyice
-        return cyice.fovtrg_v(
-            self.observer.name,
-            self.target.name,
-            "ELLIPSOID",
-            self.target.frame,
-            self.light_time_correction,
-            self.observer.name,
-            times_et,
-        )
-
     def __repr__(self) -> str:
         return f"Visibility of {self.target} from {self.observer} FOV"
     
@@ -60,15 +37,6 @@ class AngularSeparation(TargetedProperty):
     _unit = pint.Unit("rad")
 
     other = field(converter=SpiceRef, kw_only=True)
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum:
-        time = et(time)
-        v1 = Vector(self.observer, self.target)
-
-        v2 = Vector(self.observer, self.other)
-
-        return spiceypy.vsep(v1(time), v2(time))
 
     def __repr__(self) -> str:
         return f"Angular separation between {self.target} and {self.observer}"

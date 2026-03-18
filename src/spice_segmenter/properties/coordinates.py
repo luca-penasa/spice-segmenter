@@ -12,6 +12,7 @@ from planetary_coverage.spice import (
     SpiceSpacecraft,
 )
 from spiceypy import NotFoundError
+from typing import ClassVar
 
 from ..core.property import BooleanProperty, Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
@@ -24,6 +25,8 @@ from ..support.time_types import TIMES_TYPES
 class VectorBase(Property):
     frame: SpiceFrame = field(default="J2000", kw_only=True, converter=SpiceFrame)
     abcorr: str = field(default="NONE", kw_only=True)
+    # Scalar __call__ returns a 3-element array; this enables np.vectorize fallback.
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     @property
     def type(self) -> PropertyTypes:
@@ -90,12 +93,6 @@ class Vector(VectorBase):
     def name(self) -> str:
         return "coordinate"
 
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> ArrayLike:
-        return spiceypy.spkpos(
-            self.target.name, et(time), self.frame, self.abcorr, self.origin.name,
-        )[0]
-
     def config(self, config: dict) -> None:
         super().config(config)
         config.update(
@@ -123,17 +120,6 @@ class SubObserverPointMethods:
 class SubObserverPoint(Vector):
     method = field(default=SubObserverPointMethods.INTERCEPT)
 
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return spiceypy.subpnt(
-            str(self.method),
-            self.target.name,
-            et(time),
-            self.target.frame.name,
-            "None",
-            self.origin.name,
-        )[0]
-
     def __repr__(self) -> str:
         return f"Sub observer ({self.origin}) point on {self.target} in frame {self.frame}, computed using {self.method} method"
 
@@ -145,11 +131,6 @@ class SubObserverPoint(Vector):
 @define(repr=False, order=False, eq=False)
 class Boresight(VectorBase):
     instrument = field(converter=SpiceInstrument)
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        T = spiceypy.pxform(self.instrument.frame, self.frame, et(time))
-        return T @ np.array([0, 0, 1])  # we should get this value from spices, please
 
     @property
     def name(self) -> str:
@@ -170,23 +151,6 @@ class BoresightIntersection(Boresight):
 
     def __attrs_post_init__(self):
         self.boresight = Boresight(self.instrument, frame=self.frame)
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        bsight = self.boresight(time)
-        try:
-            return spiceypy.sincpt(
-                "ELLIPSOID",
-                self.target.name,
-                et(time),
-                self.target.frame.name,
-                self.abcorr,
-                self.instrument.name,
-                self.frame,
-                bsight,
-            )[0]
-        except NotFoundError:
-            return np.array([np.nan, np.nan, np.nan])
 
     @property
     def name(self) -> str:
@@ -222,9 +186,8 @@ class BoresightIntersects(BooleanProperty):
             target=self.target, instrument=self.observer,
         )
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> bool:
-        return ~np.isnan(self.intersection(time)).any()
+    def __repr__(self) -> str:
+        return f"Boresight of {self.observer} intersects {self.target}"
 
 
 @define(repr=False, order=False, eq=False)
@@ -235,6 +198,8 @@ class LatitudinalCoordinates(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
+
     @property
     def name(self) -> str:
         return "latitudinal"
@@ -242,13 +207,6 @@ class LatitudinalCoordinates(Property):
     @property
     def unit(self) -> tuple[pint.Unit, pint.Unit, pint.Unit]:
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        value = self.vector.__call__(time)
-        if np.isnan(value).any():
-            return np.array([np.nan, np.nan, np.nan])
-        return np.array(spiceypy.reclat(value))
 
     @property
     def radius(self) -> Property:
@@ -275,6 +233,8 @@ class SphericalCoordinates(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
+
     @property
     def name(self) -> str:
         return "spherical"
@@ -282,13 +242,6 @@ class SphericalCoordinates(Property):
     @property
     def unit(self) -> tuple[pint.Unit, pint.Unit, pint.Unit]:
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        value = self.vector.__call__(time)
-        if np.isnan(value).any():
-            return np.array([np.nan, np.nan, np.nan])
-        return np.array(spiceypy.recsph(value))
 
     @property
     def radius(self) -> Property:
@@ -315,6 +268,8 @@ class CylindricalCoordinates(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
+
     @property
     def name(self) -> str:
         return "cylindrical"
@@ -322,13 +277,6 @@ class CylindricalCoordinates(Property):
     @property
     def unit(self) -> pint.Unit:
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("km")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        value = self.vector.__call__(time)
-        if np.isnan(value).any():
-            return np.array([np.nan, np.nan, np.nan])
-        return np.array(spiceypy.reccyl(value))
 
     @property
     def radius(self) -> Property:
@@ -355,6 +303,8 @@ class GeodeticCoordinates(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
+
     @property
     def name(self) -> str:
         return "geodetic"
@@ -362,13 +312,6 @@ class GeodeticCoordinates(Property):
     @property
     def unit(self) -> pint.Unit:
         return pint.Unit("rad"), pint.Unit("rad"), pint.Unit("km")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        value = self.vector.__call__(time)
-        if np.isnan(value).any():
-            return np.array([np.nan, np.nan, np.nan])
-        return np.array(spiceypy.recgeo(value))
 
     @property
     def longitude(self) -> Property:
@@ -395,6 +338,8 @@ class PlanetographicCoordinates(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
+
     @property
     def name(self) -> str:
         return "planetographic"
@@ -402,20 +347,6 @@ class PlanetographicCoordinates(Property):
     @property
     def unit(self) -> pint.Unit:
         return pint.Unit("rad"), pint.Unit("rad"), pint.Unit("km")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        value = self.vector.__call__(time)
-        if np.isnan(value).any():
-            return np.array([np.nan, np.nan, np.nan])
-        return np.array(
-            spiceypy.recpgr(
-                self.vector.target.name,
-                value,
-                self.vector.target.re,
-                self.vector.target.f,
-            ),
-        )
 
     @property
     def longitude(self) -> Property:
@@ -442,6 +373,8 @@ class RaDecCoordinates(Property):
     def type(self) -> PropertyTypes:
         return PropertyTypes.VECTOR
 
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
+
     @property
     def name(self) -> str:
         return "ra/dec"
@@ -449,22 +382,6 @@ class RaDecCoordinates(Property):
     @property
     def unit(self) -> pint.Unit:
         return pint.Unit("km"), pint.Unit("rad"), pint.Unit("rad")
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return np.array(spiceypy.recrad(self.vector.__call__(time)))
-
-    @property
-    def range(self) -> Property:
-        return ComponentSelector(self, 0, "range")
-
-    @property
-    def right_ascension(self) -> Property:
-        return ComponentSelector(self, 1, "right_ascension")
-
-    @property
-    def declination(self) -> Property:
-        return ComponentSelector(self, 2, "declination")
 
     def config(self, config: dict) -> None:
         self.vector.config(config)

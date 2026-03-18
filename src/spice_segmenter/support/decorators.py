@@ -15,17 +15,6 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def register_property(name: str, property_class: type["Property"]) -> type["Property"]:
-    """Register *property_class* under *name* in the global property registry.
-
-    Uses :meth:`~PropertyRegistry.register_or_skip` so that alternative /
-    functional implementations of an already-registered property silently defer
-    to the first registration rather than raising.
-    """
-    from spice_segmenter.core.registry import property_registry
-    return property_registry.register_or_skip(name, property_class)
-
-
 def get_property_class(name: str) -> type["Property"] | None:
     """Return the property class registered under *name*, or ``None``."""
     from spice_segmenter.core import registry

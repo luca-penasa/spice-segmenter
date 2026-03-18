@@ -10,7 +10,7 @@ from .context import (
     get_current_observer,
     get_current_target,
 )
-from .decorators import register_property, get_property_class, list_registered_properties, vectorize
+from .decorators import get_property_class, list_registered_properties, vectorize
 from .search_reporter import (
     NoSearchReporter,
     SearchReporter,

@@ -134,10 +134,6 @@ class RingAnsaePhaseLowerThan(BooleanProperty):
     def __repr__(self) -> str:
         return f"The phase angle at the ring ansae are lower than {self.value_deg}° at either ansa of Jupiter's rings, as seen by {self.observer}."
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return is_ring_ansae_phase_angles_lower_than(time, self.value_deg)
-
 
 @define(repr=False, order=False, eq=False)
 class RingAnsaePhaseGreaterThan(BooleanProperty):
@@ -150,10 +146,6 @@ class RingAnsaePhaseGreaterThan(BooleanProperty):
 
     def __repr__(self) -> str:
         return f"The phase angle at the ring ansae are greater than {self.value_deg}° at either ansa of Jupiter's rings, as seen by {self.observer}."
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return is_ring_ansae_phase_angles_greater_than(time, self.value_deg)
 
 
 
@@ -169,8 +161,4 @@ class RingAnsaePhaseWithinRange(BooleanProperty):
 
     def __repr__(self) -> str:
         return f"The phase angle at the ring ansae is completely within [{self.lower_deg}°, {self.upper_deg}°] at either ansa of Jupiter's rings, as seen by {self.observer}."
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return is_ring_ansae_phase_angles_in_between(time, self.lower_deg, self.upper_deg)
 

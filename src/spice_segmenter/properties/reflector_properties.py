@@ -72,23 +72,13 @@ class ShineProperties(TargetedProperty):
     _name = "shine_properties"
     _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
     _type = PropertyTypes.VECTOR
+    _vector_output_shape = "()->(n)"
     
     reflector = field(converter=SpiceBody, kw_only=True)
     light_source = field(converter=SpiceBody, default="SUN", kw_only=True)
 
     def __repr__(self) -> str:
         return f"Shine properties for the sub observer point on {self.target}, illuminated by reflected light of {self.reflector}, as seen from {self.observer}"
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return relfected_light_properties(
-            time,
-            target_name=self.target,
-            observer=self.observer,
-            reflector=self.reflector,
-            light_source=self.light_source,
-            abcorr=self.light_time_correction,
-        )
 
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
@@ -121,19 +111,6 @@ class JupiterRise(TargetedPropertyMixin, BooleanProperty):
     def __repr__(self) -> str:
         return f"Jupiter rise status for the sub-{self.observer} {self.target}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        result = relfected_light_properties(
-            time,
-            target_name=self.target,
-            observer=self.observer,
-            reflector="JUPITER",
-            abcorr=self.light_time_correction,
-        )
-        el = result[0]   # reflector_elevation
-        r  = result[3]   # reflector_angular_radius
-        return el > r
-
 
 @define(repr=False, order=False, eq=False)
 class JupiterRiseRatio(TargetedProperty):
@@ -143,19 +120,6 @@ class JupiterRiseRatio(TargetedProperty):
     
     def __repr__(self) -> str:
         return f"Jupiter rise ratio (elevation/apparent jupiter radius) for the sub-{self.observer} on {self.target}"
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        result = relfected_light_properties(
-            time,
-            target_name=self.target,
-            observer=self.observer,
-            reflector="JUPITER",
-            abcorr=self.light_time_correction,
-        )
-        el = result[0]   # reflector_elevation
-        r  = result[3]   # reflector_angular_radius
-        return el / r
 
 
 @define(repr=False, order=False, eq=False)

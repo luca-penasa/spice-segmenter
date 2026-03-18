@@ -87,25 +87,6 @@ class PhaseAngle(TargetedProperty):
     def __repr__(self) -> str:
         return f"Phase Angle of {self.target} with respect to {self.third_body} as seen from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return spiceypy.phaseq(  # type: ignore
-            time_et,
-            self.target.name,
-            self.third_body.name,
-            self.observer.name,
-            self.light_time_correction,
-        )
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        from spiceypy import cyice
-        return cyice.phaseq_v(
-            times_et,
-            self.target.name,
-            self.third_body.name,
-            self.observer.name,
-            self.light_time_correction,
-        )
-
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
         config["third_body"] = self.third_body.name
@@ -120,28 +101,6 @@ class Distance(TargetedProperty):
     def __repr__(self) -> str:
         return f"Distance of {self.target} from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return spiceypy.vnorm(  # type: ignore
-            spiceypy.spkpos(
-                self.target.name,
-                time_et,
-                self.observer.frame.name,
-                self.light_time_correction,
-                self.observer.name,
-            )[0],
-        )
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        from spiceypy import cyice
-        positions, _ = cyice.spkpos_v(
-            self.target.name,
-            times_et,
-            self.observer.frame.name,
-            self.light_time_correction,
-            self.observer.name,
-        )
-        return np.linalg.norm(positions, axis=1)
-
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
         config["property"] = self.name
@@ -152,16 +111,6 @@ class SubObserverPointVelocity(TargetedProperty):
     _name = "sub_sc_velocity"
     _unit = pint.Unit("km/s")
     # method = field(default=SubObserverPointMethods.INTERCEPT)
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        state = sc_state(
-            time,
-            self.observer.spacecraft,
-            self.target,
-            self.light_time_correction,
-        )
-        return groundtrack_velocity(self.target, state)
 
     def __repr__(self) -> str:
         return f"Velocity of sub observer ({self.observer}) point on {self.target} surface."
@@ -277,14 +226,6 @@ class AngularSize(TargetedProperty):
     def __repr__(self) -> str:
         return f"Angular size of {self.target}, seen from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        d = Distance._call_scalar(self, time_et)
-        return float(2 * np.arctan(self.target.radius / d))  # type: ignore
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        distances = Distance._call_vector(self, times_et)
-        return 2 * np.arctan(self.target.radius / distances)  # type: ignore
-
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
         config["property"] = self.name
@@ -297,18 +238,6 @@ class SubObserverPixelScale(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Resultion of {self.target}, at the sub-{self.observer} point."
-
-    def _call_scalar(self, time_et: float) -> float:
-        from planetary_coverage.spice.toolbox import pixel_scale
-        distance = Distance._call_scalar(self, time_et)
-        return pixel_scale(inst=self.observer, target=self.target, emi=0, dist=distance)
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        from planetary_coverage.spice.toolbox import pixel_scale
-        distances = Distance._call_vector(self, times_et)
-        return np.vectorize(
-            lambda d: pixel_scale(inst=self.observer, target=self.target, emi=0, dist=d)
-        )(distances)
 
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
@@ -323,12 +252,6 @@ class ApproximatedAltitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Approximated (distance-radius) altitude of {self.observer} over {self.target} surface (from sub-sc point)"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return Distance._call_scalar(self, time_et) - self.target.radius
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        return Distance._call_vector(self, times_et) - self.target.radius
-
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
         config["property"] = self.name
@@ -341,14 +264,6 @@ class TargetSizeOnSensor(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Diameter in pixels of {self.target}, on the {self.observer} sensor."
-
-    def _call_scalar(self, time_et: float) -> float:
-        angular_size = AngularSize._call_scalar(self, time_et)
-        return angular_size / np.mean(self.observer.ifov)  # type: ignore
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        angular_sizes = AngularSize._call_vector(self, times_et)
-        return angular_sizes / np.mean(self.observer.ifov)  # type: ignore
 
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
@@ -363,12 +278,6 @@ class DistanceInTargetBodyRadii(TargetedProperty):
     def __repr__(self) -> str:
         return f"Distance of {self.target}, from {self.observer} sensor, in {self.target} radii."
 
-    def _call_scalar(self, time_et: float) -> float:
-        return Distance._call_scalar(self, time_et) / self.target.radius
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        return Distance._call_vector(self, times_et) / self.target.radius
-
     def config(self, config: dict) -> None:
         TargetedProperty.config(self, config)
         config["property"] = self.name
@@ -379,24 +288,10 @@ class SubObserverIlluminationAngles(TargetedProperty):
     _name = "sub_observer_illumination_angles"
     _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
     _type = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     def __repr__(self) -> str:
         return f"Sub {self.observer} point illumination angles on {self.target}"
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> float:
-        from ..properties.coordinates import SubObserverPoint
-
-        pt = SubObserverPoint(self.observer, self.target)(time)
-
-        return illum_angles(
-            time,
-            self.observer.spacecraft,
-            self.target,
-            pt,
-            abcorr=self.light_time_correction,
-            method="ELLIPSOID",
-        )
 
     @property
     def incidence(self) -> Property:
@@ -420,10 +315,7 @@ class SubObserverIsInDaylight(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub {self.observer} point on {self.target} is in daylight"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        i, e, p = SubObserverIlluminationAngles(self.observer, self.target)(time)
-        return i < 90.0
+    pass  # engine-registered; computation via evaluator
 
 
 # Utility functions for constraint optimization

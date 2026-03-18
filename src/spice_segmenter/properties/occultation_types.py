@@ -59,45 +59,6 @@ class Occultation(Property):
     def __repr__(self) -> str:
         return f"Occultation of {self.back} by {self.front}, as seen by {self.observer}"
 
-    def _remap_to_enum(self, value: int) -> OccultationTypes:
-        if value == -3:
-            return OccultationTypes.FULL
-        if value == -2:
-            return OccultationTypes.ANNULAR
-        if value == -1:
-            return OccultationTypes.PARTIAL
-        return OccultationTypes.NONE
-
-    def _call_scalar(self, time_et: float) -> OccultationTypes:
-        v = spiceypy.occult(
-            self.back.name,
-            "ELLIPSOID",
-            self.back.frame,
-            self.front.name,
-            "ELLIPSOID",
-            self.front.frame,
-            self.light_time_correction,
-            self.observer.name,
-            time_et,
-        )
-        return self._remap_to_enum(v)
-
-    def _call_vector(self, times_et) -> object:
-        from spiceypy import cyice
-        import numpy as np
-        raw = cyice.occult_v(
-            self.back.name,
-            "ELLIPSOID",
-            self.back.frame,
-            self.front.name,
-            "ELLIPSOID",
-            self.front.frame,
-            self.light_time_correction,
-            self.observer.name,
-            times_et,
-        )
-        return np.vectorize(self._remap_to_enum)(raw)
-
     def config(self, config: dict) -> None:
         super().config(config)
         config["observer"] = self.observer.name

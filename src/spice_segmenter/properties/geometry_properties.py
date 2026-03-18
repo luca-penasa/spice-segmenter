@@ -196,6 +196,7 @@ class SubObserverLatitudinal(TargetedProperty):
     _name: ClassVar[str] = "sub_sc_latitudinal"
     _unit: ClassVar[list] = [pint.Unit("km"), pint.Unit("deg"), pint.Unit("deg")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
@@ -203,12 +204,6 @@ class SubObserverLatitudinal(TargetedProperty):
         return (
             f"Sub-observer ({self.observer}) latitudinal coordinates on "
             f"{self.target} [radius, lon, lat]"
-        )
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _subpnt_latitudinal(
-            time, self.target, self.observer, self.method, self.light_time_correction
         )
 
     @property
@@ -236,17 +231,6 @@ class SubObserverRadius(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer radius on {self.target} from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_latitudinal(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[0]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        r, _, _ = _subpnt_latitudinal_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-        return r
-
 
 @define(repr=False, order=False, eq=False)
 class SubObserverLongitude(TargetedProperty):
@@ -260,17 +244,6 @@ class SubObserverLongitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer longitude on {self.target} from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_latitudinal(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[1]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        _, lon, _ = _subpnt_latitudinal_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-        return lon
-
 
 @define(repr=False, order=False, eq=False)
 class SubObserverLatitude(TargetedProperty):
@@ -283,17 +256,6 @@ class SubObserverLatitude(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Sub-observer latitude on {self.target} from {self.observer}"
-
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_latitudinal(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[2]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        _, _, lat = _subpnt_latitudinal_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-        return lat
 
 
 # ---------------------------------------------------------------------------
@@ -314,6 +276,7 @@ class SubObserverGeodetic(TargetedProperty):
     _name: ClassVar[str] = "sub_sc_geodetic"
     _unit: ClassVar[list] = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("km")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
@@ -321,12 +284,6 @@ class SubObserverGeodetic(TargetedProperty):
         return (
             f"Sub-observer ({self.observer}) geodetic coordinates on "
             f"{self.target} [lon, lat, alt]"
-        )
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _subpnt_geodetic(
-            time, self.target, self.observer, self.method, self.light_time_correction
         )
 
     @property
@@ -354,17 +311,6 @@ class SubObserverGeoLongitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer geodetic longitude on {self.target} from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_geodetic(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[0]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        lon, _, _ = _subpnt_geodetic_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-        return lon
-
 
 @define(repr=False, order=False, eq=False)
 class SubObserverGeoLatitude(TargetedProperty):
@@ -378,17 +324,6 @@ class SubObserverGeoLatitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer geodetic latitude on {self.target} from {self.observer}"
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_geodetic(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[1]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        _, lat, _ = _subpnt_geodetic_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-        return lat
-
 
 @define(repr=False, order=False, eq=False)
 class SubObserverAltitude(TargetedProperty):
@@ -401,17 +336,6 @@ class SubObserverAltitude(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Sub-observer altitude above {self.target} ellipsoid from {self.observer}"
-
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_geodetic(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[2]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        _, _, alt = _subpnt_geodetic_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-        return alt
 
 
 # ---------------------------------------------------------------------------
@@ -438,16 +362,6 @@ class SubObserverRectangular(TargetedProperty):
             f"{self.target} [x, y, z]"
         )
 
-    def _call_scalar(self, time_et: float) -> np.ndarray:
-        return _subpnt_xyz(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        return _subpnt_xyz_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )
-
     @property
     def x(self) -> Property:
         return ComponentSelector(self, 0, "sub_sc_x")
@@ -470,15 +384,6 @@ class SubObserverX(TargetedProperty):
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_xyz(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[0]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        return _subpnt_xyz_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )[:, 0]
 
 
 @define(repr=False, order=False, eq=False)
@@ -490,15 +395,6 @@ class SubObserverY(TargetedProperty):
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_xyz(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[1]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        return _subpnt_xyz_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )[:, 1]
 
 
 @define(repr=False, order=False, eq=False)
@@ -510,15 +406,6 @@ class SubObserverZ(TargetedProperty):
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
-    def _call_scalar(self, time_et: float) -> float:
-        return _subpnt_xyz(
-            time_et, self.target, self.observer, self.method, self.light_time_correction
-        )[2]
-
-    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
-        return _subpnt_xyz_v(
-            times_et, self.target, self.observer, self.method, self.light_time_correction
-        )[:, 2]
 
 
 # ---------------------------------------------------------------------------
@@ -537,18 +424,12 @@ class BoresightIntersectionLatitudinal(TargetedProperty):
     _name: ClassVar[str] = "boresight_latitudinal"
     _unit: ClassVar[list] = [pint.Unit("km"), pint.Unit("deg"), pint.Unit("deg")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     def __repr__(self) -> str:
         return (
             f"Boresight ({self.observer}) intersection latitudinal coordinates "
             f"on {self.target}"
-        )
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _sincpt_latitudinal(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
         )
 
     @property
@@ -574,13 +455,6 @@ class BoresightLatitude(TargetedProperty):
     _name: ClassVar[str] = "boresight_latitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_latitudinal(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[2]
-
     def __repr__(self) -> str:
         return f"Boresight latitude of {self.observer} on {self.target}"
 
@@ -595,13 +469,6 @@ class BoresightLongitude(TargetedProperty):
     _name: ClassVar[str] = "boresight_longitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_latitudinal(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[1]
-
     def __repr__(self) -> str:
         return f"Boresight longitude of {self.observer} on {self.target}"
 
@@ -615,13 +482,6 @@ class BoresightRadius(TargetedProperty):
 
     _name: ClassVar[str] = "boresight_radius"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_latitudinal(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[0]
 
     def __repr__(self) -> str:
         return f"Boresight intersection radius of {self.observer} on {self.target}"
@@ -643,18 +503,12 @@ class BoresightIntersectionGeodetic(TargetedProperty):
     _name: ClassVar[str] = "boresight_geodetic"
     _unit: ClassVar[list] = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("km")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     def __repr__(self) -> str:
         return (
             f"Boresight ({self.observer}) intersection geodetic coordinates "
             f"on {self.target}"
-        )
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _sincpt_geodetic(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
         )
 
     @property
@@ -680,13 +534,6 @@ class BoresightGeoLatitude(TargetedProperty):
     _name: ClassVar[str] = "boresight_geo_latitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_geodetic(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[1]
-
     def __repr__(self) -> str:
         return f"Boresight geodetic latitude of {self.observer} on {self.target}"
 
@@ -701,13 +548,6 @@ class BoresightGeoLongitude(TargetedProperty):
     _name: ClassVar[str] = "boresight_geo_longitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_geodetic(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[0]
-
     def __repr__(self) -> str:
         return f"Boresight geodetic longitude of {self.observer} on {self.target}"
 
@@ -721,13 +561,6 @@ class BoresightAltitude(TargetedProperty):
 
     _name: ClassVar[str] = "boresight_altitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_geodetic(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[2]
 
     def __repr__(self) -> str:
         return f"Boresight intersection altitude of {self.observer} on {self.target}"
@@ -756,13 +589,6 @@ class BoresightIntersectionRectangular(TargetedProperty):
             f"on {self.target}"
         )
 
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _sincpt_xyz(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )
-
     @property
     def x(self) -> Property:
         return ComponentSelector(self, 0, "boresight_x")
@@ -783,13 +609,6 @@ class BoresightX(TargetedProperty):
     _name: ClassVar[str] = "boresight_x"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_xyz(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[0]
-
     def __repr__(self) -> str:
         return f"Boresight X of {self.observer} on {self.target}"
 
@@ -801,13 +620,6 @@ class BoresightY(TargetedProperty):
     _name: ClassVar[str] = "boresight_y"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_xyz(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[1]
-
     def __repr__(self) -> str:
         return f"Boresight Y of {self.observer} on {self.target}"
 
@@ -818,13 +630,6 @@ class BoresightZ(TargetedProperty):
 
     _name: ClassVar[str] = "boresight_z"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sincpt_xyz(
-            time, self.target, SpiceInstrument(self.observer.name),
-            self.light_time_correction,
-        )[2]
 
     def __repr__(self) -> str:
         return f"Boresight Z of {self.observer} on {self.target}"
@@ -844,13 +649,10 @@ class TargetRaDec(TargetedProperty):
     _name: ClassVar[str] = "target_radec"
     _unit: ClassVar[list] = [pint.Unit("deg"), pint.Unit("deg")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     def __repr__(self) -> str:
         return f"RA/Dec of {self.target} from {self.observer} (J2000)"
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _target_radec(time, self.target, self.observer, self.light_time_correction)
 
     @property
     def ra(self) -> Property:
@@ -868,10 +670,6 @@ class TargetRA(TargetedProperty):
     _name: ClassVar[str] = "target_ra"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _target_radec(time, self.target, self.observer, self.light_time_correction)[0]
-
     def __repr__(self) -> str:
         return f"RA of {self.target} from {self.observer} (J2000)"
 
@@ -882,10 +680,6 @@ class TargetDec(TargetedProperty):
 
     _name: ClassVar[str] = "target_dec"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _target_radec(time, self.target, self.observer, self.light_time_correction)[1]
 
     def __repr__(self) -> str:
         return f"Dec of {self.target} from {self.observer} (J2000)"
@@ -906,13 +700,10 @@ class BoresightRaDec(TargetedProperty):
     _name: ClassVar[str] = "boresight_radec"
     _unit: ClassVar[list] = [pint.Unit("deg"), pint.Unit("deg")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     def __repr__(self) -> str:
         return f"Boresight RA/Dec of {self.observer} (J2000)"
-
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
-        return _boresight_radec(time, SpiceInstrument(self.observer.name), self.light_time_correction)
 
     @property
     def ra(self) -> Property:
@@ -930,10 +721,6 @@ class BoresightRA(TargetedProperty):
     _name: ClassVar[str] = "boresight_ra"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _boresight_radec(time, SpiceInstrument(self.observer.name), self.light_time_correction)[0]
-
     def __repr__(self) -> str:
         return f"Boresight RA of {self.observer} (J2000)"
 
@@ -944,10 +731,6 @@ class BoresightDec(TargetedProperty):
 
     _name: ClassVar[str] = "boresight_dec"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _boresight_radec(time, SpiceInstrument(self.observer.name), self.light_time_correction)[1]
 
     def __repr__(self) -> str:
         return f"Boresight Dec of {self.observer} (J2000)"
@@ -982,10 +765,6 @@ class SubObserverIncidenceAngle(TargetedProperty):
     _name: ClassVar[str] = "sub_observer_incidence"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sub_observer_illum(time, self.target, self.observer, self.light_time_correction)[0]
-
     def __repr__(self) -> str:
         return f"Sub-observer incidence angle on {self.target} from {self.observer}"
 
@@ -999,10 +778,6 @@ class SubObserverEmissionAngle(TargetedProperty):
 
     _name: ClassVar[str] = "sub_observer_emission"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sub_observer_illum(time, self.target, self.observer, self.light_time_correction)[1]
 
     def __repr__(self) -> str:
         return f"Sub-observer emission angle on {self.target} from {self.observer}"
@@ -1019,10 +794,6 @@ class SubObserverPhaseAngleLocal(TargetedProperty):
 
     _name: ClassVar[str] = "sub_observer_phase_local"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
-
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
-        return _sub_observer_illum(time, self.target, self.observer, self.light_time_correction)[2]
 
     def __repr__(self) -> str:
         return f"Sub-observer local phase angle on {self.target} from {self.observer}"

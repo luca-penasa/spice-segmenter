@@ -73,12 +73,7 @@ class Property(ABC):
         super().__init_subclass__(**kwargs)
         if hasattr(cls, "_name") and isinstance(cls._name, str) and cls._name:
             from spice_segmenter.core.registry import property_registry
-            if cls.__dict__.get("_generated_by_property_function", False):
-                # Alternative / functional implementation — defer to the first
-                # registration if the name is already taken.
-                property_registry.register_or_skip(cls._name, cls)
-            else:
-                property_registry.register(cls._name, cls)
+            property_registry.register(cls._name, cls)
 
     def _call_scalar(self, time_et: float) -> float | bool | Enum:
         """Evaluate the property at a single SPICE ET (float seconds past J2000).
@@ -113,25 +108,15 @@ class Property(ABC):
     def __call__(self, time: TIMES_TYPES) -> float | bool | Enum | np.ndarray:
         """Evaluate the property at one or more times.
 
-        Dispatches to ``_call_scalar`` for a single time value and to
-        ``_call_vector`` for array-like inputs. Override ``_call_scalar`` /
-        ``_call_vector`` to implement a property — do not override this method.
+        Delegates to the global :class:`~spice_segmenter.engines.Evaluator`
+        so that computation is fully decoupled from the property data class.
 
-        Subclasses that have not yet been migrated to the
-        ``_call_scalar`` / ``_call_vector`` pattern may still override
-        ``__call__`` directly (e.g. with ``@vectorize``) and will continue to
-        work correctly.
+        Subclasses that override ``__call__`` directly (e.g. with
+        ``@vectorize``) continue to work: Python's MRO finds the subclass
+        method first and this bridge is never reached for those classes.
         """
-        from ..support.spice_utilities import et as _et
-
-        is_array = hasattr(time, "__len__") and not isinstance(time, str)
-        if not is_array:
-            return self._call_scalar(float(_et(time)))
-        times_et = _bulk_et(time)  # fast bulk ET conversion (avoids scalar loop)
-        from ..support.config import get_active_config
-        if get_active_config().use_vectorized_calls:
-            return self._call_vector(times_et)
-        return np.vectorize(self._call_scalar, signature=self._vector_output_shape)(times_et)
+        from ..engines.evaluator import get_evaluator
+        return get_evaluator().evaluate(self, time)
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -216,20 +201,9 @@ class Property(ABC):
         return "_".join(parts)
 
     def compute_as_spice_function(self) -> UDFUNS:
-        # Use _call_scalar directly when the subclass has implemented it —
-        # this skips the scalar/array dispatch overhead for SPICE callbacks
-        # which always pass a single float ET.
-        if type(self)._call_scalar is not Property._call_scalar:
-            return spiceypy.utils.callbacks.SpiceUDFUNS(
-                lambda t: self._call_scalar(float(t))
-            )
-        # Fall back to __call__ for properties not yet migrated to _call_scalar.
-        # TODO: move scalar/boolean variants to ScalarProperty / BooleanProperty
-        # subclasses and remove this fallback once all properties are migrated.
-        def as_function(time: TIMES_TYPES) -> float | bool | Enum:
-            return self.__call__(time)
-
-        return spiceypy.utils.callbacks.SpiceUDFUNS(as_function)
+        # Delegates through __call__ so both engine-registered and legacy
+        # @vectorize-override properties work transparently.
+        return spiceypy.utils.callbacks.SpiceUDFUNS(lambda t: self(float(t)))
 
     def is_decreasing(self, time: TIMES_TYPES) -> bool:
         return spiceypy.uddc(self.compute_as_spice_function(), time, self.dt)  # type: ignore
@@ -482,9 +456,9 @@ class Property(ABC):
 
 @define(repr=False, order=False, eq=False)
 class BooleanProperty(Property):
-    @abstractmethod
-    def __call__(self, time: TIMES_TYPES) -> bool:
-        pass
+    # __call__ is NOT abstract — inherited Property.__call__ delegation bridge
+    # dispatches through the evaluator for registered properties, and Python
+    # MRO ensures subclass overrides are still found first for legacy classes.
 
     @property
     def type(self) -> PropertyTypes:
