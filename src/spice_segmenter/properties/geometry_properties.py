@@ -76,6 +76,49 @@ def _subpnt_geodetic(time, target, observer, method: str, abcorr: str) -> np.nda
     return np.array([np.rad2deg(lon), np.rad2deg(lat), alt])
 
 
+# ---------------------------------------------------------------------------
+# Vectorized SPICE helpers (cyice _v — C-level batch operations)
+# These accept an np.ndarray of float64 ET values already converted from
+# TIMES_TYPES by Property.__call__ and return plain numpy arrays.
+# ---------------------------------------------------------------------------
+
+def _subpnt_latitudinal_v(
+    times_et: np.ndarray, target, observer, method: str, abcorr: str
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Vectorized (radius_km, longitude_deg, latitude_deg) for N ET values."""
+    from spiceypy import cyice
+    spoints, _, _ = cyice.subpnt_v(
+        method, target.name, times_et, target.frame.name, abcorr, observer.name
+    )
+    # reclat_v returns (N, 3) where columns are (radius, lon_rad, lat_rad)
+    latitudinal = cyice.reclat_v(spoints)
+    return latitudinal[:, 0], np.rad2deg(latitudinal[:, 1]), np.rad2deg(latitudinal[:, 2])
+
+
+def _subpnt_geodetic_v(
+    times_et: np.ndarray, target, observer, method: str, abcorr: str
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Vectorized (longitude_deg, latitude_deg, altitude_km) for N ET values."""
+    from spiceypy import cyice
+    spoints, _, _ = cyice.subpnt_v(
+        method, target.name, times_et, target.frame.name, abcorr, observer.name
+    )
+    # recgeo_v returns (N, 3) where columns are (lon_rad, lat_rad, alt_km)
+    geodetic = cyice.recgeo_v(spoints, target.re, target.f)
+    return np.rad2deg(geodetic[:, 0]), np.rad2deg(geodetic[:, 1]), geodetic[:, 2]
+
+
+def _subpnt_xyz_v(
+    times_et: np.ndarray, target, observer, method: str, abcorr: str
+) -> np.ndarray:
+    """Vectorized body-fixed XYZ (N, 3) for N ET values."""
+    from spiceypy import cyice
+    spoints, _, _ = cyice.subpnt_v(
+        method, target.name, times_et, target.frame.name, abcorr, observer.name
+    )
+    return spoints
+
+
 _NAN3 = np.array([np.nan, np.nan, np.nan])
 
 
@@ -193,11 +236,16 @@ class SubObserverRadius(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer radius on {self.target} from {self.observer}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_latitudinal(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[0]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        r, _, _ = _subpnt_latitudinal_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+        return r
 
 
 @define(repr=False, order=False, eq=False)
@@ -212,11 +260,16 @@ class SubObserverLongitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer longitude on {self.target} from {self.observer}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_latitudinal(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[1]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        _, lon, _ = _subpnt_latitudinal_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+        return lon
 
 
 @define(repr=False, order=False, eq=False)
@@ -231,11 +284,16 @@ class SubObserverLatitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer latitude on {self.target} from {self.observer}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_latitudinal(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[2]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        _, _, lat = _subpnt_latitudinal_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+        return lat
 
 
 # ---------------------------------------------------------------------------
@@ -296,11 +354,16 @@ class SubObserverGeoLongitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer geodetic longitude on {self.target} from {self.observer}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_geodetic(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[0]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        lon, _, _ = _subpnt_geodetic_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+        return lon
 
 
 @define(repr=False, order=False, eq=False)
@@ -315,11 +378,16 @@ class SubObserverGeoLatitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer geodetic latitude on {self.target} from {self.observer}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_geodetic(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[1]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        _, lat, _ = _subpnt_geodetic_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+        return lat
 
 
 @define(repr=False, order=False, eq=False)
@@ -334,11 +402,16 @@ class SubObserverAltitude(TargetedProperty):
     def __repr__(self) -> str:
         return f"Sub-observer altitude above {self.target} ellipsoid from {self.observer}"
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_geodetic(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[2]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        _, _, alt = _subpnt_geodetic_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+        return alt
 
 
 # ---------------------------------------------------------------------------
@@ -355,6 +428,7 @@ class SubObserverRectangular(TargetedProperty):
     _name: ClassVar[str] = "sub_sc_rectangular"
     _unit: ClassVar[list] = [pint.Unit("km"), pint.Unit("km"), pint.Unit("km")]
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
+    _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
@@ -364,10 +438,14 @@ class SubObserverRectangular(TargetedProperty):
             f"{self.target} [x, y, z]"
         )
 
-    @vectorize(signature="(),()->(n)")
-    def __call__(self, time: TIMES_TYPES) -> np.ndarray:
+    def _call_scalar(self, time_et: float) -> np.ndarray:
         return _subpnt_xyz(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
+        )
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        return _subpnt_xyz_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
         )
 
     @property
@@ -392,11 +470,15 @@ class SubObserverX(TargetedProperty):
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_xyz(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[0]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        return _subpnt_xyz_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )[:, 0]
 
 
 @define(repr=False, order=False, eq=False)
@@ -408,11 +490,15 @@ class SubObserverY(TargetedProperty):
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_xyz(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[1]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        return _subpnt_xyz_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )[:, 1]
 
 
 @define(repr=False, order=False, eq=False)
@@ -424,11 +510,15 @@ class SubObserverZ(TargetedProperty):
 
     method: str = field(default=_SUBPNT_METHOD, kw_only=True)
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float:
+    def _call_scalar(self, time_et: float) -> float:
         return _subpnt_xyz(
-            time, self.target, self.observer, self.method, self.light_time_correction
+            time_et, self.target, self.observer, self.method, self.light_time_correction
         )[2]
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        return _subpnt_xyz_v(
+            times_et, self.target, self.observer, self.method, self.light_time_correction
+        )[:, 2]
 
 
 # ---------------------------------------------------------------------------

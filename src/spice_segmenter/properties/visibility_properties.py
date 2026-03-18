@@ -21,9 +21,7 @@ class BodyFOVVisibility(TargetedProperty):
     _type = PropertyTypes.BOOLEAN
     _unit = pint.Unit("")
 
-    @vectorize
-    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum:
-        time = et(time)
+    def _call_scalar(self, time_et: float) -> bool:
         return spiceypy.fovtrg(
             self.observer.name,
             self.target.name,
@@ -31,7 +29,19 @@ class BodyFOVVisibility(TargetedProperty):
             self.target.frame,
             self.light_time_correction,
             self.observer.name,
-            time,
+            time_et,
+        )
+
+    def _call_vector(self, times_et) -> object:
+        from spiceypy import cyice
+        return cyice.fovtrg_v(
+            self.observer.name,
+            self.target.name,
+            "ELLIPSOID",
+            self.target.frame,
+            self.light_time_correction,
+            self.observer.name,
+            times_et,
         )
 
     def __repr__(self) -> str:

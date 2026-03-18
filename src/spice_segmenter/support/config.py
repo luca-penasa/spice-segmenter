@@ -40,6 +40,11 @@ class Config:
     )
     start: str | pd.Timestamp | None = field(default=None)
     end: str | pd.Timestamp | None = field(default=None)
+    # When True (default), array inputs are routed to _call_vector on properties
+    # that have overridden it (e.g. with a cyice._v function).  Set to False to
+    # force the baseline np.vectorize(_call_scalar) path for all properties —
+    # useful for benchmarking, debugging, or environments where cyice is missing.
+    use_vectorized_calls: bool = field(default=True)
 
     _token: contextvars.Token | None = field(
         default=None, init=False, repr=False

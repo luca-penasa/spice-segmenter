@@ -12,12 +12,43 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from enum import Enum, auto
 
+import numpy as np
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
 from attrs import define
 from loguru import logger as log
 from spiceypy.utils.callbacks import UDFUNB, UDFUNS
+
+
+def _bulk_et(time) -> np.ndarray:
+    """Convert an array-like of times to a float64 numpy array of SPICE ETs.
+
+    Fast paths (in order of preference):
+    - ``pd.DatetimeIndex``: format to ISO strings then call ``cyice.str2et_v``
+      in one C-level batch — avoids N Python→C round-trips of the scalar loop.
+    - numpy float/int array: already ETs, just cast and return.
+    - list/array of strings: convert to numpy string array then ``cyice.str2et_v``.
+    - anything else: fall back to the original scalar ``et()`` loop.
+    """
+    import pandas as pd
+    from spiceypy.cyice import str2et_v
+
+    if isinstance(time, pd.DatetimeIndex):
+        iso = np.array([str(t) for t in time], dtype=np.str_)
+        return str2et_v(iso)
+
+    arr = np.asarray(time)
+    if arr.dtype.kind in ("f", "i", "u"):  # already numeric ET values
+        return arr.astype(np.float64)
+    if arr.dtype.kind in ("U", "S", "O"):  # string-like
+        if arr.dtype.kind != "U":
+            arr = arr.astype(str)
+        return str2et_v(arr)
+
+    # Generic fallback: scalar et() loop (handles Timestamps, mixed types, etc.)
+    from ..support.spice_utilities import et as _et
+    return np.array([float(_et(t)) for t in time], dtype=np.float64)
 
 
 class PropertyTypes(Enum):
@@ -32,6 +63,10 @@ class Property(ABC):
     _name: ClassVar[str]
     _unit: ClassVar[pint.Unit | Iterable[pint.Unit]]
     _type: ClassVar[PropertyTypes] = PropertyTypes.SCALAR
+    # Set to a numpy.vectorize signature string (e.g. "()->(n)") on subclasses
+    # whose _call_scalar returns an array rather than a scalar. Used by the
+    # default _call_vector implementation.
+    _vector_output_shape: ClassVar[str | None] = None
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         """Register property subclasses automatically in the global registry."""
@@ -45,8 +80,58 @@ class Property(ABC):
             else:
                 property_registry.register(cls._name, cls)
 
-    @abstractmethod
-    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum: ...
+    def _call_scalar(self, time_et: float) -> float | bool | Enum:
+        """Evaluate the property at a single SPICE ET (float seconds past J2000).
+
+        Override this instead of ``__call__`` to implement a property. The base
+        class ``__call__`` dispatches to this for scalar inputs and to
+        ``_call_vector`` for array inputs.
+
+        Pair with a ``_call_vector`` override that calls the corresponding
+        ``cyice._v`` function to get native C-level batch performance.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} has not implemented _call_scalar. "
+            "Override _call_scalar with the property body (accepts a pre-converted "
+            "float ET), and optionally override _call_vector with a cyice _v call "
+            "for batch performance."
+        )
+
+    def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
+        """Evaluate at an array of SPICE ETs (float64 seconds past J2000 TDB).
+
+        Default: ``np.vectorize`` over ``_call_scalar`` — identical behaviour to
+        the old ``@vectorize`` decorator, just without the Python overhead of
+        re-wrapping each call.
+
+        Override this method with the matching ``cyice._v`` function for
+        native C-level vectorisation. The input is already an ``np.ndarray`` of
+        float64 ET values — no time conversion is needed inside this method.
+        """
+        return np.vectorize(self._call_scalar, signature=self._vector_output_shape)(times_et)
+
+    def __call__(self, time: TIMES_TYPES) -> float | bool | Enum | np.ndarray:
+        """Evaluate the property at one or more times.
+
+        Dispatches to ``_call_scalar`` for a single time value and to
+        ``_call_vector`` for array-like inputs. Override ``_call_scalar`` /
+        ``_call_vector`` to implement a property — do not override this method.
+
+        Subclasses that have not yet been migrated to the
+        ``_call_scalar`` / ``_call_vector`` pattern may still override
+        ``__call__`` directly (e.g. with ``@vectorize``) and will continue to
+        work correctly.
+        """
+        from ..support.spice_utilities import et as _et
+
+        is_array = hasattr(time, "__len__") and not isinstance(time, str)
+        if not is_array:
+            return self._call_scalar(float(_et(time)))
+        times_et = _bulk_et(time)  # fast bulk ET conversion (avoids scalar loop)
+        from ..support.config import get_active_config
+        if get_active_config().use_vectorized_calls:
+            return self._call_vector(times_et)
+        return np.vectorize(self._call_scalar, signature=self._vector_output_shape)(times_et)
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -131,11 +216,19 @@ class Property(ABC):
         return "_".join(parts)
 
     def compute_as_spice_function(self) -> UDFUNS:
+        # Use _call_scalar directly when the subclass has implemented it —
+        # this skips the scalar/array dispatch overhead for SPICE callbacks
+        # which always pass a single float ET.
+        if type(self)._call_scalar is not Property._call_scalar:
+            return spiceypy.utils.callbacks.SpiceUDFUNS(
+                lambda t: self._call_scalar(float(t))
+            )
+        # Fall back to __call__ for properties not yet migrated to _call_scalar.
+        # TODO: move scalar/boolean variants to ScalarProperty / BooleanProperty
+        # subclasses and remove this fallback once all properties are migrated.
         def as_function(time: TIMES_TYPES) -> float | bool | Enum:
             return self.__call__(time)
 
-        # TODO we are marking as_function as returing float, bool or enum, but wont work with SpiceUDFUNS. You need to use SpiceUDFUNB instead for booleans
-        # while for enum wont work at all. Move these routines in the derived ScalarProperty and BooleanProperty classes please!
         return spiceypy.utils.callbacks.SpiceUDFUNS(as_function)
 
     def is_decreasing(self, time: TIMES_TYPES) -> bool:

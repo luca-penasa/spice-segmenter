@@ -68,8 +68,7 @@ class Occultation(Property):
             return OccultationTypes.PARTIAL
         return OccultationTypes.NONE
 
-    @vectorize
-    def __call__(self, times: TIMES_TYPES) -> OccultationTypes:
+    def _call_scalar(self, time_et: float) -> OccultationTypes:
         v = spiceypy.occult(
             self.back.name,
             "ELLIPSOID",
@@ -79,10 +78,25 @@ class Occultation(Property):
             self.front.frame,
             self.light_time_correction,
             self.observer.name,
-            et(times),
+            time_et,
         )
-
         return self._remap_to_enum(v)
+
+    def _call_vector(self, times_et) -> object:
+        from spiceypy import cyice
+        import numpy as np
+        raw = cyice.occult_v(
+            self.back.name,
+            "ELLIPSOID",
+            self.back.frame,
+            self.front.name,
+            "ELLIPSOID",
+            self.front.frame,
+            self.light_time_correction,
+            self.observer.name,
+            times_et,
+        )
+        return np.vectorize(self._remap_to_enum)(raw)
 
     def config(self, config: dict) -> None:
         super().config(config)
