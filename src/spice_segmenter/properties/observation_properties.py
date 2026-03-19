@@ -31,6 +31,11 @@ from spice_segmenter.support.decorators import vectorize
 from spice_segmenter.support.spice_utilities import as_spice_ref, et
 from spice_segmenter.support.time_types import TIMES_TYPES
 
+def _to_pint_unit(x):
+    """Converter for unit fields: strings → pint.Unit, tuples → tuple of units."""
+    from spice_segmenter.core.property import _to_pint_unit as _core_to_pint_unit
+    return _core_to_pint_unit(x)
+
 PROPERTIES_REGISTRY = []
 
 
@@ -41,7 +46,7 @@ class MinMaxConditionTypes(Enum):
     GLOBAL_MAXIMUM = "global_maximum"
 
 
-@define(repr=False, order=False, eq=False)
+@define(repr=False, order=False, eq=False, slots=False)
 class TargetedPropertyMixin:
     observer: SpiceInstrument | SpiceSpacecraft = field(
         factory=get_current_observer,
@@ -77,7 +82,7 @@ class TargetedProperty(TargetedPropertyMixin, Property):
 @define(repr=False, order=False, eq=False)
 class PhaseAngle(TargetedProperty):
     _name = "phase_angle"
-    _unit = pint.Unit("rad")
+    unit: pint.Unit = field(default=pint.Unit("rad"), kw_only=True, converter=_to_pint_unit)
 
     third_body: SpiceBody = field(
         factory=lambda: as_spice_ref("SUN"),
@@ -96,21 +101,16 @@ class PhaseAngle(TargetedProperty):
 @define(repr=False, order=False, eq=False)
 class Distance(TargetedProperty):
     _name = "distance"
-    _unit = pint.Unit("km")
+    unit: pint.Unit = field(default=pint.Unit("km"), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Distance of {self.target} from {self.observer}"
-
-    def config(self, config: dict) -> None:
-        TargetedProperty.config(self, config)
-        config["property"] = self.name
 
 
 @define(repr=False, order=False, eq=False)
 class SubObserverPointVelocity(TargetedProperty):
     _name = "sub_sc_velocity"
-    _unit = pint.Unit("km/s")
-    # method = field(default=SubObserverPointMethods.INTERCEPT)
+    unit: pint.Unit = field(default=pint.Unit("km/s"), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Velocity of sub observer ({self.observer}) point on {self.target} surface."
@@ -146,7 +146,7 @@ class BoresightGroundtrackVelocity(TargetedProperty):
     """
 
     _name: ClassVar[str] = "boresight_groundtrack_velocity"
-    _unit: ClassVar[pint.Unit] = pint.Unit("km/s")
+    unit: pint.Unit = field(default=pint.Unit("km/s"), kw_only=True, converter=_to_pint_unit)
 
     dt: float = field(
         default=1.0,
@@ -221,72 +221,52 @@ class BoresightGroundtrackVelocity(TargetedProperty):
 @define
 class AngularSize(TargetedProperty):
     _name = "angular_size"
-    _unit = pint.Unit("rad")
+    unit: pint.Unit = field(default=pint.Unit("rad"), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Angular size of {self.target}, seen from {self.observer}"
-
-    def config(self, config: dict) -> None:
-        TargetedProperty.config(self, config)
-        config["property"] = self.name
 
 
 @define
 class SubObserverPixelScale(TargetedProperty):
     _name = "sub_observer_pixel_scale"
-    _unit = pint.Unit("km/px")
+    unit: pint.Unit = field(default=pint.Unit("km/px"), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Resultion of {self.target}, at the sub-{self.observer} point."
-
-    def config(self, config: dict) -> None:
-        TargetedProperty.config(self, config)
-        config["property"] = self.name
 
 
 @define
 class ApproximatedAltitude(TargetedProperty):
     _name = "approx_altitude"
-    _unit = pint.Unit("km")
+    unit: pint.Unit = field(default=pint.Unit("km"), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Approximated (distance-radius) altitude of {self.observer} over {self.target} surface (from sub-sc point)"
-
-    def config(self, config: dict) -> None:
-        TargetedProperty.config(self, config)
-        config["property"] = self.name
 
 
 @define
 class TargetSizeOnSensor(TargetedProperty):
     _name = "target_size_on_sensor"
-    _unit = pint.Unit("px")
+    unit: pint.Unit = field(default=pint.Unit("px"), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Diameter in pixels of {self.target}, on the {self.observer} sensor."
-
-    def config(self, config: dict) -> None:
-        TargetedProperty.config(self, config)
-        config["property"] = self.name
 
 
 @define
 class DistanceInTargetBodyRadii(TargetedProperty):
     _name = "distance_in_target_radii"
-    _unit = pint.Unit("dimensionless")
+    unit: pint.Unit = field(default=pint.Unit(""), kw_only=True, converter=_to_pint_unit)
 
     def __repr__(self) -> str:
         return f"Distance of {self.target}, from {self.observer} sensor, in {self.target} radii."
-
-    def config(self, config: dict) -> None:
-        TargetedProperty.config(self, config)
-        config["property"] = self.name
 
 
 @define
 class SubObserverIlluminationAngles(TargetedProperty):
     _name = "sub_observer_illumination_angles"
-    _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
+    unit: tuple = field(default=(pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")), kw_only=True, converter=_to_pint_unit)
     _type = PropertyTypes.VECTOR
     _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
@@ -309,7 +289,7 @@ class SubObserverIlluminationAngles(TargetedProperty):
 @define
 class SubObserverIsInDaylight(TargetedProperty):
     _name = "sub_obs_point_in_daylight"
-    _unit = pint.Unit("dimensionless")
+    unit: pint.Unit = field(default=pint.Unit(""), kw_only=True, converter=_to_pint_unit)
     _type = PropertyTypes.BOOLEAN
 
     def __repr__(self) -> str:

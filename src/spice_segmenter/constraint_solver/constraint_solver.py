@@ -67,7 +67,15 @@ class SpiceEventSolverConfigurator:
     """Configures the cspice gfevnt solver.
 
     As the config of the cspice gfevnt method is a bit convoluted,
-    this class is used to simplify the configuration of the solver
+    this class is used to simplify the configuration of the solver.
+
+    gfevnt supports:d
+                  "ANGULAR SEPARATION"
+                  "COORDINATE"
+                  "DISTANCE"
+                  "ILLUMINATION ANGLE"
+                  "PHASE ANGLE"
+                  "RANGE RATE"
     """
 
     names: list[str] = field(factory=list)
@@ -388,8 +396,11 @@ class SpiceOccultationSolver(BaseSolver):
         factory=get_default_reporter_class,
     )
 
-    def configure(self) -> dict:
+    def configure(self) -> None:
         """
+        Build the gfocce keyword arguments directly from the Occultation
+        property instance on the left side of the constraint.
+
         occtyp     I   Type of occultation.
         front      I   Name of body occulting the other.
         fshape     I   Type of shape model used for front body.
@@ -399,36 +410,25 @@ class SpiceOccultationSolver(BaseSolver):
         bframe     I   Body-fixed, body-centered frame for back body.
         abcorr     I   Aberration correction flag.
         obsrvr     I   Name of the observing body.
-        tol        I   Convergence tolerance in seconds.
-        udstep     I   Name of the routine that returns a time step.
-        udrefn     I   Name of the routine that computes a refined time.
-        rpt        I   Progress report flag.
-        udrepi     I   Function that initializes progress reporting.
-        udrepu     I   Function that updates the progress report.
-        udrepf     I   Function that finalizes progress reporting.
-        bail       I   Logical indicating program interrupt monitoring.
-        udbail     I   Name of a routine that signals a program interrupt.
-        cnfine    I-O  SPICE window to which the search is restricted.
-        result     O   SPICE window containing results.
         """
+        from ..properties.occultation_types import Occultation
 
         if not self.constraint:
             log.error("You need to provide a valid constraint")
             raise ValueError
 
-        config: dict = {}
-        self.constraint.config(config)  # extract the config
+        occ: Occultation = self.constraint.left  # type: ignore[assignment]
 
         self.config.update(
             {
-                "front": config["front"],
+                "front": occ.front.name,
                 "fshape": "ELLIPSOID",
-                "fframe": SpiceRef(config["front"]).frame,
-                "back": config["back"],
+                "fframe": occ.front.frame,
+                "back": occ.back.name,
                 "bshape": "ELLIPSOID",
-                "bframe": SpiceRef(config["back"]).frame,
-                "abcorr": config["light_time_correction"],
-                "obsrvr": config["observer"],
+                "bframe": occ.back.frame,
+                "abcorr": occ.light_time_correction,
+                "obsrvr": occ.observer.name,
                 "tol": 1e-3,
                 "udstep": spiceypy.utils.callbacks.SpiceUDFUNS(gfstep),
                 "udrefn": spiceypy.utils.callbacks.SpiceUDREFN(gfrefn),
@@ -443,9 +443,9 @@ class SpiceOccultationSolver(BaseSolver):
 
         log.info("Configured: {}", self.config)
 
-        return config
-
     def solve(self, window: SpiceWindow) -> SpiceWindow:
+        from ..ops.constraint_operations import Inverted
+
         if not self.constraint or not self.can_solve(self.constraint):
             log.error("You need to provide a valid constraint/constraints not solvable")
             raise ValueError
@@ -454,13 +454,12 @@ class SpiceOccultationSolver(BaseSolver):
             self.result = SpiceWindow()
             return self.result
 
-        constraint_config = self.configure()
+        self.configure()
 
         maxval = 10000
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
 
-        # step = self.constraint.time_step if self.constraint.time_step else self.step
         spiceypy.gfsstp(self.step)  # set the step size
 
         right = self.constraint.right
@@ -471,18 +470,15 @@ class SpiceOccultationSolver(BaseSolver):
         if not isinstance(right.value, OccultationTypes):
             raise TypeError
 
-        right_value = right.value
-
-        if right_value.value == OccultationTypes.ANY.value:
-            occtyp = "ANY"
-        elif right_value.value == OccultationTypes.FULL.value:
-            occtyp = "FULL"
-        elif right_value.value == OccultationTypes.PARTIAL.value:
-            occtyp = "PARTIAL"
-        elif right_value.value == OccultationTypes.ANNULAR.value:
-            occtyp = "ANNULAR"
-        else:
-            log.debug("Unknown occultation type {}", right_value)
+        occtyp_map = {
+            OccultationTypes.ANY.value: "ANY",
+            OccultationTypes.FULL.value: "FULL",
+            OccultationTypes.PARTIAL.value: "PARTIAL",
+            OccultationTypes.ANNULAR.value: "ANNULAR",
+        }
+        occtyp = occtyp_map.get(right.value.value)
+        if occtyp is None:
+            log.debug("Unknown occultation type {}", right.value)
             raise ValueError
 
         self.config["occtyp"] = occtyp
@@ -493,8 +489,7 @@ class SpiceOccultationSolver(BaseSolver):
 
         spiceypy.gfocce(**self.config)
 
-        inverted = constraint_config.get("inverted", False)
-        if inverted:
+        if isinstance(self.constraint, Inverted):
             log.debug("INVERTING RESULT")
             self.result = self.result.complement(window)
 
@@ -743,17 +738,29 @@ class GenericScalarSolver(BaseSolver):
             runit = self.constraint.right.unit
             lunit = self.constraint.left.unit
 
+            # Convert right_value to the compute unit (what gfuds/evaluate_scalar_raw returns),
+            # not the display unit, because compute_as_spice_function returns raw compute-unit values.
+            try:
+                from ..engines.evaluator import get_evaluator
+                comp_unit = get_evaluator()._engine.get_compute_unit(type(left_prop))
+            except Exception:
+                comp_unit = None
+            target_unit = comp_unit if comp_unit is not None else lunit
+
             if runit == pint.Unit("dimensionless"):
                 log.debug(
-                    f"ritgh unit is dimensionless. Assuming same as left property unit {lunit}",
+                    f"right unit is dimensionless. Assuming same as left property unit {lunit}",
                 )
                 runit = lunit
 
-            if runit != lunit:
+            if runit != target_unit:
                 log.debug(
-                    f"different units between constraint and property are used. attempting conversion {runit} vs {lunit}",
+                    f"converting right value from {runit} to compute unit {target_unit}",
                 )
-                right_value = pint.Quantity(right_value, runit).to(lunit).magnitude
+                try:
+                    right_value = pint.Quantity(right_value, runit).to(target_unit).magnitude
+                except Exception:
+                    log.warning(f"Unit conversion failed: {runit} → {target_unit}, using raw value")
 
             spiceypy.gfuds(
                 as_spice_f,

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from ..support.time_types import TIMES_TYPES
 
 if TYPE_CHECKING:
-    from ..ops.unit_adapter import UnitAdaptor
     from .constraints import Constraint, left_types
 
 from abc import ABC, abstractmethod
@@ -16,9 +15,24 @@ import numpy as np
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
-from attrs import define
+from attrs import define, field
 from loguru import logger as log
 from spiceypy.utils.callbacks import UDFUNB, UDFUNS
+
+
+def _to_pint_unit(x: pint.Unit | str | tuple | list | None) -> pint.Unit | tuple:
+    """Converter for ``unit`` attrs fields: strings become ``pint.Unit``,
+    tuples/lists are converted element-wise, existing ``pint.Unit`` pass through.
+    """
+    if isinstance(x, (list, tuple)):
+        return tuple(_to_pint_unit(u) for u in x)
+    if isinstance(x, str):
+        return pint.Unit(x)
+    if isinstance(x, pint.Unit):
+        return x
+    if x is None:
+        raise TypeError("unit cannot be None; provide a unit string or pint.Unit")
+    return pint.Unit(str(x))  # fallback for pint-compatible objects
 
 
 def _bulk_et(time) -> np.ndarray:
@@ -61,7 +75,7 @@ class PropertyTypes(Enum):
 @define(repr=False, order=False, eq=False)
 class Property(ABC):
     _name: ClassVar[str]
-    _unit: ClassVar[pint.Unit | Iterable[pint.Unit]]
+    _unit: ClassVar[pint.Unit | tuple | None] = None  # For backward compat; instance 'unit' field takes precedence
     _type: ClassVar[PropertyTypes] = PropertyTypes.SCALAR
     # Set to a numpy.vectorize signature string (e.g. "()->(n)") on subclasses
     # whose _call_scalar returns an array rather than a scalar. Used by the
@@ -126,23 +140,58 @@ class Property(ABC):
         """Property name, read from _name class attribute."""
         return self._name
 
-    @property
-    def unit(self) -> pint.Unit | Iterable[pint.Unit]:
-        """Property unit, read from _unit class attribute."""
-        return self._unit
+    @property  
+    def unit(self) -> pint.Unit | tuple:
+        """Property unit: check for instance field first, then fallback to class _unit."""
+        import attrs
+        
+        # Check if 'unit' is defined as an attrs field
+        try:
+            fields = attrs.fields(type(self))
+            for attr_field in fields:
+                if attr_field.name == 'unit':
+                    # 'unit' is an attrs field; get it from instance variables
+                    instance_vars = vars(self)
+                    if 'unit' in instance_vars:
+                        return instance_vars['unit']
+                    # Not in vars, use the default from field definition
+                    if attr_field.default is not attrs.NOTHING:
+                        return attr_field.default
+                    return pint.Unit('')
+        except (TypeError, AttributeError):
+            # Not an attrs class at all
+            pass
+        
+        # No 'unit' field defined, fallback to class-level _unit ClassVar
+        return getattr(type(self), '_unit', pint.Unit(''))
 
     @property
     def type(self) -> PropertyTypes:
         """Property type, read from _type class attribute or default to SCALAR."""
         return getattr(self.__class__, "_type", PropertyTypes.SCALAR)
 
-    def as_unit(self, unit: pint.Unit | str) -> UnitAdaptor:
-        from ..ops.unit_adapter import UnitAdaptor
+    def as_unit(self, unit: pint.Unit | str) -> Property:
+        """Return a copy of this property that evaluates in *unit*.
 
-        return UnitAdaptor(self, unit)
+        Raises ``ValueError`` if *unit* is dimensionally incompatible with the
+        property's current unit.
+        """
+        import attrs
+
+        target = _to_pint_unit(unit)
+        current = self.unit  # Use the @property which handles fallback
+        if current is not None and not isinstance(current, (list, tuple)):
+            if not current.is_compatible_with(target):
+                raise ValueError(
+                    f"{self!r}: unit {target} is not compatible with current unit {current}"
+                )
+        return attrs.evolve(self, unit=target)
 
     def has_unit(self) -> bool:
-        return bool(str(self.unit))
+        u = self.unit
+        if u is None:
+            return False
+        return bool(str(u))
 
     @property
     def instance_id(self) -> str:
@@ -201,9 +250,14 @@ class Property(ABC):
         return "_".join(parts)
 
     def compute_as_spice_function(self) -> UDFUNS:
-        # Delegates through __call__ so both engine-registered and legacy
-        # @vectorize-override properties work transparently.
-        return spiceypy.utils.callbacks.SpiceUDFUNS(lambda t: self(float(t)))
+        # Uses evaluate_scalar_raw so SPICE GF callbacks always receive values
+        # in the compute_unit (native unit of the registered function), not the
+        # user-facing unit.  Solvers convert the refval to compute_unit themselves.
+        from ..engines.evaluator import get_evaluator
+        ev = get_evaluator()
+        return spiceypy.utils.callbacks.SpiceUDFUNS(
+            lambda t: float(ev.evaluate_scalar_raw(self, float(t)))
+        )
 
     def is_decreasing(self, time: TIMES_TYPES) -> bool:
         return spiceypy.uddc(self.compute_as_spice_function(), time, self.dt)  # type: ignore
@@ -279,9 +333,25 @@ class Property(ABC):
         return Constraint(self, self._handle_other_operand(other), "|")
 
     def config(self, config: dict) -> None:
-        log.debug("adding prop unit for {}", self.unit)
-        config["property_unit"] = str(self.unit)
+        # Kept for backward compatibility with solver.
+        # property_unit must be the COMPUTE unit (what SPICE natively returns),
+        # so that the solver can convert the user's reference value into it.
         config["property"] = self.name
+
+        # Try engine registry first for the compute unit
+        try:
+            from ..engines.evaluator import get_evaluator
+            compute_unit = get_evaluator()._engine.get_compute_unit(type(self))
+            if compute_unit is not None:
+                config["property_unit"] = str(compute_unit)
+                return
+        except Exception:
+            pass
+
+        # Fallback: use the display unit
+        unit = self.unit
+        if unit is not None:
+            config["property_unit"] = str(unit) if str(unit) else "dimensionless"
 
     def to_json(self, indent: int | None = None) -> str:
         """Serialize this Property to a JSON string.
@@ -459,14 +529,13 @@ class BooleanProperty(Property):
     # __call__ is NOT abstract — inherited Property.__call__ delegation bridge
     # dispatches through the evaluator for registered properties, and Python
     # MRO ensures subclass overrides are still found first for legacy classes.
+    unit: pint.Unit = field(
+        default=pint.Unit(""), kw_only=True, converter=_to_pint_unit
+    )
 
     @property
     def type(self) -> PropertyTypes:
         return PropertyTypes.BOOLEAN
-
-    @property
-    def unit(self) -> pint.Unit:
-        return pint.Unit("")
 
     def has_unit(self) -> bool:
         return False

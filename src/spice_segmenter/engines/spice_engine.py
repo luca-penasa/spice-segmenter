@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import numpy as np
+import pint
 
 
 class SpiceEngine:
@@ -20,8 +21,9 @@ class SpiceEngine:
     Usage::
 
         engine = SpiceEngine()
-        engine.register(Distance, scalar_fn=distance_scalar, vector_fn=distance_vector)
-        engine.register(PhaseAngle, scalar_fn=phase_angle_scalar)  # vector auto-made
+        engine.register(Distance, scalar_fn=distance_scalar, vector_fn=distance_vector,
+                        compute_unit="km")
+        engine.register(PhaseAngle, scalar_fn=phase_angle_scalar, compute_unit="rad")
 
     Registration is order-independent; entries are sorted by *priority* (highest
     first) so that a higher-priority override can replace the default.
@@ -31,6 +33,8 @@ class SpiceEngine:
         # dict[type, list[tuple[int, Callable]]] — sorted descending by priority
         self._scalar_fns: dict[type, list[tuple[int, Callable]]] = {}
         self._vector_fns: dict[type, list[tuple[int, Callable]]] = {}
+        # dict[type, pint.Unit | tuple[pint.Unit, ...]] — unit the registered fn returns
+        self._compute_units: dict[type, pint.Unit | tuple] = {}
 
     # ------------------------------------------------------------------
     # Registration
@@ -40,11 +44,17 @@ class SpiceEngine:
         self,
         property_class: type,
         *,
+        compute_unit: pint.Unit | str | tuple | None = None,
         scalar_fn: Callable | None = None,
         vector_fn: Callable | None = None,
         priority: int = 0,
     ) -> None:
         """Register scalar and/or vector compute functions for *property_class*.
+
+        *compute_unit* declares the unit (or tuple of units for vector properties)
+        in which the registered function(s) return their result. If not provided,
+        falls back to the property's class-level _unit (for backward compat).
+        The evaluator uses this to convert to ``prop.unit`` on the way out.
 
         At least one of *scalar_fn* / *vector_fn* must be supplied.  Both may
         be provided when a C-level vectorised variant exists.
@@ -54,6 +64,20 @@ class SpiceEngine:
                 f"register({property_class.__name__}): "
                 "at least one of scalar_fn or vector_fn must be provided."
             )
+        
+        # Only store compute_unit if explicitly provided
+        if compute_unit is not None:
+            # Normalise compute_unit to pint.Unit or tuple of pint.Unit
+            if isinstance(compute_unit, tuple):
+                normalised: pint.Unit | tuple = tuple(
+                    pint.Unit(u) if isinstance(u, str) else u for u in compute_unit
+                )
+            elif isinstance(compute_unit, str):
+                normalised = pint.Unit(compute_unit)
+            else:
+                normalised = compute_unit
+            self._compute_units[property_class] = normalised
+
         if scalar_fn is not None:
             bucket = self._scalar_fns.setdefault(property_class, [])
             bucket.append((priority, scalar_fn))
@@ -62,6 +86,13 @@ class SpiceEngine:
             bucket = self._vector_fns.setdefault(property_class, [])
             bucket.append((priority, vector_fn))
             bucket.sort(key=lambda x: x[0], reverse=True)
+
+    def get_compute_unit(self, prop_type: type) -> pint.Unit | tuple | None:
+        """Return the compute unit for *prop_type* via MRO walk, or ``None``."""
+        for cls in prop_type.__mro__:
+            if cls in self._compute_units:
+                return self._compute_units[cls]
+        return None
 
     # ------------------------------------------------------------------
     # Lookup helpers (MRO walk)

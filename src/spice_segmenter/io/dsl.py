@@ -516,7 +516,7 @@ def constraint_to_context(
 
         prop_overrides: dict[str, Any] = {}
         for f in fields:
-            if not f.init or f.name.startswith("_") or f.name in _CONTEXT_FIELDS:
+            if not f.init or f.name.startswith("_") or f.name == "unit" or f.name in _CONTEXT_FIELDS:
                 continue
             val = _spice_ref_to_str(getattr(prop, f.name))
             prop_overrides[f.name] = val

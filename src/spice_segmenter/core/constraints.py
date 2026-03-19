@@ -73,6 +73,23 @@ class ConstraintBase(Property):
         self.right.config(config)
         config["operator"] = self.operator
 
+    def get_compute_unit(self) -> pint.Unit | tuple | None:
+        """Get the compute unit (native unit) for the left property via engine registry.
+        
+        Currently returns None to avoid circular imports during constraint initialization.
+        To be implemented after solver refactoring.
+        """
+        # TODO: implement after solver refactor to access engine without circular imports
+        return None
+
+    def convert_reference_value(self, refval: float) -> float:
+        """Convert a reference value from the constraint's desired unit to compute unit.
+        
+        Currently a no-op; to be implemented after solver refactoring.
+        """
+        # TODO: implement conversion logic after solver fully refactor
+        return refval
+
     def solve(self, arg: Any = None, **kwargs) -> TimeSegmentsCollection:
         """
         Solve the constraint over a time window.

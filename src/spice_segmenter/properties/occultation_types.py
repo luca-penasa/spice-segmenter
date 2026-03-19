@@ -17,6 +17,12 @@ from ..support.spice_utilities import et
 from ..support.time_types import TIMES_TYPES
 
 
+def _to_pint_unit(x):
+    """Converter for unit fields."""
+    from ..core.property import _to_pint_unit as _core_to_pint_unit
+    return _core_to_pint_unit(x)
+
+
 class OccultationTypes(Enum):
     NONE = 0
     FULL = 1
@@ -48,7 +54,7 @@ class OccultationTypes(Enum):
 @define(repr=False, order=False, eq=False)
 class Occultation(Property):
     _name: ClassVar[str] = "occultation"
-    _unit: ClassVar[pint.Unit] = pint.Unit("")
+    unit: pint.Unit = field(default=pint.Unit(""), kw_only=True, converter=_to_pint_unit)
     _type: ClassVar[PropertyTypes] = PropertyTypes.DISCRETE
 
     observer: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
@@ -58,10 +64,3 @@ class Occultation(Property):
 
     def __repr__(self) -> str:
         return f"Occultation of {self.back} by {self.front}, as seen by {self.observer}"
-
-    def config(self, config: dict) -> None:
-        super().config(config)
-        config["observer"] = self.observer.name
-        config["front"] = self.front.name
-        config["back"] = self.back.name
-        config["light_time_correction"] = self.light_time_correction

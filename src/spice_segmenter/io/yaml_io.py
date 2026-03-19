@@ -300,13 +300,16 @@ def _property_to_entry(prop: Property, shared_context: dict[str, Any]) -> dict[s
         return entry
 
     for f in fields:
-        if not f.init or f.name.startswith("_"):
+        # Skip internal/non-init fields and the 'unit' field (not serialized; always use default).
+        if not f.init or f.name.startswith("_") or f.name == "unit":
             continue
 
         raw_val = getattr(prop, f.name)
         str_val = _spice_ref_to_str(raw_val)
 
         if f.name in _CONTEXT_FIELDS:
+            # Write context field only when it differs from the shared context
+            # (e.g. per-property target override when targets differ).
             if shared_context.get(f.name) != str_val:
                 entry[f.name] = str_val
         else:
