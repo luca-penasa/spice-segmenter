@@ -12,13 +12,13 @@ bump version_kind:
     uv run kacl-cli verify
     uv run bump-my-version bump {{version_kind}}
 
-    @echo "New version will be: {{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}}"
-    just release-changelog {{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}}
+    @echo "New version will be: {{`grep '^version = ' pyproject.toml | head -1 | awk -F'"' '{print $2}'`}}"
+    just release-changelog {{`grep '^version = ' pyproject.toml | head -1 | awk -F'"' '{print $2}'`}}
 
     # Commit the changes
     git add {{VERSION_FILE}} {{CHANGELOG}}
-    git commit -m "Bump version to {{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}} and update changelog"
-    git tag v{{`grep 'version = ' pyproject.toml | head -1 | cut -d'\"' -f2`}}
+    git commit -m "Bump version to {{`grep '^version = ' pyproject.toml | head -1 | awk -F'"' '{print $2}'`}} and update changelog"
+    git tag v{{`grep '^version = ' pyproject.toml | head -1 | awk -F'"' '{print $2}'`}}
     @echo "Version bump and changelog update complete."
 
 # Task to release changelog with the new version
