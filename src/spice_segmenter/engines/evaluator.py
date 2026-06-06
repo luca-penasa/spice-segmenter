@@ -44,7 +44,7 @@ def _apply_unit_conversion(value: Any, compute_unit: Any, desired_unit: Any) -> 
                 parts.append(value[..., i])
             else:
                 parts.append(
-                    pint.Quantity(value[..., i], cu).to(du).magnitude
+                    pint.Quantity(value[..., i], cu).to(du).magnitude,
                 )
         return np.stack(parts, axis=-1)
     # Scalar unit
@@ -83,8 +83,8 @@ class Evaluator:
     def evaluate(self, prop: Property, time: TIMES_TYPES) -> Any:
         """Evaluate *prop* at one or more times, converting to ``prop.unit``."""
         from ..core.property import _bulk_et
-        from ..support.spice_utilities import et as _et
         from ..support.config import get_active_config
+        from ..support.spice_utilities import et as _et
 
         is_array = hasattr(time, "__len__") and not isinstance(time, str)
         if not is_array:
@@ -96,7 +96,7 @@ class Evaluator:
 
         sig = getattr(prop, "_vector_output_shape", None)
         return np.vectorize(
-            lambda t: self.evaluate_scalar(prop, t), signature=sig
+            lambda t: self.evaluate_scalar(prop, t), signature=sig,
         )(times_et)
 
     def evaluate_scalar_raw(self, prop: Property, time_et: float) -> Any:
@@ -134,7 +134,7 @@ class Evaluator:
         raise NotImplementedError(
             f"{type(prop).__name__} has no registered compute function and no "
             f"_call_scalar implementation.  Register one with:\n"
-            f"  engine.register({type(prop).__name__}, scalar_fn=your_fn, compute_unit=...)"
+            f"  engine.register({type(prop).__name__}, scalar_fn=your_fn, compute_unit=...)",
         )
 
     def evaluate_scalar(self, prop: Property, time_et: float) -> Any:
@@ -159,7 +159,7 @@ class Evaluator:
         raise NotImplementedError(
             f"{type(prop).__name__} has no registered compute function and no "
             f"_call_vector implementation.  Register one with:\n"
-            f"  engine.register({type(prop).__name__}, scalar_fn=your_fn, compute_unit=...)"
+            f"  engine.register({type(prop).__name__}, scalar_fn=your_fn, compute_unit=...)",
         )
 
     def evaluate_vector(self, prop: Property, times_et: np.ndarray) -> np.ndarray:
@@ -174,7 +174,7 @@ class Evaluator:
     # ------------------------------------------------------------------
 
     def as_spice_function(
-        self, prop: Property
+        self, prop: Property,
     ) -> spiceypy.utils.callbacks.SpiceUDFUNS:
         """Wrap *prop* as a SPICE ``UDFUNS`` scalar callback (raw/native units).
 
@@ -182,7 +182,7 @@ class Evaluator:
         Values are in *compute_unit* — no user-unit conversion is applied.
         """
         return spiceypy.utils.callbacks.SpiceUDFUNS(
-            lambda t: float(self.evaluate_scalar_raw(prop, float(t)))
+            lambda t: float(self.evaluate_scalar_raw(prop, float(t))),
         )
 
     def as_spice_boolean_function(
@@ -222,8 +222,8 @@ def get_evaluator() -> Evaluator:
     """
     global _evaluator
     if _evaluator is None:
-        from .spice_engine import SpiceEngine
         from ..computations.spice import register_all
+        from .spice_engine import SpiceEngine
 
         engine = SpiceEngine()
         register_all(engine)

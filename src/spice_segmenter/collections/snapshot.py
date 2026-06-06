@@ -16,7 +16,6 @@ Usage
 
 from __future__ import annotations
 
-import traceback
 from typing import Any
 
 import pint
@@ -120,7 +119,7 @@ class PropertySnapshot:
     # Display
     # ------------------------------------------------------------------
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:
         import numpy as np
 
         lines = [
@@ -134,7 +133,7 @@ class PropertySnapshot:
         col_id = max(col_id, 11)
         col_unit = max(col_unit, 4)
         lines.append(
-            f"  {'instance_id':<{col_id}}  {'unit':<{col_unit}}  value"
+            f"  {'instance_id':<{col_id}}  {'unit':<{col_unit}}  value",
         )
         lines.append(f"  {'-'*col_id}  {'-'*col_unit}  -----")
         for iid, val in self.values.items():
@@ -146,7 +145,7 @@ class PropertySnapshot:
                 val_str = f"[{', '.join(f'{v:.4g}' for v in val[:4])}{'…' if len(val) > 4 else ''}]"
             elif isinstance(val, (float, np.floating, np.ndarray)):
                 val_str = f"{float(val):.6g}"
-            elif hasattr(val, 'name'):  # Enum (e.g. OccultationTypes)
+            elif hasattr(val, "name"):  # Enum (e.g. OccultationTypes)
                 val_str = str(val.name)
             else:
                 val_str = str(val)
@@ -174,7 +173,7 @@ class PropertySnapshot:
                 val_str = f"[{', '.join(f'{v:.4g}' for v in val[:4])}{'…' if len(val) > 4 else ''}]"
             elif isinstance(val, (float, np.floating, np.ndarray)):
                 val_str = f"{float(val):.6g}"
-            elif hasattr(val, 'name'):  # Enum (e.g. OccultationTypes)
+            elif hasattr(val, "name"):  # Enum (e.g. OccultationTypes)
                 val_str = str(val.name)
             else:
                 val_str = str(val)
@@ -269,7 +268,7 @@ def compute_all(
         print(snap)
         series = snap.to_series()
     """
-    from spice_segmenter.core.registry import property_registry, _field_info
+    from spice_segmenter.core.registry import _field_info, property_registry
     from spice_segmenter.properties.occultation_types import Occultation
     from spice_segmenter.support.context import SpiceContext
 

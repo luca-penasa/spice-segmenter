@@ -179,7 +179,7 @@ def create_ca_deltas(
                         "offset": offset_str,
                         "ca_time": str(ca_seg.start),
                     },
-                )
+                ),
             )
 
     segments.sort(key=lambda s: s.start)

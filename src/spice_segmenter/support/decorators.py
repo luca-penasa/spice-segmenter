@@ -3,10 +3,9 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import pint
 
 if TYPE_CHECKING:
-    from ..core.property import Property, PropertyTypes
+    from ..core.property import Property
 
 
 # ---------------------------------------------------------------------------

@@ -56,7 +56,7 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
     # Internal SPICE bridge (not part of the public API)
     # ------------------------------------------------------------------
 
-    def _to_spice_window(self) -> "SpiceWindow":  # type: ignore[name-defined]  # noqa: F821
+    def _to_spice_window(self) -> SpiceWindow:  # type: ignore[name-defined]  # noqa: F821
         """Materialise a :class:`SpiceWindow` from the current segments."""
         from .spice_window import SpiceWindow
 
@@ -66,7 +66,7 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
         return sw
 
     @classmethod
-    def _from_spice_window(cls, sw: "SpiceWindow") -> TimeSegmentsCollection:  # type: ignore[name-defined]  # noqa: F821
+    def _from_spice_window(cls, sw: SpiceWindow) -> TimeSegmentsCollection:  # type: ignore[name-defined]  # noqa: F821
         """Create an ``TimeSegmentsCollection`` from a :class:`SpiceWindow`."""
         intervals = [
             TimeSegment.from_et(sw[i].start, sw[i].end) for i in range(len(sw))
@@ -101,13 +101,13 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
         for r in ranges:
             if r.start_datetime is None or r.end_datetime is None:
                 raise ValueError(
-                    "DateTimeRange must have valid start and end datetimes"
+                    "DateTimeRange must have valid start and end datetimes",
                 )
             intervals.append(
                 TimeSegment(
                     start=pd.Timestamp(r.start_datetime),
                     end=pd.Timestamp(r.end_datetime),
-                )
+                ),
             )
         return cls(segments=intervals)
 
@@ -141,19 +141,19 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
     def union(self, other: TimeSegmentsCollection) -> TimeSegmentsCollection:
         """Return the union of this window and *other*."""
         return TimeSegmentsCollection._from_spice_window(
-            self._to_spice_window().union(other._to_spice_window())
+            self._to_spice_window().union(other._to_spice_window()),
         )
 
     def intersect(self, other: TimeSegmentsCollection) -> TimeSegmentsCollection:
         """Return the intersection of this window and *other*."""
         return TimeSegmentsCollection._from_spice_window(
-            self._to_spice_window().intersect(other._to_spice_window())
+            self._to_spice_window().intersect(other._to_spice_window()),
         )
 
     def difference(self, other: TimeSegmentsCollection) -> TimeSegmentsCollection:
         """Return this window minus *other*."""
         return TimeSegmentsCollection._from_spice_window(
-            self._to_spice_window().difference(other._to_spice_window())
+            self._to_spice_window().difference(other._to_spice_window()),
         )
 
     def complement(self, bounds: TimeSegmentsCollection | None = None) -> TimeSegmentsCollection:
@@ -168,7 +168,7 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
             else self._to_spice_window()
         )
         return TimeSegmentsCollection._from_spice_window(
-            self._to_spice_window().complement(bounds_sw)
+            self._to_spice_window().complement(bounds_sw),
         )
 
     def compare(self, other: TimeSegmentsCollection, operator: str) -> bool:
@@ -295,7 +295,7 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
         t.to_csv(filename, date_format=dformat, header=False, index=False)
 
     def plot(
-        self, ax: matplotlib.axes.Axes | None = None, **kwargs: Any
+        self, ax: matplotlib.axes.Axes | None = None, **kwargs: Any,
     ) -> list:
         """Plot each interval as an ``axvspan`` patch.
 

@@ -46,11 +46,9 @@ import spiceypy
 from spice_segmenter import TimeSegmentsCollection
 from spice_segmenter.constraint_solver.constraint_solver import (
     GenericScalarSolver,
-    SpiceEventSolver,
 )
-from spice_segmenter.core.spice_window import SpiceWindow
-from spice_segmenter.properties.observation_properties import Distance, PhaseAngle
 from spice_segmenter.properties.geometry_properties import SubObserverLatitude
+from spice_segmenter.properties.observation_properties import Distance, PhaseAngle
 from spice_segmenter.support.config import config
 
 from . import tour_config as tc
@@ -213,8 +211,6 @@ class TestBug2GenericScalarSolverIsDecCallback:
         At a time when lat is decreasing, uddc(as_spice_f, t, dt) must be True
         and uddc(spiceypy.udf_stub, t, dt) must be False.
         """
-        import spiceypy
-        from spice_segmenter.core.property import Property
 
         as_spice_f = lat.compute_as_spice_function()
 
@@ -226,7 +222,7 @@ class TestBug2GenericScalarSolverIsDecCallback:
 
         correct_is_dec  = spiceypy.uddc(as_spice_f, t_et, 3600.0)
         incorrect_is_dec = spiceypy.uddc(
-            spiceypy.utils.callbacks.SpiceUDFUNS(spiceypy.udf), t_et, 3600.0
+            spiceypy.utils.callbacks.SpiceUDFUNS(spiceypy.udf), t_et, 3600.0,
         )
 
         # The correct call must agree with numerical finite difference

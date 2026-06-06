@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pint
@@ -62,9 +63,9 @@ class SpiceEngine:
         if scalar_fn is None and vector_fn is None:
             raise ValueError(
                 f"register({property_class.__name__}): "
-                "at least one of scalar_fn or vector_fn must be provided."
+                "at least one of scalar_fn or vector_fn must be provided.",
             )
-        
+
         # Only store compute_unit if explicitly provided
         if compute_unit is not None:
             # Normalise compute_unit to pint.Unit or tuple of pint.Unit
@@ -147,7 +148,7 @@ class SpiceEngine:
             raise KeyError(type(prop))
         sig = getattr(prop, "_vector_output_shape", None)
         return np.vectorize(
-            lambda t: scalar_fn(prop, t), signature=sig
+            lambda t: scalar_fn(prop, t), signature=sig,
         )(times_et)
 
     def can_evaluate(self, property_class: type) -> bool:

@@ -2,23 +2,22 @@ from functools import cached_property
 
 from attrs import define, field
 
-from spice_segmenter.support.context import (
-    get_current_observer,
-    get_current_target,
-)
+from spice_segmenter.properties import TargetSizeOnSensor
 from spice_segmenter.properties.observation_properties import (
     AngularSize,
+    ApproximatedAltitude,
     Distance,
     PhaseAngle,
     SubObserverIlluminationAngles,
     SubObserverPixelScale,
     SubObserverPointVelocity,
-    ApproximatedAltitude,
 )
-
-from spice_segmenter.properties import TargetSizeOnSensor
 from spice_segmenter.properties.occultation_types import Occultation, OccultationTypes
 from spice_segmenter.properties.reflector_properties import JupiterShineIdealCondition
+from spice_segmenter.support.context import (
+    get_current_observer,
+    get_current_target,
+)
 
 
 @define
@@ -40,11 +39,11 @@ class TargetProperties:
 
     @cached_property
     def phase_angle(self) -> PhaseAngle:
-        return PhaseAngle(observer=self.observer, target=self.target)
+        return PhaseAngle(observer=self.observer, target=self.target).as_unit("deg")
 
     @cached_property
     def angular_size(self) -> AngularSize:
-        return AngularSize(observer=self.observer, target=self.target)
+        return AngularSize(observer=self.observer, target=self.target).as_unit("deg")
 
     @cached_property
     def pixel_scale(self) -> SubObserverPixelScale:

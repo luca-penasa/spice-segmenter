@@ -5,11 +5,9 @@ from .constraint_operations import (
     Inverted,
     MinMaxConstraint,
 )
-from .unit_adapter import UnitAdaptor
 
 __all__ = [
     "Constant",
     "Inverted",
     "MinMaxConstraint",
-    "UnitAdaptor",
 ]

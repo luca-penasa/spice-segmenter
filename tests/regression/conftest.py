@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import fnmatch
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -160,10 +160,10 @@ def _write_baseline(path: Path, data: dict) -> None:
     meta = {
         "meta": {
             "mk_version": MK_VERSION,
-            "generated": datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        }
+            "generated": datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        },
     }
-    full = {**meta, **{"values": data}}
+    full = {**meta, "values": data}
     path.write_text(yaml.dump(full, default_flow_style=False, sort_keys=True, allow_unicode=True))
 
 
@@ -222,16 +222,16 @@ def regression_baseline(request: pytest.FixtureRequest):
         extra   = set(normalised) - set(expected)
 
         assert not missing, (
-            f"Keys present in baseline but missing from actual output:\n"
+            "Keys present in baseline but missing from actual output:\n"
             + "\n".join(f"  {k}" for k in sorted(missing))
         )
         if extra:
             # New properties added — fail with a clear message so the developer
             # knows to run --update-regression
             raise AssertionError(
-                f"New keys in actual output not present in baseline "
-                f"(run --update-regression to accept):\n"
-                + "\n".join(f"  {k}" for k in sorted(extra))
+                "New keys in actual output not present in baseline "
+                "(run --update-regression to accept):\n"
+                + "\n".join(f"  {k}" for k in sorted(extra)),
             )
 
         for key, exp_val in expected.items():

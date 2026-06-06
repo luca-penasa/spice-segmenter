@@ -25,21 +25,20 @@ from ...properties.coordinates import (
     Vector,
 )
 
-
 # ---------------------------------------------------------------------------
 # Vector  (spkpos)
 # ---------------------------------------------------------------------------
 
 def vector_scalar(prop: Vector, time_et: float) -> np.ndarray:
     return spiceypy.spkpos(
-        prop.target.name, time_et, prop.frame, prop.abcorr, prop.origin.name
+        prop.target.name, time_et, prop.frame, prop.abcorr, prop.origin.name,
     )[0]
 
 
 def vector_vector(prop: Vector, times_et: np.ndarray) -> np.ndarray:
     from spiceypy import cyice
     positions, _ = cyice.spkpos_v(
-        prop.target.name, times_et, str(prop.frame), prop.abcorr, prop.origin.name
+        prop.target.name, times_et, str(prop.frame), prop.abcorr, prop.origin.name,
     )
     return positions  # (N, 3)
 
@@ -86,7 +85,7 @@ def boresight_scalar(prop: Boresight, time_et: float) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def boresight_intersection_scalar(
-    prop: BoresightIntersection, time_et: float
+    prop: BoresightIntersection, time_et: float,
 ) -> np.ndarray:
     # Compute boresight direction using the shared Boresight logic
     bsight = boresight_scalar(prop, time_et)
@@ -162,7 +161,7 @@ def planetographic_scalar(prop: PlanetographicCoordinates, time_et: float) -> np
             value,
             prop.vector.target.re,
             prop.vector.target.f,
-        )
+        ),
     )
 
 

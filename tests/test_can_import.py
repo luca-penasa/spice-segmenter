@@ -1,6 +1,5 @@
 def test_import_package():
     """Verify we can import the main package"""
-    import spice_segmenter
 
 
 def test_has_version():

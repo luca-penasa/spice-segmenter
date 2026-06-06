@@ -11,6 +11,50 @@ from .coordinates import (
     SubObserverPointMethods,
     Vector,
 )
+from .geometry_properties import (
+    BoresightAltitude,
+    BoresightDec,
+    BoresightGeoLatitude,
+    BoresightGeoLongitude,
+    # Boresight intersection geodetic
+    BoresightIntersectionGeodetic,
+    # Boresight intersection latitudinal
+    BoresightIntersectionLatitudinal,
+    # Boresight intersection rectangular
+    BoresightIntersectionRectangular,
+    BoresightLatitude,
+    BoresightLongitude,
+    BoresightRA,
+    # Boresight RA/Dec
+    BoresightRaDec,
+    BoresightRadius,
+    BoresightX,
+    BoresightY,
+    BoresightZ,
+    SubObserverAltitude,
+    SubObserverEmissionAngle,
+    # Sub-observer geodetic
+    SubObserverGeodetic,
+    SubObserverGeoLatitude,
+    SubObserverGeoLongitude,
+    # Illumination angle scalars
+    SubObserverIncidenceAngle,
+    SubObserverLatitude,
+    # Sub-observer latitudinal
+    SubObserverLatitudinal,
+    SubObserverLongitude,
+    SubObserverPhaseAngleLocal,
+    SubObserverRadius,
+    # Sub-observer rectangular
+    SubObserverRectangular,
+    SubObserverX,
+    SubObserverY,
+    SubObserverZ,
+    TargetDec,
+    TargetRA,
+    # Target RA/Dec
+    TargetRaDec,
+)
 from .observation_properties import (
     AngularSize,
     ApproximatedAltitude,
@@ -31,50 +75,6 @@ from .occultation_types import Occultation, OccultationTypes
 from .reflector_properties import JupiterShineIdealCondition
 from .surface_properties import SurfaceIlluminationAngles
 from .visibility_properties import AngularSeparation, BodyFOVVisibility
-from .geometry_properties import (
-    # Sub-observer latitudinal
-    SubObserverLatitudinal,
-    SubObserverLatitude,
-    SubObserverLongitude,
-    SubObserverRadius,
-    # Sub-observer geodetic
-    SubObserverGeodetic,
-    SubObserverGeoLatitude,
-    SubObserverGeoLongitude,
-    SubObserverAltitude,
-    # Sub-observer rectangular
-    SubObserverRectangular,
-    SubObserverX,
-    SubObserverY,
-    SubObserverZ,
-    # Boresight intersection latitudinal
-    BoresightIntersectionLatitudinal,
-    BoresightLatitude,
-    BoresightLongitude,
-    BoresightRadius,
-    # Boresight intersection geodetic
-    BoresightIntersectionGeodetic,
-    BoresightGeoLatitude,
-    BoresightGeoLongitude,
-    BoresightAltitude,
-    # Boresight intersection rectangular
-    BoresightIntersectionRectangular,
-    BoresightX,
-    BoresightY,
-    BoresightZ,
-    # Target RA/Dec
-    TargetRaDec,
-    TargetRA,
-    TargetDec,
-    # Boresight RA/Dec
-    BoresightRaDec,
-    BoresightRA,
-    BoresightDec,
-    # Illumination angle scalars
-    SubObserverIncidenceAngle,
-    SubObserverEmissionAngle,
-    SubObserverPhaseAngleLocal,
-)
 
 __all__ = [
     # Occultation

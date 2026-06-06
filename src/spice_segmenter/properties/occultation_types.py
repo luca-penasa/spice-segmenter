@@ -2,7 +2,6 @@ from enum import Enum
 from typing import ClassVar
 
 import pint
-import spiceypy
 from attrs import define, field
 from planetary_coverage.spice import (
     SpiceBody,
@@ -12,9 +11,6 @@ from planetary_coverage.spice import (
 )
 
 from ..core.property import Property, PropertyTypes
-from ..support.decorators import vectorize
-from ..support.spice_utilities import et
-from ..support.time_types import TIMES_TYPES
 
 
 def _to_pint_unit(x):

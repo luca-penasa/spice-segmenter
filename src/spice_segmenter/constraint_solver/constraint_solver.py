@@ -6,21 +6,19 @@ import pint
 import spiceypy
 from attr import define, field
 from loguru import logger as log
-from planetary_coverage import SpiceRef
 from spiceypy import gfrefn, gfstep
 
-from spice_segmenter import config
-from spice_segmenter.support.config import get_active_config
 from spice_segmenter.core.constraints import (
     ConstraintBase,
     ConstraintTypes,
 )
-from spice_segmenter.core.time_segments_collection import TimeSegmentsCollection
 from spice_segmenter.core.property import BooleanProperty, PropertyTypes
 from spice_segmenter.core.spice_window import SpiceWindow
+from spice_segmenter.core.time_segments_collection import TimeSegmentsCollection
 from spice_segmenter.ops.constant_values import BoolConstant, Constant
 from spice_segmenter.ops.constraint_operations import Inverted
 from spice_segmenter.properties.occultation_types import OccultationTypes
+from spice_segmenter.support.config import get_active_config
 from spice_segmenter.support.search_reporter import (
     NoSearchReporter,
     SearchReporter,
@@ -121,6 +119,124 @@ class SpiceEventSolverConfigurator:
             "gquant": self.quantity,
             "adjust": self.adjust,
         }
+
+    def set_from_constraint(self, constraint: ConstraintBase) -> dict:
+        """Configure directly from a constraint object, reading attributes directly.
+
+        Replaces the old ``set_from_dict`` / ``config()`` pattern.  Returns an
+        auxiliary info dict (e.g. ``{"inverted": True}``) for the caller.
+        """
+        from ..ops.constraint_operations import Inverted
+        from ..properties.component_selector import ComponentSelector
+
+        inverted = isinstance(constraint, Inverted)
+        # Inverted/WrappedConstraint delegates .left/.right/.operator to the
+        # inner constraint, so no unwrapping is needed for those attributes.
+        left = constraint.left
+
+        quantity = self._get_spice_quantity(left)
+        if quantity is None or quantity not in self.known_properties():
+            raise ValueError(
+                f"Cannot determine SPICE quantity from property {left!r}",
+            )
+
+        # ── per-quantity SPICE parameter setup ────────────────────────────────
+        if quantity == "angular_separation":
+            self.add_str_parameter("TARGET1", left.target.name)
+            self.add_str_parameter("FRAME1", left.target.frame.name)
+            self.add_str_parameter("SHAPE1", "POINT")
+            self.add_str_parameter("TARGET2", left.other.name)
+            self.add_str_parameter("FRAME2", left.other.frame.name)
+            self.add_str_parameter("SHAPE2", "POINT")
+            self.add_str_parameter("OBSERVER", left.observer.name)
+            self.add_str_parameter("ABCORR", left.light_time_correction)
+
+        elif quantity == "distance":
+            self.add_str_parameter("TARGET", left.target.name)
+            self.add_str_parameter("OBSERVER", left.observer.name)
+            self.add_str_parameter("ABCORR", left.light_time_correction)
+
+        elif quantity == "phase_angle":
+            self.add_str_parameter("TARGET", left.target.name)
+            self.add_str_parameter("OBSERVER", left.observer.name)
+            self.add_str_parameter("ABCORR", left.light_time_correction)
+            self.add_str_parameter("ILLUM", left.third_body.name)
+
+        elif quantity == "coordinate":
+            # left is a ComponentSelector wrapping a coordinate property (e.g.
+            # LatitudinalCoordinates) which itself wraps a Vector.
+            coord = left.vector       # e.g. LatitudinalCoordinates
+            vec = coord.vector        # Vector has .origin, .target, .frame, .abcorr
+            method = getattr(vec, "method", "ellipsoid")
+            self.add_str_parameter("TARGET", vec.target.name)
+            self.add_str_parameter("OBSERVER", vec.origin.name)
+            self.add_str_parameter("ABCORR", vec.abcorr)
+            self.add_str_parameter("COORDINATE SYSTEM", coord.name)
+            self.add_str_parameter(
+                "COORDINATE",
+                left.name.upper().replace("_", " "),
+            )
+            self.add_str_parameter("REFERENCE FRAME", vec.frame.name)
+            self.add_str_parameter("VECTOR DEFINITION", "position")
+            self.add_str_parameter("METHOD", str(method))
+            self.add_str_parameter("DREF", "")
+            self.add_vector_parameter("DVEC", [0.0, 0.0, 0.0])
+
+        self.quantity = quantity.replace("_", " ").upper()
+
+        # ── operator ──────────────────────────────────────────────────────────
+        operator = self.translate_minamx(constraint.operator)
+        if operator not in self.known_operators():
+            raise ValueError(f"Unknown operator {operator!r}")
+        self.operator = operator
+
+        # ── reference value / adjust ──────────────────────────────────────────
+        if operator in self.minmax_operators():
+            self.adjust = getattr(constraint, "adjust", 0.0)
+        else:
+            right = constraint.right
+            refval = right.value
+            runit = right.unit
+            lunit = left.unit
+
+            # Determine the SPICE compute unit — what gfevnt actually works in.
+            # This may differ from left.unit when the user called .as_unit() to
+            # change the display/comparison unit (e.g. PhaseAngle.as_unit("deg")
+            # sets unit=deg, but SPICE always works in rad).
+            compute_unit: pint.Unit | None = None
+            try:
+                from ..engines.evaluator import get_evaluator
+                compute_unit = get_evaluator()._engine.get_compute_unit(type(left))
+            except Exception:
+                pass
+            target_unit = compute_unit if compute_unit is not None else lunit
+
+            if runit == pint.Unit("dimensionless"):
+                runit = lunit
+
+            if runit != target_unit:
+                log.debug(
+                    "converting refval from {} to compute unit {}",
+                    runit,
+                    target_unit,
+                )
+                refval = pint.Quantity(refval, runit).to(target_unit).magnitude
+
+            self.refval = float(refval)
+
+        return {"inverted": inverted}
+
+    @staticmethod
+    def _get_spice_quantity(prop) -> str | None:
+        """Return the SPICE gfevnt quantity name for *prop*, or ``None``."""
+        from ..properties.component_selector import ComponentSelector
+
+        if isinstance(prop, ComponentSelector):
+            return "coordinate"
+        name = getattr(prop, "name", None)
+        if name and name in SpiceEventSolverConfigurator.known_properties():
+            return name
+        return None
 
     def set_from_dict(self, pars: dict) -> None:
         """Set the configuration from a dictionary"""
@@ -305,10 +421,6 @@ class SpiceEventSolver(BaseSolver):
             log.error("You need to provide a valid constraint")
             raise ValueError
 
-        cfg: dict = {}
-        self.constraint.config(cfg)
-        log.debug("Config {}", cfg)
-
         constraint_config = self.configure()
 
         log.debug("Solver config {}", self.config)
@@ -316,8 +428,6 @@ class SpiceEventSolver(BaseSolver):
         maxval = 100000
         cnfine = window.spice_window  # the window
         self.result = SpiceWindow(size=maxval)  # the resulting window
-
-        # step = self.constraint.time_step if self.constraint.time_step else self.step
 
         log.debug(f"Setting step size at {self.step} seconds.")
 
@@ -350,37 +460,25 @@ class SpiceEventSolver(BaseSolver):
     def configure(self) -> dict:
         log.debug("Configuring solver")
 
-        config: dict = {}
         if not self.constraint:
             log.error("You need to provide a valid constraint")
             raise ValueError
 
-        self.constraint.config(config)
-
-        log.debug("Constraint full config {}", config)
-
         pars_composer = SpiceEventSolverConfigurator()
-        pars_composer.set_from_dict(config)
+        extra = pars_composer.set_from_constraint(self.constraint)
         self.config = pars_composer.as_dict()
 
         log.debug("config: \n {}", self.config)
 
-        return config
+        return extra
 
     @staticmethod
     def can_solve(constraint: ConstraintBase) -> bool:
         if constraint.ctype == ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT:
             return False
 
-        conf: dict = {}
-        constraint.config(conf)
-
-        quantity = conf.get("property")
-        if not quantity:
-            log.debug("No property keyword found in constraint, this might imply a bug")
-            return False
-
-        if quantity.lower() in SpiceEventSolverConfigurator.known_properties():
+        quantity = SpiceEventSolverConfigurator._get_spice_quantity(constraint.left)
+        if quantity and quantity.lower() in SpiceEventSolverConfigurator.known_properties():
             return True
 
         return False
@@ -578,9 +676,6 @@ class FovVisibilitySolver(BaseSolver):
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         if not len(window):
             return SpiceWindow()
-        config = {}
-        self.constraint.config(config)  # get the config
-        log.debug("Config for the solver - fov visibility - {}", config)
 
         result = SpiceWindow()  # the resulting window
 
@@ -677,10 +772,7 @@ class GenericScalarSolver(BaseSolver):
 
     @staticmethod
     def can_solve(constraint: ConstraintBase) -> bool:
-        if constraint.ctype == ConstraintTypes.COMPARE_TO_CONSTANT:
-            if constraint.left.type == PropertyTypes.SCALAR:
-                return True
-        elif constraint.ctype == ConstraintTypes.MINMAX:
+        if constraint.ctype == ConstraintTypes.COMPARE_TO_CONSTANT or constraint.ctype == ConstraintTypes.MINMAX:
             if constraint.left.type == PropertyTypes.SCALAR:
                 return True
         return False

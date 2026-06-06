@@ -10,13 +10,12 @@ import spiceypy
 from datetimerange import DateTimeRange
 from pandas import Timestamp
 
-from spice_segmenter.core.time_segments_collection import TimeSegmentsCollection
-from spice_segmenter.core.time_segment import TimeSegment
 # SpiceWindow is internal — imported here solely to test the SPICE cell bridge
 from spice_segmenter.core.spice_window import SpiceWindow
+from spice_segmenter.core.time_segment import TimeSegment
+from spice_segmenter.core.time_segments_collection import TimeSegmentsCollection
 
 from . import tour_config as tc
-
 
 # ============================================================
 # TimeSegment
@@ -280,7 +279,7 @@ class TestEventWindowExport:
 
     def test_to_juice_core_csv(self):
         w = TimeSegmentsCollection.from_start_end(
-            "2023-11-02T12:00:00.000", "2023-11-02T12:00:01.002"
+            "2023-11-02T12:00:00.000", "2023-11-02T12:00:01.002",
         )
         tmpfile = tempfile.gettempdir() + "/test_event.csv"
         if Path(tmpfile).exists():

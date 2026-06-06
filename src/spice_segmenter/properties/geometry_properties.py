@@ -33,15 +33,12 @@ import pint
 import spiceypy
 from attrs import define, field
 from planetary_coverage import et
-from planetary_coverage.spice import SpiceBody, SpiceInstrument
+from planetary_coverage.spice import SpiceInstrument
 from spiceypy import NotFoundError
 
 from ..core.property import Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
-from ..properties.observation_properties import TargetedProperty, TargetedPropertyMixin
-from ..support.context import get_current_observer, get_current_target
-from ..support.decorators import vectorize
-from ..support.time_types import TIMES_TYPES
+from ..properties.observation_properties import TargetedProperty
 
 # ---------------------------------------------------------------------------
 # Private SPICE helpers (non-vectorised, scalar-time)
@@ -83,12 +80,12 @@ def _subpnt_geodetic(time, target, observer, method: str, abcorr: str) -> np.nda
 # ---------------------------------------------------------------------------
 
 def _subpnt_latitudinal_v(
-    times_et: np.ndarray, target, observer, method: str, abcorr: str
+    times_et: np.ndarray, target, observer, method: str, abcorr: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Vectorized (radius_km, longitude_deg, latitude_deg) for N ET values."""
     from spiceypy import cyice
     spoints, _, _ = cyice.subpnt_v(
-        method, target.name, times_et, target.frame.name, abcorr, observer.name
+        method, target.name, times_et, target.frame.name, abcorr, observer.name,
     )
     # reclat_v returns (N, 3) where columns are (radius, lon_rad, lat_rad)
     latitudinal = cyice.reclat_v(spoints)
@@ -96,12 +93,12 @@ def _subpnt_latitudinal_v(
 
 
 def _subpnt_geodetic_v(
-    times_et: np.ndarray, target, observer, method: str, abcorr: str
+    times_et: np.ndarray, target, observer, method: str, abcorr: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Vectorized (longitude_deg, latitude_deg, altitude_km) for N ET values."""
     from spiceypy import cyice
     spoints, _, _ = cyice.subpnt_v(
-        method, target.name, times_et, target.frame.name, abcorr, observer.name
+        method, target.name, times_et, target.frame.name, abcorr, observer.name,
     )
     # recgeo_v returns (N, 3) where columns are (lon_rad, lat_rad, alt_km)
     geodetic = cyice.recgeo_v(spoints, target.re, target.f)
@@ -109,12 +106,12 @@ def _subpnt_geodetic_v(
 
 
 def _subpnt_xyz_v(
-    times_et: np.ndarray, target, observer, method: str, abcorr: str
+    times_et: np.ndarray, target, observer, method: str, abcorr: str,
 ) -> np.ndarray:
     """Vectorized body-fixed XYZ (N, 3) for N ET values."""
     from spiceypy import cyice
     spoints, _, _ = cyice.subpnt_v(
-        method, target.name, times_et, target.frame.name, abcorr, observer.name
+        method, target.name, times_et, target.frame.name, abcorr, observer.name,
     )
     return spoints
 

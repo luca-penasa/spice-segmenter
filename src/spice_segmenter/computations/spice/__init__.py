@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from spice_segmenter.properties.observation_properties import RelativeSpeed
+
 if TYPE_CHECKING:
     from ...engines.spice_engine import SpiceEngine
 
@@ -49,11 +51,13 @@ def register_all(engine: SpiceEngine) -> None:
         sub_observer_pixel_scale_vector,
         target_size_on_sensor_scalar,
         target_size_on_sensor_vector,
+        relative_speed_scalar
     )
 
     engine.register(Distance, scalar_fn=distance_scalar, vector_fn=distance_vector, compute_unit="km")
     engine.register(PhaseAngle, scalar_fn=phase_angle_scalar, vector_fn=phase_angle_vector, compute_unit="rad")
     engine.register(AngularSize, scalar_fn=angular_size_scalar, vector_fn=angular_size_vector, compute_unit="rad")
+    engine.register(RelativeSpeed, scalar_fn=relative_speed_scalar, compute_unit="km/s")
     engine.register(
         ApproximatedAltitude,
         scalar_fn=approx_altitude_scalar,
@@ -141,9 +145,9 @@ def register_all(engine: SpiceEngine) -> None:
         boresight_geo_longitude_scalar,
         boresight_geodetic_scalar,
         boresight_geodetic_vector,
+        boresight_latitude_scalar,
         boresight_latitudinal_scalar,
         boresight_latitudinal_vector,
-        boresight_latitude_scalar,
         boresight_longitude_scalar,
         boresight_ra_scalar,
         boresight_radec_scalar,
@@ -162,10 +166,10 @@ def register_all(engine: SpiceEngine) -> None:
         sub_sc_geo_longitude_vector,
         sub_sc_geodetic_scalar,
         sub_sc_geodetic_vector,
-        sub_sc_latitudinal_scalar,
-        sub_sc_latitudinal_vector,
         sub_sc_latitude_scalar,
         sub_sc_latitude_vector,
+        sub_sc_latitudinal_scalar,
+        sub_sc_latitudinal_vector,
         sub_sc_longitude_scalar,
         sub_sc_longitude_vector,
         sub_sc_radius_scalar,
@@ -353,8 +357,16 @@ def register_all(engine: SpiceEngine) -> None:
     # ------------------------------------------------------------------
     # Reflector (Jupiter shine)
     # ------------------------------------------------------------------
-    from ...properties.reflector_properties import JupiterRise, JupiterRiseRatio, ShineProperties
-    from .reflector import jupiter_rise_ratio_scalar, jupiter_rise_scalar, shine_properties_scalar
+    from ...properties.reflector_properties import (
+        JupiterRise,
+        JupiterRiseRatio,
+        ShineProperties,
+    )
+    from .reflector import (
+        jupiter_rise_ratio_scalar,
+        jupiter_rise_scalar,
+        shine_properties_scalar,
+    )
 
     engine.register(ShineProperties, scalar_fn=shine_properties_scalar, compute_unit=("deg", "deg", "deg", "deg"))
     engine.register(JupiterRise, scalar_fn=jupiter_rise_scalar, compute_unit="")
@@ -368,7 +380,11 @@ def register_all(engine: SpiceEngine) -> None:
         RingAnsaePhaseLowerThan,
         RingAnsaePhaseWithinRange,
     )
-    from .ring import ring_greater_than_scalar, ring_lower_than_scalar, ring_within_range_scalar
+    from .ring import (
+        ring_greater_than_scalar,
+        ring_lower_than_scalar,
+        ring_within_range_scalar,
+    )
 
     engine.register(RingAnsaePhaseLowerThan, scalar_fn=ring_lower_than_scalar, compute_unit="")
     engine.register(RingAnsaePhaseGreaterThan, scalar_fn=ring_greater_than_scalar, compute_unit="")

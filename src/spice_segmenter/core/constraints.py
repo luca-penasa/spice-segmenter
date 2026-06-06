@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator as _op
 from abc import abstractmethod
 from collections.abc import Iterable
 from enum import Enum, auto
@@ -15,9 +16,9 @@ from attrs import define, field
 from loguru import logger as log
 
 from spice_segmenter.properties.observation_properties import MinMaxConditionTypes
-from .time_segments_collection import TimeSegmentsCollection
+
 from .property import Property, PropertyTypes
-from .spice_window import SpiceWindow
+from .time_segments_collection import TimeSegmentsCollection
 
 if TYPE_CHECKING:
     from ..ops.constraint_operations import Inverted
@@ -25,6 +26,15 @@ if TYPE_CHECKING:
 
 
 left_types = Union["Property", str, float, int, Enum]
+
+_OPERATOR_FNS = {
+    ">": _op.gt,
+    "<": _op.lt,
+    "=": _op.eq,  # stored form produced by Property.__eq__
+    "==": _op.eq,
+    "&": np.logical_and,
+    "|": np.logical_or,
+}
 
 
 class ConstraintTypes(Enum):
@@ -38,9 +48,9 @@ class ConstraintBase(Property):
     time_step: float | None = field(
         default=None,
         kw_only=True,
-        converter=lambda x: x
-        if isinstance(x, float | None)
-        else pd.Timedelta(x).total_seconds(),
+        converter=lambda x: (
+            x if isinstance(x, float | None) else pd.Timedelta(x).total_seconds()
+        ),
     )  # seconds
 
     @property
@@ -75,7 +85,7 @@ class ConstraintBase(Property):
 
     def get_compute_unit(self) -> pint.Unit | tuple | None:
         """Get the compute unit (native unit) for the left property via engine registry.
-        
+
         Currently returns None to avoid circular imports during constraint initialization.
         To be implemented after solver refactoring.
         """
@@ -84,23 +94,36 @@ class ConstraintBase(Property):
 
     def convert_reference_value(self, refval: float) -> float:
         """Convert a reference value from the constraint's desired unit to compute unit.
-        
+
         Currently a no-op; to be implemented after solver refactoring.
         """
         # TODO: implement conversion logic after solver fully refactor
         return refval
 
-    def solve(self, arg: Any = None, **kwargs) -> TimeSegmentsCollection:
+    def solve(
+        self,
+        arg: Any = None,
+        end: Any = None,
+        **kwargs,
+    ) -> TimeSegmentsCollection:
         """
         Solve the constraint over a time window.
 
         Parameters
         ----------
-        arg : TimeSegmentsCollection or pd.Timestamp or str or object, optional
-            Either an ``TimeSegmentsCollection``, the start time of the window,
-            or any object with ``start`` and ``end`` attributes.
-            If omitted, the default window set in the active :class:`~spice_segmenter.support.config.Config`
-            context is used (raises ``RuntimeError`` if none is set).
+        arg : TimeSegmentsCollection or pd.Timestamp or str or float or int or tuple or object, optional
+            One of:
+
+            * A :class:`~spice_segmenter.core.TimeSegmentsCollection` — used directly as the search window.
+            * A time-like start value (``str``, ``pd.Timestamp``, ``float`` ET, ``int`` ET) — must be
+              paired with *end* or a second positional argument.
+            * A 2-tuple ``(start, end)`` of time-like values.
+            * Any object with ``start`` and ``end`` attributes.
+            * Omitted — uses the default window from the active
+              :class:`~spice_segmenter.support.config.Config` context (raises ``RuntimeError`` if none
+              is set).
+        end : time-like, optional
+            End of the search window. Only used when *arg* is a time-like start value.
         optimize : bool, optional
             If True, apply constraint optimizations before solving.
             Default is False.
@@ -114,14 +137,43 @@ class ConstraintBase(Property):
 
         Examples
         --------
-        >>> constraint.solve(TimeSegmentsCollection.from_start_end("2033-01-01", "2033-12-31"))
-        >>> constraint.solve("2033-01-01", "2033-12-31")
-        >>> constraint.solve(scenario)   # object with .start / .end
-        >>> constraint.solve(window, optimize=True)  # enable optimizer
-        >>> with Config(start="2033-01-01", end="2033-12-31"):
-        ...     constraint.solve()       # uses default window from context
+        >>> constraint.solve(
+        ...     TimeSegmentsCollection.from_start_end(
+        ...         "2033-01-01",
+        ...         "2033-12-31",
+        ...     )
+        ... )
+        >>> constraint.solve(
+        ...     "2033-01-01",
+        ...     "2033-12-31",
+        ... )  # two positional strings
+        >>> constraint.solve(
+        ...     (
+        ...         "2033-01-01",
+        ...         "2033-12-31",
+        ...     )
+        ... )  # tuple
+        >>> constraint.solve(
+        ...     et_start, et_end
+        ... )  # SPICE ET floats
+        >>> constraint.solve(
+        ...     scenario
+        ... )  # object with .start / .end
+        >>> constraint.solve(
+        ...     window,
+        ...     optimize=True,
+        ... )  # enable optimizer
+        >>> with Config(
+        ...     start="2033-01-01",
+        ...     end="2033-12-31",
+        ... ):
+        ...     constraint.solve()  # uses default window from context
         """
         from ..support.config import get_active_config
+
+        if end is not None:
+            # Two-positional-arg form: solve(start, end)
+            return self._solve_dispatch(arg, end, **kwargs)
 
         if arg is None:
             cfg = get_active_config()
@@ -130,7 +182,7 @@ class ConstraintBase(Property):
                     "solve() called without a window and no default window is set. "
                     "Either pass a window explicitly or activate a context:\n\n"
                     "    with Config(start='2032-01-01', end='2035-01-01'):\n"
-                    "        constraint.solve()\n"
+                    "        constraint.solve()\n",
                 )
             arg = TimeSegmentsCollection.from_start_end(cfg.start, cfg.end)
 
@@ -148,7 +200,7 @@ class ConstraintBase(Property):
         raise TypeError(
             f"solve() called with unsupported type: {type(arg)}. "
             "Expected TimeSegmentsCollection, str, pd.Timestamp, or object with "
-            "start/end attributes"
+            "start/end attributes",
         )
 
     @_solve_dispatch.register
@@ -161,6 +213,7 @@ class ConstraintBase(Property):
         constraint = self
         if optimize:
             from ..optimizers.constraint_optimizer import optimize_constraint
+
             constraint = optimize_constraint(self, verbose=True)
 
         solver = MasterSolver(constraint=constraint, **kwargs)
@@ -168,13 +221,26 @@ class ConstraintBase(Property):
 
     @_solve_dispatch.register(str)
     @_solve_dispatch.register(pd.Timestamp)
+    @_solve_dispatch.register(float)
+    @_solve_dispatch.register(int)
     def _(
         self,
-        start: pd.Timestamp | str,
-        end: pd.Timestamp | str,
+        start: pd.Timestamp | str | float,
+        end: pd.Timestamp | str | float,
         **kwargs,
     ) -> TimeSegmentsCollection:
-        """Solve by constructing an TimeSegmentsCollection from start/end times."""
+        """Solve by constructing a TimeSegmentsCollection from start/end times."""
+        window = TimeSegmentsCollection.from_start_end(start, end)
+        return self._solve_dispatch(window, **kwargs)
+
+    @_solve_dispatch.register(tuple)
+    def _(self, arg: tuple, **kwargs) -> TimeSegmentsCollection:
+        """Solve from a 2-tuple (start, end) of time-like values."""
+        if len(arg) != 2:
+            raise ValueError(
+                f"solve() expects a 2-tuple (start, end), got {len(arg)}-tuple.",
+            )
+        start, end = arg
         window = TimeSegmentsCollection.from_start_end(start, end)
         return self._solve_dispatch(window, **kwargs)
 
@@ -188,14 +254,13 @@ class ConstraintBase(Property):
         Returns an anynode tree with the constraints
         """
         if isinstance(self.left, ConstraintBase) and isinstance(
-            self.right, ConstraintBase,
+            self.right,
+            ConstraintBase,
         ):
             if self.operator == "|":
                 name = "OR"
-
             elif self.operator == "&":
                 name = "AND"
-
             else:
                 raise NotImplementedError
 
@@ -230,7 +295,6 @@ class Constraint(ConstraintBase):
     right: Property | ConstraintBase
     operator: str = field(default=None)
 
-
     def __attrs_post_init__(self) -> None:
         log.debug("Checking constraint {} for compatibility", self)
         log.debug("Left type is {}", type(self.left))
@@ -260,7 +324,8 @@ class Constraint(ConstraintBase):
             return
 
         if hasattr(self.right, "value") and isinstance(
-            self.right.value, MinMaxConditionTypes,
+            self.right.value,
+            MinMaxConditionTypes,
         ):
             log.debug("Right side of constraint {} is a minmax condition", self)
             return
@@ -292,7 +357,8 @@ class Constraint(ConstraintBase):
         if isinstance(self.right, Constant) or isinstance(self.left, Constant):
             return ConstraintTypes.COMPARE_TO_CONSTANT
         if isinstance(self.left, ConstraintBase) and isinstance(
-            self.left, ConstraintBase,
+            self.left,
+            ConstraintBase,
         ):
             return ConstraintTypes.COMPARE_TO_OTHER_CONSTRAINT
 
@@ -312,35 +378,30 @@ class Constraint(ConstraintBase):
         return pint.Unit("")  # a constraint has no unit, as it returns bools
 
     def __call__(self, time: TIMES_TYPES) -> npt.NDArray[np.bool_]:
-        right: Property | None = None
+        left_val = self.left(time)
+        right_val = self.right(time)
 
         if self.left.unit != self.right.unit:
-            from ..ops.unit_adapter import UnitAdaptor
-
             log.warning(
                 "Comparing {} with {}. This is not recommended. Will attempt automatic conversion.",
                 self.left.unit,
                 self.right.unit,
             )
+            right_unit = self.right.unit
+            if isinstance(right_unit, tuple):
+                right_val = np.stack(
+                    [
+                        pint.Quantity(right_val[..., i], u).to(self.left.unit).magnitude
+                        for i, u in enumerate(right_unit)
+                    ],
+                    axis=-1,
+                )
+            else:
+                right_val = (
+                    pint.Quantity(right_val, right_unit).to(self.left.unit).magnitude
+                )
 
-            right = UnitAdaptor(self.right, self.left.unit)
-
-        else:
-            right = self.right
-
-        if (
-            right is None
-        ):  # this is added just to make flake8 aware we are actually using it in the eval below
-            raise ValueError("Could not convert right side of constraint")
-
-        if self.operator == "=":
-            operator = "=="
-        else:
-            operator = self.operator
-
-        # TODO: is thera a better way to do this?
-        # yes the right way is to ship constraints with a lambda function that represent the operator
-        # and then use that lambda (or named) function to make the eval e.g. > -> lambda a,b: a > b
-        q = "self.left(time)" + operator + "right(time)"
-
-        return np.array(eval(q), dtype=bool)
+        fn = _OPERATOR_FNS.get(self.operator)
+        if fn is None:
+            raise ValueError(f"Unknown operator: {self.operator!r}")
+        return np.array(fn(left_val, right_val), dtype=bool)

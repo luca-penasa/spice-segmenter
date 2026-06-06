@@ -19,7 +19,8 @@ Public surface
 from __future__ import annotations
 
 import textwrap
-from typing import TYPE_CHECKING, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import attrs
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
 _CONTEXT_FIELDS = {"observer", "target", "light_time_correction"}
 
 
-def _field_info(cls: type["Property"]) -> tuple[list[str], list[str], list[str]]:
+def _field_info(cls: type[Property]) -> tuple[list[str], list[str], list[str]]:
     """Return (required, context, optional) parameter name lists for *cls*.
 
     - **required**: ``init=True`` fields with ``default=NOTHING``
@@ -62,7 +63,7 @@ def _field_info(cls: type["Property"]) -> tuple[list[str], list[str], list[str]]
     return required, context, optional
 
 
-def _unit_str(cls: type["Property"]) -> str:
+def _unit_str(cls: type[Property]) -> str:
     unit = getattr(cls, "_unit", None)
     if unit is None:
         return ""
@@ -71,7 +72,7 @@ def _unit_str(cls: type["Property"]) -> str:
     return str(unit)
 
 
-def _type_str(cls: type["Property"]) -> str:
+def _type_str(cls: type[Property]) -> str:
     from spice_segmenter.core.property import PropertyTypes
     ptype = getattr(cls, "_type", PropertyTypes.SCALAR)
     return ptype.name.capitalize()
@@ -85,13 +86,13 @@ class PropertyRegistry:
     """
 
     def __init__(self) -> None:
-        self._store: dict[str, type["Property"]] = {}
+        self._store: dict[str, type[Property]] = {}
 
     # ------------------------------------------------------------------
     # Mutation (internal use)
     # ------------------------------------------------------------------
 
-    def register(self, name: str, cls: type["Property"]) -> type["Property"]:
+    def register(self, name: str, cls: type[Property]) -> type[Property]:
         """Register *cls* under *name*.  Called by ``Property.__init_subclass__``.
 
         Three cases are handled:
@@ -132,7 +133,7 @@ class PropertyRegistry:
                 f"and cannot be overwritten by "
                 f"{cls.__module__}.{cls.__qualname__}. "
                 f"Remove the duplicate _name declaration, "
-                f"or import the existing class instead of redefining it."
+                f"or import the existing class instead of redefining it.",
             )
         return cls
 
@@ -140,17 +141,17 @@ class PropertyRegistry:
     # Mapping-like read API
     # ------------------------------------------------------------------
 
-    def __getitem__(self, name: str) -> type["Property"]:
+    def __getitem__(self, name: str) -> type[Property]:
         try:
             return self._store[name]
         except KeyError:
             available = ", ".join(sorted(self._store))
             raise KeyError(
                 f"No property named {name!r} is registered. "
-                f"Available: {available}"
+                f"Available: {available}",
             ) from None
 
-    def get(self, name: str, default: type["Property"] | None = None) -> type["Property"] | None:
+    def get(self, name: str, default: type[Property] | None = None) -> type[Property] | None:
         """Return the class for *name*, or *default* if not found."""
         return self._store.get(name, default)
 
@@ -163,7 +164,7 @@ class PropertyRegistry:
     def __len__(self) -> int:
         return len(self._store)
 
-    def all(self) -> dict[str, type["Property"]]:
+    def all(self) -> dict[str, type[Property]]:
         """Return a snapshot copy of the full registry."""
         return dict(self._store)
 
@@ -196,7 +197,7 @@ class PropertyRegistry:
                 f"{_unit_str(cls):<{col_unit}}  "
                 f"{', '.join(req) or '-':<8}  "
                 f"{', '.join(ctx) or '-':<16}  "
-                f"{', '.join(opt) or '-'}"
+                f"{', '.join(opt) or '-'}",
             )
 
         lines.append(sep)
@@ -292,16 +293,16 @@ property_registry: PropertyRegistry = PropertyRegistry()
 # core/__init__.py.
 # ---------------------------------------------------------------------------
 
-def register(name: str, cls: type["Property"]) -> type["Property"]:
+def register(name: str, cls: type[Property]) -> type[Property]:
     """Register *cls* under *name* in the global registry."""
     return property_registry.register(name, cls)
 
 
-def get(name: str) -> type["Property"]:
+def get(name: str) -> type[Property]:
     """Return the property class registered under *name*."""
     return property_registry[name]
 
 
-def all() -> dict[str, type["Property"]]:  # noqa: A001
+def all() -> dict[str, type[Property]]:  # noqa: A001
     """Return a snapshot copy of the full registry."""
     return property_registry.all()

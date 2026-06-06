@@ -71,4 +71,4 @@ def as_spice_ref(
 ) -> SpiceBody | SpiceInstrument | SpiceSpacecraft | SpiceFrame:
     if isinstance(item, SpiceRef):
         return item
-    return SpiceRef(item) 
+    return SpiceRef(item)

@@ -11,12 +11,12 @@ from ..core.property import Property, PropertyTypes
 from ..support.time_types import TIMES_TYPES
 
 
-@define
+@define(repr=False, order=False, eq=False)
 class SurfaceIlluminationAngles(Property):
     """Computes illumination angles for points on the surface of a target body
 
     return phase, solar incidence, and emission"""
-    
+
     _name = "illumination_angles"
     _unit = ["rad", "rad", "rad"]
     _type = PropertyTypes.VECTOR

@@ -49,7 +49,6 @@ import ast
 from typing import Any
 
 import attrs
-import pint
 
 from spice_segmenter.core.constraints import Constraint, ConstraintBase
 from spice_segmenter.core.registry import property_registry
@@ -72,8 +71,10 @@ _ENUM_NAMESPACES: dict[str, Any] = {}
 def _enum_namespaces() -> dict[str, Any]:
     """Lazily build the enum namespace dict."""
     if not _ENUM_NAMESPACES:
+        from spice_segmenter.properties.observation_properties import (
+            MinMaxConditionTypes,
+        )
         from spice_segmenter.properties.occultation_types import OccultationTypes
-        from spice_segmenter.properties.observation_properties import MinMaxConditionTypes
 
         _ENUM_NAMESPACES["OccultationTypes"] = OccultationTypes
         _ENUM_NAMESPACES["MinMaxConditionTypes"] = MinMaxConditionTypes
@@ -126,7 +127,7 @@ def _make_property(name: str, context: dict[str, Any], overrides: dict[str, Any]
         available = ", ".join(sorted(property_registry))
         raise KeyError(
             f"Unknown property {name!r} in expression. "
-            f"Registered properties: {available}"
+            f"Registered properties: {available}",
         )
     cls = property_registry[name]
 
@@ -201,7 +202,7 @@ def _eval_prop_ref(node: ast.expr, prop_map: dict[str, Any]):
             attr = node.attr
             if not hasattr(parent, attr):
                 raise AttributeError(
-                    f"Property {parent_name!r} has no sub-property {attr!r}"
+                    f"Property {parent_name!r} has no sub-property {attr!r}",
                 )
             return getattr(parent, attr)
 
@@ -288,7 +289,7 @@ def _eval_expr(node: ast.expr, prop_map: dict[str, Any]) -> ConstraintBase:
         "  Boolean ops (natural precedence):  a or b,  a and b,  not a\n"
         "  Bitwise ops (parens around cmps):  (a > x) | (b < y),  (a) & (b),  ~a\n"
         "  Comparisons:  prop > 'value unit',  prop == True\n"
-        "  Bare boolean: fov_visibility  (shorthand for fov_visibility == True)"
+        "  Bare boolean: fov_visibility  (shorthand for fov_visibility == True)",
     )
 
 
@@ -505,7 +506,7 @@ def constraint_to_context(
                 raise ValueError(
                     f"Constraint contains conflicting {field_name!r} values: "
                     f"{context[field_name]!r} vs {val!r}. "
-                    "Cannot be represented as a single context block."
+                    "Cannot be represented as a single context block.",
                 )
             context[field_name] = val
 

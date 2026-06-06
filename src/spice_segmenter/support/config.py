@@ -36,7 +36,7 @@ class Config:
 
     show_progressbar: bool = field(default=False)
     solver_step: pd.Timedelta = field(
-        default=pd.Timedelta(minutes=5), converter=to_timedelta
+        default=pd.Timedelta(minutes=5), converter=to_timedelta,
     )
     start: str | pd.Timestamp | None = field(default=None)
     end: str | pd.Timestamp | None = field(default=None)
@@ -47,7 +47,7 @@ class Config:
     use_vectorized_calls: bool = field(default=True)
 
     _token: contextvars.Token | None = field(
-        default=None, init=False, repr=False
+        default=None, init=False, repr=False,
     )
 
     @property

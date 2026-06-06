@@ -19,6 +19,7 @@ from tests import tour_config as tc
 
 tc.load_kernels()
 
+import numpy as np
 
 from spice_segmenter.core.registry import _field_info
 from spice_segmenter.engines.evaluator import get_evaluator

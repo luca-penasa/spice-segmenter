@@ -22,5 +22,5 @@ def ring_greater_than_scalar(prop: RingAnsaePhaseGreaterThan, time_et: float) ->
 
 def ring_within_range_scalar(prop: RingAnsaePhaseWithinRange, time_et: float) -> bool:
     return bool(
-        is_ring_ansae_phase_angles_in_between(time_et, prop.lower_deg, prop.upper_deg)
+        is_ring_ansae_phase_angles_in_between(time_et, prop.lower_deg, prop.upper_deg),
     )

@@ -69,7 +69,7 @@ class SpiceWindow:
                 end.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             )
         return window
-    
+
     def to_tuples(self) -> list[tuple[pd.Timestamp, pd.Timestamp]]:
         """Convert SpiceWindow to list of (start, end) tuples as pd.Timestamp"""
         out = []

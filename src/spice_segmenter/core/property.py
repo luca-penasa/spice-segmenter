@@ -1,14 +1,14 @@
 from __future__ import annotations
-from typing import ClassVar
-from typing import TYPE_CHECKING
+
+from typing import TYPE_CHECKING, ClassVar, Self
 
 from ..support.time_types import TIMES_TYPES
 
 if TYPE_CHECKING:
     from .constraints import Constraint, left_types
 
-from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
+from abc import ABC
+from collections.abc import Callable
 from enum import Enum, auto
 
 import numpy as np
@@ -103,7 +103,7 @@ class Property(ABC):
             f"{type(self).__name__} has not implemented _call_scalar. "
             "Override _call_scalar with the property body (accepts a pre-converted "
             "float ET), and optionally override _call_vector with a cyice _v call "
-            "for batch performance."
+            "for batch performance.",
         )
 
     def _call_vector(self, times_et: np.ndarray) -> np.ndarray:
@@ -140,37 +140,37 @@ class Property(ABC):
         """Property name, read from _name class attribute."""
         return self._name
 
-    @property  
+    @property
     def unit(self) -> pint.Unit | tuple:
         """Property unit: check for instance field first, then fallback to class _unit."""
         import attrs
-        
+
         # Check if 'unit' is defined as an attrs field
         try:
             fields = attrs.fields(type(self))
             for attr_field in fields:
-                if attr_field.name == 'unit':
+                if attr_field.name == "unit":
                     # 'unit' is an attrs field; get it from instance variables
                     instance_vars = vars(self)
-                    if 'unit' in instance_vars:
-                        return instance_vars['unit']
+                    if "unit" in instance_vars:
+                        return instance_vars["unit"]
                     # Not in vars, use the default from field definition
                     if attr_field.default is not attrs.NOTHING:
                         return attr_field.default
-                    return pint.Unit('')
+                    return pint.Unit("")
         except (TypeError, AttributeError):
             # Not an attrs class at all
             pass
-        
+
         # No 'unit' field defined, fallback to class-level _unit ClassVar
-        return getattr(type(self), '_unit', pint.Unit(''))
+        return getattr(type(self), "_unit", pint.Unit(""))
 
     @property
     def type(self) -> PropertyTypes:
         """Property type, read from _type class attribute or default to SCALAR."""
         return getattr(self.__class__, "_type", PropertyTypes.SCALAR)
 
-    def as_unit(self, unit: pint.Unit | str) -> Property:
+    def as_unit(self, unit: pint.Unit | str) -> Self:
         """Return a copy of this property that evaluates in *unit*.
 
         Raises ``ValueError`` if *unit* is dimensionally incompatible with the
@@ -183,7 +183,7 @@ class Property(ABC):
         if current is not None and not isinstance(current, (list, tuple)):
             if not current.is_compatible_with(target):
                 raise ValueError(
-                    f"{self!r}: unit {target} is not compatible with current unit {current}"
+                    f"{self!r}: unit {target} is not compatible with current unit {current}",
                 )
         return attrs.evolve(self, unit=target)
 
@@ -213,6 +213,7 @@ class Property(ABC):
         'juice_ganymede_jupiter_occultation'
         """
         import re
+
         import attrs
 
         def _normalise(value: object) -> str | None:
@@ -256,7 +257,7 @@ class Property(ABC):
         from ..engines.evaluator import get_evaluator
         ev = get_evaluator()
         return spiceypy.utils.callbacks.SpiceUDFUNS(
-            lambda t: float(ev.evaluate_scalar_raw(self, float(t)))
+            lambda t: float(ev.evaluate_scalar_raw(self, float(t))),
         )
 
     def is_decreasing(self, time: TIMES_TYPES) -> bool:
@@ -288,7 +289,7 @@ class Property(ABC):
         from .constraints import Constraint
 
         log.warning(
-            "Using >= operator on properties is not supported by SPICE. Using > instead."
+            "Using >= operator on properties is not supported by SPICE. Using > instead.",
         )
         return Constraint(self, self._handle_other_operand(other), ">")
 
@@ -296,7 +297,7 @@ class Property(ABC):
         from .constraints import Constraint
 
         log.warning(
-            "Using <= operator on properties is not supported by SPICE. Using < instead."
+            "Using <= operator on properties is not supported by SPICE. Using < instead.",
         )
         return Constraint(self, self._handle_other_operand(other), "<")
 
@@ -371,10 +372,10 @@ class Property(ABC):
 
     def find_minimum(
         self,
-        window: "TimeSegmentsCollection" = None,
+        window: TimeSegmentsCollection = None,
         *,
         evaluate: bool = True,
-    ) -> "TimeSegment":  # type: ignore[name-defined]  # noqa: F821
+    ) -> TimeSegment:  # type: ignore[name-defined]  # noqa: F821
         """Find the global minimum of this property within *window*.
 
         Parameters
@@ -399,19 +400,19 @@ class Property(ABC):
 
     def find_maximum(
         self,
-        window: "TimeSegmentsCollection" = None,
+        window: TimeSegmentsCollection = None,
         *,
         evaluate: bool = True,
-    ) -> "TimeSegment":
+    ) -> TimeSegment:
         """Find the global maximum of this property within *window*."""
         return self._find_extremum("GLOBAL_MAXIMUM", window, evaluate=evaluate)
 
     def find_local_minima(
         self,
-        window: "TimeSegmentsCollection" = None,
+        window: TimeSegmentsCollection = None,
         *,
         evaluate: bool = True,
-    ) -> "TimeSegmentsCollection":
+    ) -> TimeSegmentsCollection:
         """Find all local minima of this property within *window*.
 
         Returns a :class:`~spice_segmenter.core.TimeSegmentsCollection` of
@@ -426,26 +427,26 @@ class Property(ABC):
 
     def find_local_maxima(
         self,
-        window: "TimeSegmentsCollection" = None,
+        window: TimeSegmentsCollection = None,
         *,
         evaluate: bool = True,
-    ) -> "TimeSegmentsCollection":
+    ) -> TimeSegmentsCollection:
         """Find all local maxima of this property within *window*."""
         return self._find_extrema("LOCAL_MAXIMUM", window, evaluate=evaluate)
 
     def _find_extremum(
         self,
         condition: str,
-        window: "TimeSegmentsCollection" = None,
+        window: TimeSegmentsCollection = None,
         *,
         evaluate: bool,
-    ) -> "TimeSegment":
+    ) -> TimeSegment:
         """Solve a global min/max condition and return a single point segment."""
         results = self._find_extrema(condition, window, evaluate=evaluate)
         pts = results.point_events
         if not pts:
             raise ValueError(
-                f"Could not find {condition} for {self!r} in the given window."
+                f"Could not find {condition} for {self!r} in the given window.",
             )
         if len(pts) > 1:
             log.warning(
@@ -457,10 +458,10 @@ class Property(ABC):
     def _find_extrema(
         self,
         condition: str,
-        window: "TimeSegmentsCollection" = None,
+        window: TimeSegmentsCollection = None,
         *,
         evaluate: bool,
-    ) -> "TimeSegmentsCollection":
+    ) -> TimeSegmentsCollection:
         """Solve a MinMaxConstraint and return a TimeSegmentsCollection of point segments."""
         from ..ops.constraint_operations import MinMaxConstraint
         from ..properties.observation_properties import MinMaxConditionTypes
@@ -476,7 +477,7 @@ class Property(ABC):
                     "and no default window is set. "
                     "Either pass a window explicitly or activate a context:\n\n"
                     "    with Config(start='2032-01-01', end='2035-01-01'):\n"
-                    f"        prop.find_{condition.lower()}()\n"
+                    f"        prop.find_{condition.lower()}()\n",
                 )
             window = TimeSegmentsCollection.from_start_end(cfg.start, cfg.end)
 
@@ -494,7 +495,7 @@ class Property(ABC):
                     label=condition.lower().replace("_", " "),
                     value=val,
                     property_name=self.name,
-                )
+                ),
             )
         return TimeSegmentsCollection(segments=annotated)
 
@@ -530,7 +531,7 @@ class BooleanProperty(Property):
     # dispatches through the evaluator for registered properties, and Python
     # MRO ensures subclass overrides are still found first for legacy classes.
     unit: pint.Unit = field(
-        default=pint.Unit(""), kw_only=True, converter=_to_pint_unit
+        default=pint.Unit(""), kw_only=True, converter=_to_pint_unit,
     )
 
     @property
@@ -542,9 +543,8 @@ class BooleanProperty(Property):
 
     def compute_as_spice_function(self, invert: bool = False) -> UDFUNB:
         if invert:
-
             def as_function(udfun, time: TIMES_TYPES) -> bool:
-                return ~self.__call__(time)
+                return not self.__call__(time)
 
         else:
 

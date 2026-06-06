@@ -36,7 +36,6 @@ from spice_segmenter.properties.observation_properties import (
 )
 from spice_segmenter.properties.occultation_types import Occultation, OccultationTypes
 from spice_segmenter.properties.reflector_properties import ShineProperties
-
 from tests import tour_config  # noqa: F401 — loads SPICE kernels as a side-effect
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -169,7 +168,7 @@ class TestConstraintToExpression:
         from spice_segmenter.properties.visibility_properties import BodyFOVVisibility
         c = BodyFOVVisibility(**CTX) == True  # noqa: E712
         expr = constraint_to_expression(c)
-        assert "fov_visibility" == expr
+        assert expr == "fov_visibility"
 
     def test_compound_round_trip(self):
         c = (Distance(**CTX) > "1e4 km") | (PhaseAngle(**CTX) < "30 deg")
@@ -333,7 +332,7 @@ class TestPropertyListYaml:
     def test_round_trip_required_and_optional_extra_fields(self):
         p = ShineProperties(
             OBS, TGT, reflector="JUPITER", light_source="CALLISTO",
-            light_time_correction="NONE"
+            light_time_correction="NONE",
         )
         yaml_str = dumps_properties([p])
         props2 = loads_properties(yaml_str)
@@ -413,7 +412,7 @@ class TestPropertyListYaml:
     def test_loads_properties_not_list_raises(self):
         with pytest.raises(ValueError, match="list"):
             loads_properties(
-                "properties:\n  distance:\n    target: GANYMEDE\n"
+                "properties:\n  distance:\n    target: GANYMEDE\n",
             )
 
     def test_loads_entry_not_dict_raises(self):
@@ -423,7 +422,7 @@ class TestPropertyListYaml:
     def test_loads_missing_type_key_raises(self):
         with pytest.raises(ValueError, match="type"):
             loads_properties(
-                "properties:\n  - target: GANYMEDE\n"
+                "properties:\n  - target: GANYMEDE\n",
             )
 
     def test_loads_unknown_property_type_raises(self):
@@ -581,7 +580,11 @@ class TestTopLevelReExports:
         assert c is not None
 
     def test_dumps_loads_constraint(self):
-        from spice_segmenter import dumps_constraint, loads_constraint, constraint_to_expression
+        from spice_segmenter import (
+            constraint_to_expression,
+            dumps_constraint,
+            loads_constraint,
+        )
         c = Distance(**CTX) > "1e4 km"
         c2 = loads_constraint(dumps_constraint(c))
         assert constraint_to_expression(c) == constraint_to_expression(c2)

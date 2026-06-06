@@ -1,24 +1,19 @@
 
-import numpy as np
+from typing import ClassVar
+
 import pint
-import spiceypy
 from attr import define, field
-from numpy.typing import ArrayLike
-from planetary_coverage import SpiceRef, et
+from planetary_coverage import SpiceRef
 from planetary_coverage.spice import (
     SpiceBody,
     SpiceFrame,
     SpiceInstrument,
     SpiceSpacecraft,
 )
-from spiceypy import NotFoundError
-from typing import ClassVar
 
 from ..core.property import BooleanProperty, Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
 from ..support.context import get_current_observer, get_current_target
-from ..support.decorators import vectorize
-from ..support.time_types import TIMES_TYPES
 
 
 @define(repr=False, order=False, eq=False)
@@ -169,7 +164,7 @@ class BoresightIntersects(BooleanProperty):
     _name = "boresight_intersects_body"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     observer = field(
         factory=get_current_observer,
         converter=SpiceInstrument,

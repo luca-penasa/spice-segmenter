@@ -11,9 +11,7 @@ from planetary_coverage.spice import SpiceBody, SpiceObserver, et
 from planetary_coverage.spice.toolbox import sun_pos
 
 from ..core.property import BooleanProperty, PropertyTypes
-from ..support.decorators import vectorize
 from ..support.spice_utilities import et
-from ..support.time_types import TIMES_TYPES
 
 
 def ring_ansae_phase_angles(
@@ -39,15 +37,15 @@ def ring_ansae_phase_angles(
     """
     observer = SpiceObserver(observer)
     jup = SpiceBody("jupiter")
-    
+
     # Convert time to ET
     time_et = et(time)
-    
+
     # Check if time is scalar or array
     is_scalar = np.ndim(time_et) == 0
     if is_scalar:
         time_et = np.array([time_et])
-    
+
     # Process each time
     all_angles = []
     for t in time_et:
@@ -56,7 +54,7 @@ def ring_ansae_phase_angles(
         sc_pos = spiceypy.spkpos(observer.name, t, jup.frame.name, "NONE", jup.name)[
             0
         ]  # sc position wrt jupiter center
-        
+
         # compute the position of interest points on the ring plane
         planes_intersections = np.cross(
             sc_pos, [0, 0, 1],
@@ -73,14 +71,13 @@ def ring_ansae_phase_angles(
         angles = np.rad2deg(
             np.arccos(np.einsum("ij,ij->i", rsc, rsun)),
         )  # computing phase angles at that location.
-        
+
         all_angles.append(angles)
-    
+
     # Return appropriate shape
     if is_scalar:
         return all_angles[0]
-    else:
-        return np.array(all_angles)
+    return np.array(all_angles)
 
 
 def min_max_ring_ansae_phase_angle(time, observer="JUICE"):
@@ -95,18 +92,17 @@ def min_max_ring_ansae_phase_angle(time, observer="JUICE"):
         observer=observer,
         pts_radiuses=np.array([-250000, -100000, 100000, 250000]),
     )
-    
+
     # Handle both scalar and array cases
     if angles.ndim == 1:
         # Single time: angles is 1D array of 4 values
         return np.min(angles[:2]), np.max(angles[:2]), np.min(angles[2:]), np.max(angles[2:])
-    else:
-        # Multiple times: angles is 2D array (n_times, 4)
-        minR = np.min(angles[:, :2], axis=1)
-        maxR = np.max(angles[:, :2], axis=1)
-        minL = np.min(angles[:, 2:], axis=1)
-        maxL = np.max(angles[:, 2:], axis=1)
-        return minR, maxR, minL, maxL
+    # Multiple times: angles is 2D array (n_times, 4)
+    minR = np.min(angles[:, :2], axis=1)
+    maxR = np.max(angles[:, :2], axis=1)
+    minL = np.min(angles[:, 2:], axis=1)
+    maxL = np.max(angles[:, 2:], axis=1)
+    return minR, maxR, minL, maxL
 
 
 def is_ring_ansae_phase_angles_lower_than(time, angle):
@@ -127,7 +123,7 @@ class RingAnsaePhaseLowerThan(BooleanProperty):
     _name = "ring_ansae_phase_lower_than"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     value_deg: float = field()
     observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)
 
@@ -140,7 +136,7 @@ class RingAnsaePhaseGreaterThan(BooleanProperty):
     _name = "ring_ansae_phase_greater_than"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     value_deg: float = field()
     observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)
 
@@ -154,7 +150,7 @@ class RingAnsaePhaseWithinRange(BooleanProperty):
     _name = "ring_ansae_phase_within_range"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     lower_deg: float = field()
     upper_deg: float = field()
     observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)

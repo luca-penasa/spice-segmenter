@@ -22,11 +22,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from spice_segmenter import TimeSegmentsCollection
-from spice_segmenter.properties.observation_properties import Distance, PhaseAngle
 from spice_segmenter.properties.geometry_properties import SubObserverLatitude
+from spice_segmenter.properties.observation_properties import Distance, PhaseAngle
 from spice_segmenter.support.config import config
 
 from . import tour_config as tc
@@ -95,6 +94,7 @@ phase = PhaseAngle(OBSERVER, TARGET).as_unit("deg")  # deg (UnitAdaptor)
 lat   = SubObserverLatitude(OBSERVER, TARGET)        # native unit: deg
 
 import math
+
 _HALF_PI = math.pi / 2   # ≈ 1.5708 rad  (= 90°)
 _TWO_PI  = 2 * math.pi   # ≈ 6.2832 rad  (= 360°)
 

@@ -15,7 +15,6 @@ from ..properties.observation_properties import (
     TargetedProperty,
     TargetedPropertyMixin,
 )
-from ..support.decorators import vectorize
 from ..support.time_types import TIMES_TYPES
 
 
@@ -73,7 +72,7 @@ class ShineProperties(TargetedProperty):
     _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
     _type = PropertyTypes.VECTOR
     _vector_output_shape = "()->(n)"
-    
+
     reflector = field(converter=SpiceBody, kw_only=True)
     light_source = field(converter=SpiceBody, default="SUN", kw_only=True)
 
@@ -107,7 +106,7 @@ class JupiterRise(TargetedPropertyMixin, BooleanProperty):
     _name = "jupiter_rise"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     def __repr__(self) -> str:
         return f"Jupiter rise status for the sub-{self.observer} {self.target}"
 
@@ -117,7 +116,7 @@ class JupiterRiseRatio(TargetedProperty):
     _name = "jupiter_rise_ratio"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.SCALAR
-    
+
     def __repr__(self) -> str:
         return f"Jupiter rise ratio (elevation/apparent jupiter radius) for the sub-{self.observer} on {self.target}"
 
@@ -127,7 +126,7 @@ class JupiterShineIdealCondition(TargetedPropertyMixin, BooleanProperty):
     _name = "jupiter_shine_ideal_condition"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
-    
+
     max_apparent_jupiter_phase = field(default=90)  # half disk is illuminated
     min_rise_ratio = field(default=1)  # half above the sub-observer horizon
 

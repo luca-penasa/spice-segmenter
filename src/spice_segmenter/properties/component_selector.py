@@ -20,6 +20,7 @@ class ComponentSelector(Property):
     vector: Property = field(default=None)
     component: int = field(default=0, converter=int)
     _name: str = "component_selector"
+    _unit_override: pint.Unit | None = field(default=None)
 
     @vector.validator
     def _validate_vector(self, attribute, value) -> Any:  # type: ignore
@@ -38,11 +39,31 @@ class ComponentSelector(Property):
 
     @property
     def unit(self) -> pint.Unit:
+        if self._unit_override is not None:
+            return self._unit_override
         return self.vector.unit[self.component]
+
+    def as_unit(self, unit: pint.Unit | str) -> "ComponentSelector":
+        """Return a copy that evaluates in *unit*, applying conversion in __call__."""
+        import attrs
+        from ..core.property import _to_pint_unit
+
+        target = _to_pint_unit(unit)
+        current = self.vector.unit[self.component]
+        if current is not None:
+            if not current.is_compatible_with(target):
+                raise ValueError(
+                    f"{self!r}: unit {target} is not compatible with current unit {current}",
+                )
+        return attrs.evolve(self, unit_override=target)
 
     @vectorize()
     def __call__(self, time: TIMES_TYPES) -> float:
-        return self.vector.__call__(time)[self.component]
+        value = self.vector.__call__(time)[self.component]
+        if self._unit_override is not None:
+            native = self.vector.unit[self.component]
+            value = (value * native).to(self._unit_override).magnitude
+        return value
 
     def config(self, config: dict) -> None:
         self.vector.config(config)

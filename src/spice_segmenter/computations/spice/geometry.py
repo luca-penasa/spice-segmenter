@@ -15,6 +15,37 @@ import numpy as np
 from planetary_coverage.spice import SpiceInstrument
 
 from ...properties.geometry_properties import (
+    # property classes
+    BoresightAltitude,
+    BoresightDec,
+    BoresightGeoLatitude,
+    BoresightGeoLongitude,
+    BoresightIntersectionGeodetic,
+    BoresightIntersectionLatitudinal,
+    BoresightIntersectionRectangular,
+    BoresightLatitude,
+    BoresightLongitude,
+    BoresightRA,
+    BoresightRaDec,
+    BoresightRadius,
+    BoresightX,
+    BoresightY,
+    BoresightZ,
+    SubObserverAltitude,
+    SubObserverGeodetic,
+    SubObserverGeoLatitude,
+    SubObserverGeoLongitude,
+    SubObserverLatitude,
+    SubObserverLatitudinal,
+    SubObserverLongitude,
+    SubObserverRadius,
+    SubObserverRectangular,
+    SubObserverX,
+    SubObserverY,
+    SubObserverZ,
+    TargetDec,
+    TargetRA,
+    TargetRaDec,
     # private helpers
     _boresight_radec,
     _sincpt_geodetic,
@@ -27,39 +58,7 @@ from ...properties.geometry_properties import (
     _subpnt_xyz,
     _subpnt_xyz_v,
     _target_radec,
-    # property classes
-    BoresightAltitude,
-    BoresightDec,
-    BoresightGeoLatitude,
-    BoresightGeoLongitude,
-    BoresightIntersectionGeodetic,
-    BoresightIntersectionLatitudinal,
-    BoresightIntersectionRectangular,
-    BoresightLatitude,
-    BoresightLongitude,
-    BoresightRA,
-    BoresightRadius,
-    BoresightRaDec,
-    BoresightX,
-    BoresightY,
-    BoresightZ,
-    SubObserverAltitude,
-    SubObserverGeodetic,
-    SubObserverGeoLatitude,
-    SubObserverGeoLongitude,
-    SubObserverLatitude,
-    SubObserverLatitudinal,
-    SubObserverRadius,
-    SubObserverRectangular,
-    SubObserverLongitude,
-    SubObserverX,
-    SubObserverY,
-    SubObserverZ,
-    TargetDec,
-    TargetRA,
-    TargetRaDec,
 )
-
 
 # ===========================================================================
 # Sub-observer point — Latitudinal
@@ -67,15 +66,15 @@ from ...properties.geometry_properties import (
 
 def sub_sc_latitudinal_scalar(prop: SubObserverLatitudinal, time_et: float) -> np.ndarray:
     return _subpnt_latitudinal(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
 
 
 def sub_sc_latitudinal_vector(
-    prop: SubObserverLatitudinal, times_et: np.ndarray
+    prop: SubObserverLatitudinal, times_et: np.ndarray,
 ) -> np.ndarray:
     r, lon, lat = _subpnt_latitudinal_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return np.stack([r, lon, lat], axis=-1)
 
@@ -84,43 +83,43 @@ def sub_sc_latitudinal_vector(
 
 def sub_sc_radius_scalar(prop: SubObserverRadius, time_et: float) -> float:
     return _subpnt_latitudinal(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[0]
 
 
 def sub_sc_radius_vector(prop: SubObserverRadius, times_et: np.ndarray) -> np.ndarray:
     r, _, _ = _subpnt_latitudinal_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return r
 
 
 def sub_sc_longitude_scalar(prop: SubObserverLongitude, time_et: float) -> float:
     return _subpnt_latitudinal(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[1]
 
 
 def sub_sc_longitude_vector(
-    prop: SubObserverLongitude, times_et: np.ndarray
+    prop: SubObserverLongitude, times_et: np.ndarray,
 ) -> np.ndarray:
     _, lon, _ = _subpnt_latitudinal_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return lon
 
 
 def sub_sc_latitude_scalar(prop: SubObserverLatitude, time_et: float) -> float:
     return _subpnt_latitudinal(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[2]
 
 
 def sub_sc_latitude_vector(
-    prop: SubObserverLatitude, times_et: np.ndarray
+    prop: SubObserverLatitude, times_et: np.ndarray,
 ) -> np.ndarray:
     _, _, lat = _subpnt_latitudinal_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return lat
 
@@ -131,15 +130,15 @@ def sub_sc_latitude_vector(
 
 def sub_sc_geodetic_scalar(prop: SubObserverGeodetic, time_et: float) -> np.ndarray:
     return _subpnt_geodetic(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
 
 
 def sub_sc_geodetic_vector(
-    prop: SubObserverGeodetic, times_et: np.ndarray
+    prop: SubObserverGeodetic, times_et: np.ndarray,
 ) -> np.ndarray:
     lon, lat, alt = _subpnt_geodetic_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return np.stack([lon, lat, alt], axis=-1)
 
@@ -148,45 +147,45 @@ def sub_sc_geodetic_vector(
 
 def sub_sc_geo_longitude_scalar(prop: SubObserverGeoLongitude, time_et: float) -> float:
     return _subpnt_geodetic(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[0]
 
 
 def sub_sc_geo_longitude_vector(
-    prop: SubObserverGeoLongitude, times_et: np.ndarray
+    prop: SubObserverGeoLongitude, times_et: np.ndarray,
 ) -> np.ndarray:
     lon, _, _ = _subpnt_geodetic_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return lon
 
 
 def sub_sc_geo_latitude_scalar(prop: SubObserverGeoLatitude, time_et: float) -> float:
     return _subpnt_geodetic(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[1]
 
 
 def sub_sc_geo_latitude_vector(
-    prop: SubObserverGeoLatitude, times_et: np.ndarray
+    prop: SubObserverGeoLatitude, times_et: np.ndarray,
 ) -> np.ndarray:
     _, lat, _ = _subpnt_geodetic_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return lat
 
 
 def sub_sc_altitude_scalar(prop: SubObserverAltitude, time_et: float) -> float:
     return _subpnt_geodetic(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[2]
 
 
 def sub_sc_altitude_vector(
-    prop: SubObserverAltitude, times_et: np.ndarray
+    prop: SubObserverAltitude, times_et: np.ndarray,
 ) -> np.ndarray:
     _, _, alt = _subpnt_geodetic_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
     return alt
 
@@ -196,54 +195,54 @@ def sub_sc_altitude_vector(
 # ===========================================================================
 
 def sub_sc_rectangular_scalar(
-    prop: SubObserverRectangular, time_et: float
+    prop: SubObserverRectangular, time_et: float,
 ) -> np.ndarray:
     return _subpnt_xyz(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
 
 
 def sub_sc_rectangular_vector(
-    prop: SubObserverRectangular, times_et: np.ndarray
+    prop: SubObserverRectangular, times_et: np.ndarray,
 ) -> np.ndarray:
     return _subpnt_xyz_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )
 
 
 def sub_sc_x_scalar(prop: SubObserverX, time_et: float) -> float:
     return _subpnt_xyz(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[0]
 
 
 def sub_sc_x_vector(prop: SubObserverX, times_et: np.ndarray) -> np.ndarray:
     return _subpnt_xyz_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[:, 0]
 
 
 def sub_sc_y_scalar(prop: SubObserverY, time_et: float) -> float:
     return _subpnt_xyz(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[1]
 
 
 def sub_sc_y_vector(prop: SubObserverY, times_et: np.ndarray) -> np.ndarray:
     return _subpnt_xyz_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[:, 1]
 
 
 def sub_sc_z_scalar(prop: SubObserverZ, time_et: float) -> float:
     return _subpnt_xyz(
-        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[2]
 
 
 def sub_sc_z_vector(prop: SubObserverZ, times_et: np.ndarray) -> np.ndarray:
     return _subpnt_xyz_v(
-        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction
+        times_et, prop.target, prop.observer, prop.method, prop.light_time_correction,
     )[:, 2]
 
 
@@ -257,15 +256,15 @@ def _inst(prop) -> SpiceInstrument:
 
 
 def boresight_latitudinal_scalar(
-    prop: BoresightIntersectionLatitudinal, time_et: float
+    prop: BoresightIntersectionLatitudinal, time_et: float,
 ) -> np.ndarray:
     return _sincpt_latitudinal(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )
 
 
 def boresight_latitudinal_vector(
-    prop: BoresightIntersectionLatitudinal, times_et: np.ndarray
+    prop: BoresightIntersectionLatitudinal, times_et: np.ndarray,
 ) -> np.ndarray:
     inst = _inst(prop)
     return np.array([
@@ -276,19 +275,19 @@ def boresight_latitudinal_vector(
 
 def boresight_latitude_scalar(prop: BoresightLatitude, time_et: float) -> float:
     return _sincpt_latitudinal(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[2]
 
 
 def boresight_longitude_scalar(prop: BoresightLongitude, time_et: float) -> float:
     return _sincpt_latitudinal(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[1]
 
 
 def boresight_radius_scalar(prop: BoresightRadius, time_et: float) -> float:
     return _sincpt_latitudinal(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[0]
 
 
@@ -297,15 +296,15 @@ def boresight_radius_scalar(prop: BoresightRadius, time_et: float) -> float:
 # ===========================================================================
 
 def boresight_geodetic_scalar(
-    prop: BoresightIntersectionGeodetic, time_et: float
+    prop: BoresightIntersectionGeodetic, time_et: float,
 ) -> np.ndarray:
     return _sincpt_geodetic(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )
 
 
 def boresight_geodetic_vector(
-    prop: BoresightIntersectionGeodetic, times_et: np.ndarray
+    prop: BoresightIntersectionGeodetic, times_et: np.ndarray,
 ) -> np.ndarray:
     inst = _inst(prop)
     return np.array([
@@ -316,21 +315,21 @@ def boresight_geodetic_vector(
 
 def boresight_geo_latitude_scalar(prop: BoresightGeoLatitude, time_et: float) -> float:
     return _sincpt_geodetic(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[1]
 
 
 def boresight_geo_longitude_scalar(
-    prop: BoresightGeoLongitude, time_et: float
+    prop: BoresightGeoLongitude, time_et: float,
 ) -> float:
     return _sincpt_geodetic(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[0]
 
 
 def boresight_altitude_scalar(prop: BoresightAltitude, time_et: float) -> float:
     return _sincpt_geodetic(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[2]
 
 
@@ -339,15 +338,15 @@ def boresight_altitude_scalar(prop: BoresightAltitude, time_et: float) -> float:
 # ===========================================================================
 
 def boresight_rectangular_scalar(
-    prop: BoresightIntersectionRectangular, time_et: float
+    prop: BoresightIntersectionRectangular, time_et: float,
 ) -> np.ndarray:
     return _sincpt_xyz(
-        time_et, prop.target, _inst(prop), prop.light_time_correction
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
     )
 
 
 def boresight_rectangular_vector(
-    prop: BoresightIntersectionRectangular, times_et: np.ndarray
+    prop: BoresightIntersectionRectangular, times_et: np.ndarray,
 ) -> np.ndarray:
     inst = _inst(prop)
     return np.array([
@@ -374,7 +373,7 @@ def boresight_z_scalar(prop: BoresightZ, time_et: float) -> float:
 
 def target_radec_scalar(prop: TargetRaDec, time_et: float) -> np.ndarray:
     return _target_radec(
-        time_et, prop.target, prop.observer, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.light_time_correction,
     )
 
 
@@ -387,13 +386,13 @@ def target_radec_vector(prop: TargetRaDec, times_et: np.ndarray) -> np.ndarray:
 
 def target_ra_scalar(prop: TargetRA, time_et: float) -> float:
     return _target_radec(
-        time_et, prop.target, prop.observer, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.light_time_correction,
     )[0]
 
 
 def target_dec_scalar(prop: TargetDec, time_et: float) -> float:
     return _target_radec(
-        time_et, prop.target, prop.observer, prop.light_time_correction
+        time_et, prop.target, prop.observer, prop.light_time_correction,
     )[1]
 
 
@@ -403,7 +402,7 @@ def target_dec_scalar(prop: TargetDec, time_et: float) -> float:
 
 def boresight_radec_scalar(prop: BoresightRaDec, time_et: float) -> np.ndarray:
     return _boresight_radec(
-        time_et, _inst(prop), prop.light_time_correction
+        time_et, _inst(prop), prop.light_time_correction,
     )
 
 
@@ -428,26 +427,26 @@ def boresight_dec_scalar(prop: BoresightDec, time_et: float) -> float:
 # ---------------------------------------------------------------------------
 
 from ...properties.geometry_properties import (  # noqa: E402
-    SubObserverIncidenceAngle,
     SubObserverEmissionAngle,
+    SubObserverIncidenceAngle,
     SubObserverPhaseAngleLocal,
     _sub_observer_illum,
 )
 
 
 def sub_observer_incidence_angle_scalar(
-    prop: SubObserverIncidenceAngle, time_et: float
+    prop: SubObserverIncidenceAngle, time_et: float,
 ) -> float:
     return float(_sub_observer_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[0])
 
 
 def sub_observer_emission_angle_scalar(
-    prop: SubObserverEmissionAngle, time_et: float
+    prop: SubObserverEmissionAngle, time_et: float,
 ) -> float:
     return float(_sub_observer_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[1])
 
 
 def sub_observer_phase_angle_local_scalar(
-    prop: SubObserverPhaseAngleLocal, time_et: float
+    prop: SubObserverPhaseAngleLocal, time_et: float,
 ) -> float:
     return float(_sub_observer_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[2])

@@ -69,7 +69,6 @@ from spice_segmenter.io.dsl import (
     parse,
 )
 
-
 # ---------------------------------------------------------------------------
 # Constraint deserialization
 # ---------------------------------------------------------------------------
@@ -265,7 +264,7 @@ def _properties_from_dict(data: dict[str, Any]) -> list[Property]:
         if not isinstance(e, dict):
             raise ValueError(
                 f"Entry {i} in 'properties' must be a mapping with at least a 'type' key, "
-                f"got {type(e).__name__}: {e!r}"
+                f"got {type(e).__name__}: {e!r}",
             )
 
     shared_context: dict[str, Any] = data.get("context") or {}

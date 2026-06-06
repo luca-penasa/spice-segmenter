@@ -5,7 +5,7 @@ from .snapshot import PropertySnapshot, compute_all
 
 __all__ = [
     "OccultationProperties",
-    "TargetProperties",
     "PropertySnapshot",
+    "TargetProperties",
     "compute_all",
 ]

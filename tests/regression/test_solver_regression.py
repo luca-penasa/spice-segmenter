@@ -28,7 +28,6 @@ Append to ``SOLVER_CASES`` and run ``--update-regression``.
 
 from __future__ import annotations
 
-import math
 from typing import Any
 
 import pytest
@@ -42,13 +41,12 @@ from spice_segmenter import (
     Occultation,
     OccultationTypes,
     PhaseAngle,
-    SpiceContext,
     TimeSegmentsCollection,
     config,
 )
 from spice_segmenter.properties.geometry_properties import (
-    SubObserverLatitude,
     SubObserverIncidenceAngle,
+    SubObserverLatitude,
 )
 
 # ---------------------------------------------------------------------------

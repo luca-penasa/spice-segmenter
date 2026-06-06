@@ -1,28 +1,39 @@
-from spice_segmenter import TimeSegmentsCollection, log_enable
-from spice_segmenter.core.constraints import ConstraintBase
-from spice_segmenter.constraint_solver import GenericScalarSolver
-from spice_segmenter.constraint_solver.constraint_solver import SpiceEventSolver, SpiceOccultationSolver, SpiceWindowSolver
-from spice_segmenter.properties.observation_properties import AngularSize, Distance
-from spice_segmenter.properties.coordinates import Vector
-from spice_segmenter.constraint_solver import get_appropriate_solver
-from spice_segmenter import Occultation, OccultationTypes
 from planetary_coverage.spice import SpiceBody
 
-log_enable('DEBUG')
+from spice_segmenter import (
+    Occultation,
+    OccultationTypes,
+    TimeSegmentsCollection,
+    log_enable,
+)
+from spice_segmenter.constraint_solver import (
+    GenericScalarSolver,
+    get_appropriate_solver,
+)
+from spice_segmenter.constraint_solver.constraint_solver import (
+    SpiceEventSolver,
+    SpiceOccultationSolver,
+    SpiceWindowSolver,
+)
+from spice_segmenter.core.constraints import ConstraintBase
+from spice_segmenter.properties.coordinates import Vector
+from spice_segmenter.properties.observation_properties import AngularSize, Distance
+
+log_enable("DEBUG")
 
 c_less = AngularSize("JUICE_JANUS", "CALLISTO").as_unit("deg") < 2
-c_less_def = AngularSize("JUICE_JANUS", "CALLISTO").as_unit("deg") < '2 deg'
+c_less_def = AngularSize("JUICE_JANUS", "CALLISTO").as_unit("deg") < "2 deg"
 c_gt = AngularSize("JUICE_JANUS", "CALLISTO").as_unit("deg") > 2
 
-c_d = Distance('JUICE_JANUS', 'CALLISTO') < '5000 km'
+c_d = Distance("JUICE_JANUS", "CALLISTO") < "5000 km"
 
-p_lat = Vector('CALLISTO', 'JUICE_JANUS', frame=SpiceBody('CALLISTO').frame).as_latitudinal.latitude
+p_lat = Vector("CALLISTO", "JUICE_JANUS", frame=SpiceBody("CALLISTO").frame).as_latitudinal.latitude
 
-c_lat = p_lat < '20 deg'
+c_lat = p_lat < "20 deg"
 
 w = TimeSegmentsCollection.from_start_end("2032-01-01T00:00:00", "2033-01-01T00:00:00")
 
-p_occ = Occultation('JUICE_JANUS', 'CALLISTO', 'JUPITER')
+p_occ = Occultation("JUICE_JANUS", "CALLISTO", "JUPITER")
 
 c_occ = p_occ == OccultationTypes.ANNULAR
 

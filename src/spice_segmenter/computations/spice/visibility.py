@@ -7,7 +7,6 @@ import spiceypy
 
 from ...properties.visibility_properties import BodyFOVVisibility
 
-
 # ---------------------------------------------------------------------------
 # BodyFOVVisibility
 # ---------------------------------------------------------------------------
@@ -32,7 +31,7 @@ def fov_visibility_vector(prop: BodyFOVVisibility, times_et: np.ndarray) -> np.n
         prop.observer.name,
         prop.target.name,
         "ELLIPSOID",
-        prop.target.frame,
+        prop.target.frame.name,
         prop.light_time_correction,
         prop.observer.name,
         times_et,
