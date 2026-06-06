@@ -6,11 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## 0.0.6 - 2026-06-06
 
 ### Changed
+
 - Full experimental refactor of the codebase, strongly influenced by copilot work. Still experimental.
 
 ### Added
+
 - new target size on sensor property
 
 ## 0.0.5 - 2024-11-08

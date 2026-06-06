@@ -1,6 +1,6 @@
 [project]
 name = "spice-segmenter"
-version = "0.0.5"
+version = "0.0.6"
 description = "Spice-based segmenter, wrapping event finding routines within spice toolkit."
 authors = [
     {name = "Luca Penasa", email = "luca.penasa@gmail.com"}
@@ -143,7 +143,7 @@ strict = false                  # See all the enabled flags `mypy --help | grep 
 # ]
 # disallow_untyped_defs = false
 [tool.bumpversion]
-current_version = "0.0.5"  # Replace with your current version
+current_version = "0.0.6"  # Replace with your current version
 
 
 [[tool.bumpversion.files]]
