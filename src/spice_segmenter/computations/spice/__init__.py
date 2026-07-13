@@ -119,6 +119,7 @@ def register_all(engine: SpiceEngine) -> None:
         BoresightRA,
         BoresightRaDec,
         BoresightRadius,
+        BoresightSlantRange,
         BoresightX,
         BoresightY,
         BoresightZ,
@@ -153,6 +154,7 @@ def register_all(engine: SpiceEngine) -> None:
         boresight_radec_scalar,
         boresight_radec_vector,
         boresight_radius_scalar,
+        boresight_slant_scalar,
         boresight_rectangular_scalar,
         boresight_rectangular_vector,
         boresight_x_scalar,
@@ -227,6 +229,7 @@ def register_all(engine: SpiceEngine) -> None:
     engine.register(BoresightLatitude, scalar_fn=boresight_latitude_scalar, compute_unit="deg")
     engine.register(BoresightLongitude, scalar_fn=boresight_longitude_scalar, compute_unit="deg")
     engine.register(BoresightRadius, scalar_fn=boresight_radius_scalar, compute_unit="km")
+    engine.register(BoresightSlantRange, scalar_fn=boresight_slant_scalar, compute_unit="km")
 
     # Boresight geodetic
     engine.register(

@@ -32,6 +32,7 @@ from .geometry_properties import (
     # Boresight RA/Dec
     BoresightRaDec,
     BoresightRadius,
+    BoresightSlantRange,
     BoresightX,
     BoresightY,
     BoresightZ,
@@ -130,6 +131,7 @@ __all__ = [
     "BoresightLatitude",
     "BoresightLongitude",
     "BoresightRadius",
+    "BoresightSlantRange",
     # Geometry — boresight geodetic
     "BoresightIntersectionGeodetic",
     "BoresightGeoLatitude",

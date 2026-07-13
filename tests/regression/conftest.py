@@ -88,7 +88,7 @@ def _to_serialisable(value: Any) -> Any:
         else:
             return [_to_serialisable(v) for v in value.tolist()]
     if isinstance(value, (np.floating, np.integer)):
-        return value.item()
+        value = value.item()
     if isinstance(value, (np.bool_,)):
         return bool(value)
     if hasattr(value, "name"):          # Enum-like (OccultationTypes, …)

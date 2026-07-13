@@ -87,6 +87,7 @@ from .properties import (
     BoresightRA,
     BoresightRaDec,
     BoresightRadius,
+    BoresightSlantRange,
     BoresightX,
     BoresightY,
     BoresightZ,

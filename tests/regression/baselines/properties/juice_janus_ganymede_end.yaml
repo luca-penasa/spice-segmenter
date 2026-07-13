@@ -1,5 +1,5 @@
 meta:
-  generated: '2026-03-17T13:36:07Z'
+  generated: '2026-07-13T12:36:54Z'
   mk_version: v432_20230505_001
 values:
   juice_janus_callisto_ganymede_occultation: NONE
@@ -34,6 +34,7 @@ values:
   - 599.7764061043206
   - -1368.6576260181173
   - 2165.7003498690747
+  juice_janus_ganymede_boresight_slant: 467.1212514506975
   juice_janus_ganymede_boresight_x: 599.7764061043206
   juice_janus_ganymede_boresight_y: -1368.6576260181173
   juice_janus_ganymede_boresight_z: 2165.7003498690747

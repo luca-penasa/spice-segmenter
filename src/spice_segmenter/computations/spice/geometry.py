@@ -28,6 +28,7 @@ from ...properties.geometry_properties import (
     BoresightRA,
     BoresightRaDec,
     BoresightRadius,
+    BoresightSlantRange,
     BoresightX,
     BoresightY,
     BoresightZ,
@@ -50,6 +51,7 @@ from ...properties.geometry_properties import (
     _boresight_radec,
     _sincpt_geodetic,
     _sincpt_latitudinal,
+    _sincpt_srfvec,
     _sincpt_xyz,
     _subpnt_geodetic,
     _subpnt_geodetic_v,
@@ -289,6 +291,15 @@ def boresight_radius_scalar(prop: BoresightRadius, time_et: float) -> float:
     return _sincpt_latitudinal(
         time_et, prop.target, _inst(prop), prop.light_time_correction,
     )[0]
+
+
+def boresight_slant_scalar(prop: BoresightSlantRange, time_et: float) -> float:
+    srfvec = _sincpt_srfvec(
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
+    )
+    if np.isnan(srfvec).any():
+        return np.nan
+    return float(np.linalg.norm(srfvec))
 
 
 # ===========================================================================

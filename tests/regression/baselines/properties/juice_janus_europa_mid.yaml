@@ -1,5 +1,5 @@
 meta:
-  generated: '2026-03-17T13:36:08Z'
+  generated: '2026-07-13T12:36:54Z'
   mk_version: v432_20230505_001
 values:
   juice_janus_callisto_europa_occultation: NONE
@@ -33,6 +33,7 @@ values:
   - nan
   - nan
   - nan
+  juice_janus_europa_boresight_slant: nan
   juice_janus_europa_boresight_x: nan
   juice_janus_europa_boresight_y: nan
   juice_janus_europa_boresight_z: nan

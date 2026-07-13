@@ -157,6 +157,29 @@ def _sincpt_geodetic(time, target, observer: SpiceInstrument, abcorr: str) -> np
     return np.array([np.rad2deg(lon), np.rad2deg(lat), alt])
 
 
+def _sincpt_srfvec(time, target, observer: SpiceInstrument, abcorr: str) -> np.ndarray:
+    """Return the observer-to-surface vector (``srfvec``) for the boresight
+    intersection, in the target body-fixed frame (km).
+
+    Its norm is the slant range from the instrument to the boresight-surface
+    intersection point. Returns ``[NaN, NaN, NaN]`` when the boresight misses
+    the body.
+    """
+    try:
+        return spiceypy.sincpt(
+            "ELLIPSOID",
+            target.name,
+            et(time),
+            target.frame.name,
+            abcorr,
+            observer.name,
+            str(observer.frame),
+            np.array([0.0, 0.0, 1.0]),
+        )[2]
+    except NotFoundError:
+        return _NAN3.copy()
+
+
 def _target_radec(time, target, observer, abcorr: str) -> np.ndarray:
     """Return (right_ascension_deg, declination_deg) of target from observer in J2000."""
     pos = spiceypy.spkpos(target.name, et(time), "J2000", abcorr, observer.name)[0]
@@ -482,6 +505,25 @@ class BoresightRadius(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Boresight intersection radius of {self.observer} on {self.target}"
+
+
+@define(repr=False, order=False, eq=False)
+class BoresightSlantRange(TargetedProperty):
+    """Line-of-sight distance from the instrument to the boresight–surface
+    intersection point (km).
+
+    This is the slant range (SPICE ``sincpt`` ``srfvec`` norm) — distinct
+    from :class:`BoresightRadius` (distance from the body centre) and
+    :class:`BoresightAltitude` (altitude above the reference ellipsoid).
+
+    Returns ``NaN`` when the boresight misses the body.
+    """
+
+    _name: ClassVar[str] = "boresight_slant"
+    _unit: ClassVar[pint.Unit] = pint.Unit("km")
+
+    def __repr__(self) -> str:
+        return f"Boresight slant range of {self.observer} on {self.target}"
 
 
 # ---------------------------------------------------------------------------
