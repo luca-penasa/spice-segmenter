@@ -262,11 +262,17 @@ def register_all(engine: SpiceEngine) -> None:
     # SubObserver illumination angle scalars  (geometry module)
     # ------------------------------------------------------------------
     from ...properties.geometry_properties import (
+        BoresightEmissionAngle,
+        BoresightIncidenceAngle,
+        BoresightPhaseAngleLocal,
         SubObserverEmissionAngle,
         SubObserverIncidenceAngle,
         SubObserverPhaseAngleLocal,
     )
     from .geometry import (
+        boresight_emission_angle_scalar,
+        boresight_incidence_angle_scalar,
+        boresight_phase_angle_local_scalar,
         sub_observer_emission_angle_scalar,
         sub_observer_incidence_angle_scalar,
         sub_observer_phase_angle_local_scalar,
@@ -275,6 +281,9 @@ def register_all(engine: SpiceEngine) -> None:
     engine.register(SubObserverIncidenceAngle, scalar_fn=sub_observer_incidence_angle_scalar, compute_unit="deg")
     engine.register(SubObserverEmissionAngle, scalar_fn=sub_observer_emission_angle_scalar, compute_unit="deg")
     engine.register(SubObserverPhaseAngleLocal, scalar_fn=sub_observer_phase_angle_local_scalar, compute_unit="deg")
+    engine.register(BoresightIncidenceAngle, scalar_fn=boresight_incidence_angle_scalar, compute_unit="deg")
+    engine.register(BoresightEmissionAngle, scalar_fn=boresight_emission_angle_scalar, compute_unit="deg")
+    engine.register(BoresightPhaseAngleLocal, scalar_fn=boresight_phase_angle_local_scalar, compute_unit="deg")
 
     # ------------------------------------------------------------------
     # Observation: SubObserverIlluminationAngles, SubObserverIsInDaylight,

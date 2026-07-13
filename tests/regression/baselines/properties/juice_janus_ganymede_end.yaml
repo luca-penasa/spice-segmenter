@@ -8,6 +8,7 @@ values:
   juice_janus_ganymede_approx_altitude: 467.12015143769804
   juice_janus_ganymede_boresight_altitude: -4.195281132371681e-13
   juice_janus_ganymede_boresight_dec: -78.28341660747368
+  juice_janus_ganymede_boresight_emission: 0.1348366114237547
   juice_janus_ganymede_boresight_geo_latitude: 55.39478263325062
   juice_janus_ganymede_boresight_geo_longitude: -66.33589145953694
   juice_janus_ganymede_boresight_geodetic:
@@ -15,6 +16,7 @@ values:
   - 55.39478263325062
   - -4.195281132371681e-13
   juice_janus_ganymede_boresight_groundtrack_velocity: 1.5258804087629527
+  juice_janus_ganymede_boresight_incidence: 103.1043193588053
   juice_janus_ganymede_boresight_intersects_body: true
   juice_janus_ganymede_boresight_latitude: 55.39478263325062
   juice_janus_ganymede_boresight_latitudinal:
@@ -22,6 +24,7 @@ values:
   - -66.33589145953694
   - 55.39478263325062
   juice_janus_ganymede_boresight_longitude: -66.33589145953694
+  juice_janus_ganymede_boresight_phase_local: 103.22681902053763
   juice_janus_ganymede_boresight_ra: 313.82538908751894
   juice_janus_ganymede_boresight_radec:
   - 313.82538908751894
@@ -44,6 +47,7 @@ values:
   juice_janus_ganymede_jupiter_rise: true
   juice_janus_ganymede_jupiter_rise_ratio: 3.8287422959191466
   juice_janus_ganymede_jupiter_shine_ideal_condition: false
+  juice_janus_ganymede_relative_speed: 1.7926277535419994
   juice_janus_ganymede_sub_obs_point_in_daylight: false
   juice_janus_ganymede_sub_observer_emission: 0.00014648810676112063
   juice_janus_ganymede_sub_observer_illumination_angles:

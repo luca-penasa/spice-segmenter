@@ -7,6 +7,7 @@ values:
   juice_janus_europa_approx_altitude: 445273676.9846599
   juice_janus_europa_boresight_altitude: nan
   juice_janus_europa_boresight_dec: -23.196824427325826
+  juice_janus_europa_boresight_emission: nan
   juice_janus_europa_boresight_geo_latitude: nan
   juice_janus_europa_boresight_geo_longitude: nan
   juice_janus_europa_boresight_geodetic:
@@ -14,6 +15,7 @@ values:
   - nan
   - nan
   juice_janus_europa_boresight_groundtrack_velocity: nan
+  juice_janus_europa_boresight_incidence: nan
   juice_janus_europa_boresight_intersects_body: false
   juice_janus_europa_boresight_latitude: nan
   juice_janus_europa_boresight_latitudinal:
@@ -21,6 +23,7 @@ values:
   - nan
   - nan
   juice_janus_europa_boresight_longitude: nan
+  juice_janus_europa_boresight_phase_local: nan
   juice_janus_europa_boresight_ra: 277.53296896721406
   juice_janus_europa_boresight_radec:
   - 277.53296896721406
@@ -43,6 +46,7 @@ values:
   juice_janus_europa_jupiter_rise: false
   juice_janus_europa_jupiter_rise_ratio: -1.5499469829528447
   juice_janus_europa_jupiter_shine_ideal_condition: false
+  juice_janus_europa_relative_speed: 27.77776567888102
   juice_janus_europa_sub_obs_point_in_daylight: true
   juice_janus_europa_sub_observer_emission: 0.02969409062841184
   juice_janus_europa_sub_observer_illumination_angles:

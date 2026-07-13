@@ -794,3 +794,56 @@ class SubObserverPhaseAngleLocal(TargetedProperty):
 
     def __repr__(self) -> str:
         return f"Sub-observer local phase angle on {self.target} from {self.observer}"
+
+
+def _boresight_illum(time, target, observer, abcorr: str) -> np.ndarray:
+    """Return (incidence_deg, emission_deg, phase_deg) at the *boresight*
+    surface intersection point (not the sub-observer / nadir point).
+
+    Returns NaNs when the boresight misses the body.
+    """
+    inst = observer if isinstance(observer, SpiceInstrument) else SpiceInstrument(observer.name)
+    pt = _sincpt_xyz(time, target, inst, abcorr)
+    if np.isnan(pt).any():
+        return _NAN3.copy()
+    i, e, p = _illum_angles(time, inst.spacecraft, target, pt, abcorr=abcorr, method="ELLIPSOID")
+    return np.array([i, e, p])
+
+
+@define(repr=False, order=False, eq=False)
+class BoresightIncidenceAngle(TargetedProperty):
+    """Solar incidence angle at the boresight surface intersection (deg).
+
+    Unlike :class:`SubObserverIncidenceAngle` (which uses the sub-observer /
+    nadir point), this evaluates the illumination at the point the instrument
+    boresight actually intercepts the surface.  0° = sun overhead, 90° =
+    terminator.  NaN when the boresight misses the body.
+    """
+
+    _name: ClassVar[str] = "boresight_incidence"
+    _unit: ClassVar[pint.Unit] = pint.Unit("deg")
+
+    def __repr__(self) -> str:
+        return f"Boresight incidence angle on {self.target} from {self.observer}"
+
+
+@define(repr=False, order=False, eq=False)
+class BoresightEmissionAngle(TargetedProperty):
+    """Emission angle at the boresight surface intersection (deg)."""
+
+    _name: ClassVar[str] = "boresight_emission"
+    _unit: ClassVar[pint.Unit] = pint.Unit("deg")
+
+    def __repr__(self) -> str:
+        return f"Boresight emission angle on {self.target} from {self.observer}"
+
+
+@define(repr=False, order=False, eq=False)
+class BoresightPhaseAngleLocal(TargetedProperty):
+    """Local phase angle at the boresight surface intersection (deg)."""
+
+    _name: ClassVar[str] = "boresight_phase_local"
+    _unit: ClassVar[pint.Unit] = pint.Unit("deg")
+
+    def __repr__(self) -> str:
+        return f"Boresight local phase angle on {self.target} from {self.observer}"

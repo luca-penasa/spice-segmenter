@@ -14,8 +14,12 @@ from .coordinates import (
 from .geometry_properties import (
     BoresightAltitude,
     BoresightDec,
+    # Boresight illumination angle scalars
+    BoresightEmissionAngle,
     BoresightGeoLatitude,
     BoresightGeoLongitude,
+    BoresightIncidenceAngle,
+    BoresightPhaseAngleLocal,
     # Boresight intersection geodetic
     BoresightIntersectionGeodetic,
     # Boresight intersection latitudinal
@@ -147,6 +151,9 @@ __all__ = [
     "SubObserverIncidenceAngle",
     "SubObserverEmissionAngle",
     "SubObserverPhaseAngleLocal",
+    "BoresightIncidenceAngle",
+    "BoresightEmissionAngle",
+    "BoresightPhaseAngleLocal",
     # Visibility
     "BodyFOVVisibility",
     # Specialized

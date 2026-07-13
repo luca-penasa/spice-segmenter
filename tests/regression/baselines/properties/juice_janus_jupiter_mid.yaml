@@ -1,11 +1,12 @@
 meta:
-  generated: '2026-03-17T13:36:08Z'
+  generated: '2026-07-13T12:36:54Z'
   mk_version: v432_20230505_001
 values:
   juice_janus_jupiter_angular_size: 0.0003139352075090264
   juice_janus_jupiter_approx_altitude: 445316946.6271302
   juice_janus_jupiter_boresight_altitude: nan
   juice_janus_jupiter_boresight_dec: -23.196824427325826
+  juice_janus_jupiter_boresight_emission: nan
   juice_janus_jupiter_boresight_geo_latitude: nan
   juice_janus_jupiter_boresight_geo_longitude: nan
   juice_janus_jupiter_boresight_geodetic:
@@ -13,6 +14,7 @@ values:
   - nan
   - nan
   juice_janus_jupiter_boresight_groundtrack_velocity: nan
+  juice_janus_jupiter_boresight_incidence: nan
   juice_janus_jupiter_boresight_intersects_body: false
   juice_janus_jupiter_boresight_latitude: nan
   juice_janus_jupiter_boresight_latitudinal:
@@ -20,6 +22,7 @@ values:
   - nan
   - nan
   juice_janus_jupiter_boresight_longitude: nan
+  juice_janus_jupiter_boresight_phase_local: nan
   juice_janus_jupiter_boresight_ra: 277.53296896721406
   juice_janus_jupiter_boresight_radec:
   - 277.53296896721406
@@ -38,6 +41,7 @@ values:
   juice_janus_jupiter_jupiter_rise: true
   juice_janus_jupiter_jupiter_rise_ratio: 1.9997426237976648
   juice_janus_jupiter_jupiter_shine_ideal_condition: false
+  juice_janus_jupiter_relative_speed: 14.15790278024551
   juice_janus_jupiter_sub_obs_point_in_daylight: true
   juice_janus_jupiter_sub_observer_emission: 0.497831140280257
   juice_janus_jupiter_sub_observer_illumination_angles:

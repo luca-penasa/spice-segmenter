@@ -427,9 +427,13 @@ def boresight_dec_scalar(prop: BoresightDec, time_et: float) -> float:
 # ---------------------------------------------------------------------------
 
 from ...properties.geometry_properties import (  # noqa: E402
+    BoresightEmissionAngle,
+    BoresightIncidenceAngle,
+    BoresightPhaseAngleLocal,
     SubObserverEmissionAngle,
     SubObserverIncidenceAngle,
     SubObserverPhaseAngleLocal,
+    _boresight_illum,
     _sub_observer_illum,
 )
 
@@ -450,3 +454,26 @@ def sub_observer_phase_angle_local_scalar(
     prop: SubObserverPhaseAngleLocal, time_et: float,
 ) -> float:
     return float(_sub_observer_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[2])
+
+
+# ---------------------------------------------------------------------------
+# Boresight-intersection illumination angle scalars
+# ---------------------------------------------------------------------------
+
+
+def boresight_incidence_angle_scalar(
+    prop: BoresightIncidenceAngle, time_et: float,
+) -> float:
+    return float(_boresight_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[0])
+
+
+def boresight_emission_angle_scalar(
+    prop: BoresightEmissionAngle, time_et: float,
+) -> float:
+    return float(_boresight_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[1])
+
+
+def boresight_phase_angle_local_scalar(
+    prop: BoresightPhaseAngleLocal, time_et: float,
+) -> float:
+    return float(_boresight_illum(time_et, prop.target, prop.observer, prop.light_time_correction)[2])
