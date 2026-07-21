@@ -776,6 +776,38 @@ class BoresightDec(TargetedProperty):
 
 
 # ---------------------------------------------------------------------------
+# Boresight separation from a target (instrument pointing vs. apparent direction)
+# ---------------------------------------------------------------------------
+
+
+def _boresight_separation(time, target, observer: SpiceInstrument, abcorr: str) -> float:
+    """Return the angular separation (deg) between the instrument boresight and *target*."""
+    time_et = et(time)
+    target_pos = spiceypy.spkpos(target.name, time_et, "J2000", abcorr, observer.name)[0]
+    T = spiceypy.pxform(str(observer.frame), "J2000", time_et)
+    boresight = T @ np.array([0.0, 0.0, 1.0])
+    return np.rad2deg(spiceypy.vsep(boresight, target_pos))
+
+
+@define(repr=False, order=False, eq=False)
+class BoresightSeparation(TargetedProperty):
+    """Angular separation between the instrument boresight and a target body (deg).
+
+    Unlike :class:`~spice_segmenter.properties.visibility_properties.AngularSeparation`
+    (the angle between two bodies as seen from an observer), this compares the
+    instrument's actual pointing direction (boresight) against the apparent
+    direction to ``target`` — e.g. how far the Sun is from where the camera is
+    actually looking.
+    """
+
+    _name: ClassVar[str] = "boresight_separation"
+    _unit: ClassVar[pint.Unit] = pint.Unit("deg")
+
+    def __repr__(self) -> str:
+        return f"Boresight separation of {self.observer} from {self.target}"
+
+
+# ---------------------------------------------------------------------------
 # Illumination angle scalars (SubObserverIlluminationAngles components)
 # ---------------------------------------------------------------------------
 # These share a private helper that wraps the existing illum_angles call.

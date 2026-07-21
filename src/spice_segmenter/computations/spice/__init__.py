@@ -119,6 +119,7 @@ def register_all(engine: SpiceEngine) -> None:
         BoresightRA,
         BoresightRaDec,
         BoresightRadius,
+        BoresightSeparation,
         BoresightSlantRange,
         BoresightX,
         BoresightY,
@@ -154,6 +155,7 @@ def register_all(engine: SpiceEngine) -> None:
         boresight_radec_scalar,
         boresight_radec_vector,
         boresight_radius_scalar,
+        boresight_separation_scalar,
         boresight_slant_scalar,
         boresight_rectangular_scalar,
         boresight_rectangular_vector,
@@ -260,6 +262,9 @@ def register_all(engine: SpiceEngine) -> None:
     engine.register(BoresightRaDec, scalar_fn=boresight_radec_scalar, vector_fn=boresight_radec_vector, compute_unit=("deg", "deg"))
     engine.register(BoresightRA, scalar_fn=boresight_ra_scalar, compute_unit="deg")
     engine.register(BoresightDec, scalar_fn=boresight_dec_scalar, compute_unit="deg")
+
+    # Boresight separation from a target
+    engine.register(BoresightSeparation, scalar_fn=boresight_separation_scalar, compute_unit="deg")
 
     # ------------------------------------------------------------------
     # SubObserver illumination angle scalars  (geometry module)

@@ -32,6 +32,8 @@ from .geometry_properties import (
     # Boresight RA/Dec
     BoresightRaDec,
     BoresightRadius,
+    # Boresight separation from a target
+    BoresightSeparation,
     BoresightSlantRange,
     BoresightX,
     BoresightY,
@@ -149,6 +151,8 @@ __all__ = [
     "BoresightRaDec",
     "BoresightRA",
     "BoresightDec",
+    # Geometry — boresight separation from a target
+    "BoresightSeparation",
     # Geometry — illumination scalars
     "SubObserverIncidenceAngle",
     "SubObserverEmissionAngle",

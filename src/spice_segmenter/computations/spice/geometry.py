@@ -28,6 +28,7 @@ from ...properties.geometry_properties import (
     BoresightRA,
     BoresightRaDec,
     BoresightRadius,
+    BoresightSeparation,
     BoresightSlantRange,
     BoresightX,
     BoresightY,
@@ -49,6 +50,7 @@ from ...properties.geometry_properties import (
     TargetRaDec,
     # private helpers
     _boresight_radec,
+    _boresight_separation,
     _sincpt_geodetic,
     _sincpt_latitudinal,
     _sincpt_srfvec,
@@ -431,6 +433,16 @@ def boresight_ra_scalar(prop: BoresightRA, time_et: float) -> float:
 
 def boresight_dec_scalar(prop: BoresightDec, time_et: float) -> float:
     return _boresight_radec(time_et, _inst(prop), prop.light_time_correction)[1]
+
+
+# ===========================================================================
+# Boresight separation from a target
+# ===========================================================================
+
+def boresight_separation_scalar(prop: BoresightSeparation, time_et: float) -> float:
+    return _boresight_separation(
+        time_et, prop.target, _inst(prop), prop.light_time_correction,
+    )
 
 
 # ---------------------------------------------------------------------------
