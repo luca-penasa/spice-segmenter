@@ -102,6 +102,23 @@ class PhaseAngle(TargetedProperty):
 
 
 @define(repr=False, order=False, eq=False)
+class SolarElongation(TargetedProperty):
+    """Angular separation between the Sun and the target, as seen from the observer (deg).
+
+    Distinct from :class:`PhaseAngle` (the Sun-target-observer angle, measured
+    at the target): this is the angle between the apparent directions to the
+    Sun and to the target in the observer's sky — e.g. how close a target is
+    to the Sun as seen by the observer.
+    """
+
+    _name = "solar_elongation"
+    _unit: ClassVar[pint.Unit] = pint.Unit("deg")
+
+    def __repr__(self) -> str:
+        return f"Solar elongation of {self.target} as seen from {self.observer}"
+
+
+@define(repr=False, order=False, eq=False)
 class Distance(TargetedProperty):
     _name = "distance"
     unit: pint.Unit = field(

@@ -70,6 +70,7 @@ from .observation_properties import (
     DistanceInTargetBodyRadii,
     MinMaxConditionTypes,
     PhaseAngle,
+    SolarElongation,
     SubObserverIlluminationAngles,
     SubObserverIsInDaylight,
     SubObserverPixelScale,
@@ -90,6 +91,7 @@ __all__ = [
     # Observation properties
     "Distance",
     "PhaseAngle",
+    "SolarElongation",
     "AngularSize",
     "TargetSizeOnSensor",
     "AngularSeparation",

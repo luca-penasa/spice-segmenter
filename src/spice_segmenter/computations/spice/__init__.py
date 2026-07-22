@@ -33,6 +33,7 @@ def register_all(engine: SpiceEngine) -> None:
         Distance,
         DistanceInTargetBodyRadii,
         PhaseAngle,
+        SolarElongation,
         SubObserverPixelScale,
         TargetSizeOnSensor,
     )
@@ -47,6 +48,7 @@ def register_all(engine: SpiceEngine) -> None:
         distance_vector,
         phase_angle_scalar,
         phase_angle_vector,
+        solar_elongation_scalar,
         sub_observer_pixel_scale_scalar,
         sub_observer_pixel_scale_vector,
         target_size_on_sensor_scalar,
@@ -56,6 +58,7 @@ def register_all(engine: SpiceEngine) -> None:
 
     engine.register(Distance, scalar_fn=distance_scalar, vector_fn=distance_vector, compute_unit="km")
     engine.register(PhaseAngle, scalar_fn=phase_angle_scalar, vector_fn=phase_angle_vector, compute_unit="rad")
+    engine.register(SolarElongation, scalar_fn=solar_elongation_scalar, compute_unit="deg")
     engine.register(AngularSize, scalar_fn=angular_size_scalar, vector_fn=angular_size_vector, compute_unit="rad")
     engine.register(RelativeSpeed, scalar_fn=relative_speed_scalar, compute_unit="km/s")
     engine.register(

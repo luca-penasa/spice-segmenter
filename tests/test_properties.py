@@ -9,6 +9,7 @@ from spice_segmenter.ops.constant_values import Constant
 from spice_segmenter.properties.observation_properties import (
     Distance,
     PhaseAngle,
+    SolarElongation,
 )
 from spice_segmenter.support.time_types import TIMES_TYPES
 
@@ -38,6 +39,24 @@ def test_phase() -> None:
     assert tc[t1].phase[0] == approx(  # type: ignore
         np.rad2deg(ph1), abs=1e-2,
     )  # abs: we know planetary coverage implements the phase at the sub-sc point, but should be almost there anyway
+
+
+def test_solar_elongation() -> None:
+    elong = SolarElongation(tc.spacecraft, tc.target, light_time_correction="NONE")
+    e1 = elong(t1)
+
+    assert tc[t1].target_separation("SUN")[0] == approx(e1)  # type: ignore
+
+
+def test_solar_elongation_range() -> None:
+    """Test SolarElongation returns values in expected range."""
+    elong = SolarElongation(tc.spacecraft, tc.target, light_time_correction="NONE")
+
+    result = elong(t1)
+
+    # Elongation should be in [0, 180] degrees
+    assert result >= 0
+    assert result <= 180
 
 
 def test_unit_adaptor() -> None:

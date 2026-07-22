@@ -26,6 +26,7 @@ from ...properties.observation_properties import (
     Distance,
     DistanceInTargetBodyRadii,
     PhaseAngle,
+    SolarElongation,
     SubObserverPixelScale,
     TargetSizeOnSensor,
     RelativeSpeed,
@@ -88,6 +89,29 @@ def phase_angle_vector(prop: PhaseAngle, times_et: np.ndarray) -> np.ndarray:
         prop.observer.name,
         prop.light_time_correction,
     )
+
+
+# ---------------------------------------------------------------------------
+# SolarElongation  (vsep of Sun and target directions, as seen from observer)
+# ---------------------------------------------------------------------------
+
+
+def solar_elongation_scalar(prop: SolarElongation, time_et: float) -> float:
+    sun_pos = spiceypy.spkpos(
+        "SUN",
+        time_et,
+        "J2000",
+        prop.light_time_correction,
+        prop.observer.name,
+    )[0]
+    target_pos = spiceypy.spkpos(
+        prop.target.name,
+        time_et,
+        "J2000",
+        prop.light_time_correction,
+        prop.observer.name,
+    )[0]
+    return np.rad2deg(spiceypy.vsep(sun_pos, target_pos))
 
 
 # ---------------------------------------------------------------------------
