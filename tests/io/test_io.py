@@ -556,6 +556,18 @@ class TestOccultation:
         )
         assert constraint_to_expression(c) == "occultation == OccultationTypes.FULL"
 
+    def test_parse_occultation_ignores_context_keys_it_does_not_take(self):
+        """A shared context with a target still works for Occultation (no target field)."""
+        c = parse(
+            "occultation == OccultationTypes.FULL",
+            context={"observer": self.OBS, "target": "IO", "light_time_correction": "NONE"},
+            overrides={"occultation": {"front": "GANYMEDE", "back": "JUPITER"}},
+        )
+        occultation = c.left
+        assert isinstance(occultation, Occultation)
+        assert occultation.front.name == "GANYMEDE"
+        assert occultation.back.name == "JUPITER"
+
     def test_compound_occultation_constraint(self):
         """Occultation combined with another constraint."""
         c = (self._prop("GANYMEDE") == OccultationTypes.FULL) | (

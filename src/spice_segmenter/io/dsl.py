@@ -144,8 +144,14 @@ def _make_property(name: str, context: dict[str, Any], overrides: dict[str, Any]
     }
     # Context kwargs whose class field uses a factory → delegated to SpiceContext.
     spice_ctx_kwargs = {k: v for k, v in context.items() if k in factory_fields}
-    # Context kwargs whose class field does NOT use a factory → pass to constructor.
-    direct_ctx_kwargs = {k: v for k, v in context.items() if k not in factory_fields}
+    # Context kwargs whose class field does NOT use a factory → pass to constructor,
+    # but only if the class has such a field: a shared context may carry keys
+    # (e.g. ``target``) that some properties (e.g. Occultation) do not take.
+    direct_ctx_kwargs = {
+        k: v
+        for k, v in context.items()
+        if k not in factory_fields and (not cls_fields or k in cls_fields)
+    }
 
     # Merge: direct context kwargs + overrides (overrides win for conflicts).
     constructor_kwargs = {**direct_ctx_kwargs, **overrides}
