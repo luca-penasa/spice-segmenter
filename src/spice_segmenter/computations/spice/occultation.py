@@ -36,13 +36,14 @@ def occultation_scalar(prop: Occultation, time_et: float) -> OccultationTypes:
 def occultation_vector(prop: Occultation, times_et: np.ndarray) -> np.ndarray:
     from spiceypy import cyice
 
+    # cyice needs plain strings; the scalar spiceypy wrapper converts with str().
     raw = cyice.occult_v(
         prop.back.name,
         "ELLIPSOID",
-        prop.back.frame,
+        str(prop.back.frame),
         prop.front.name,
         "ELLIPSOID",
-        prop.front.frame,
+        str(prop.front.frame),
         prop.light_time_correction,
         prop.observer.name,
         times_et,

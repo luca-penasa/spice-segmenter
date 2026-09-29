@@ -29,3 +29,22 @@ def test_enum() -> None:
     assert OccultationTypes.FULL == OccultationTypes.ANY
     assert OccultationTypes.ANNULAR == OccultationTypes.ANY
     assert OccultationTypes.NONE != OccultationTypes.ANY
+
+
+def test_vector_evaluation_matches_scalar() -> None:
+    """Vectorised occultation (cyice.occult_v) gives the same states as the scalar path."""
+    import numpy as np
+    import spiceypy
+
+    from spice_segmenter.properties.occultation_types import Occultation
+    from tests import tour_config  # noqa: F401 — loads SPICE kernels as a side-effect
+
+    times = np.arange(
+        spiceypy.str2et("2033-11-22"), spiceypy.str2et("2033-11-29"), 600.0
+    )
+    occultation = Occultation("JUICE_JANUS", "JUPITER", "SUN")
+
+    vector = np.asarray(occultation(times))
+    scalar = np.array([occultation(float(t)) for t in times])
+
+    assert (vector == scalar).all()
