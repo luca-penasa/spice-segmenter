@@ -31,7 +31,7 @@ dependencies = [
     "tqdm>=4.65.0",
     "datetimerange>=2.1.0",
     "pandas>=2.0.1",
-    "quick-spice-manager>=0.0.1",
+    "quick-spice-manager>=0.2.0",
     "cattrs>=23",
     "ptr-editor>=0.4.0",
 ]

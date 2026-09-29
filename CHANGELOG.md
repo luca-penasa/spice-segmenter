@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Constraint language: context keys a property does not take (e.g. `target` for `occultation` or the ring-ansa properties) are no longer passed to its constructor, so one context can be shared across all leaves.
+- Vectorised `Occultation` evaluation passes frame names as strings to `cyice.occult_v` (it raised `TypeError: expected bytes, SpiceFrame found`).
+- Test setup uses the quick-spice-manager 0.2 API (`QuickSpiceManager(...).get_tour_config(instrument=None)`); requires quick-spice-manager >= 0.2.0.
+
 ## 0.0.6 - 2026-06-06
 
 ### Changed
