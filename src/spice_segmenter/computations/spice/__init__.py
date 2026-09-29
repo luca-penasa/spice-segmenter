@@ -367,12 +367,14 @@ def register_all(engine: SpiceEngine) -> None:
     engine.register(Boresight, scalar_fn=boresight_scalar, compute_unit=("km", "km", "km"))
     engine.register(BoresightIntersection, scalar_fn=boresight_intersection_scalar, compute_unit=("km", "km", "km"))
     engine.register(BoresightIntersects, scalar_fn=boresight_intersects_scalar, compute_unit="")
-    engine.register(LatitudinalCoordinates, scalar_fn=latitudinal_scalar, compute_unit=("km", "deg", "deg"))
-    engine.register(SphericalCoordinates, scalar_fn=spherical_scalar, compute_unit=("km", "deg", "deg"))
-    engine.register(CylindricalCoordinates, scalar_fn=cylindrical_scalar, compute_unit=("km", "deg", "km"))
-    engine.register(GeodeticCoordinates, scalar_fn=geodetic_scalar, compute_unit=("deg", "deg", "km"))
-    engine.register(PlanetographicCoordinates, scalar_fn=planetographic_scalar, compute_unit=("deg", "deg", "km"))
-    engine.register(RaDecCoordinates, scalar_fn=radec_scalar, compute_unit=("km", "deg", "deg"))
+    # The SPICE rec* routines return angles in radians: the compute units must
+    # say so, or the evaluator "converts" deg -> rad once more.
+    engine.register(LatitudinalCoordinates, scalar_fn=latitudinal_scalar, compute_unit=("km", "rad", "rad"))
+    engine.register(SphericalCoordinates, scalar_fn=spherical_scalar, compute_unit=("km", "rad", "rad"))
+    engine.register(CylindricalCoordinates, scalar_fn=cylindrical_scalar, compute_unit=("km", "rad", "km"))
+    engine.register(GeodeticCoordinates, scalar_fn=geodetic_scalar, compute_unit=("rad", "rad", "km"))
+    engine.register(PlanetographicCoordinates, scalar_fn=planetographic_scalar, compute_unit=("rad", "rad", "km"))
+    engine.register(RaDecCoordinates, scalar_fn=radec_scalar, compute_unit=("km", "rad", "rad"))
 
     # ------------------------------------------------------------------
     # Reflector (Jupiter shine)

@@ -148,7 +148,9 @@ def geodetic_scalar(prop: GeodeticCoordinates, time_et: float) -> np.ndarray:
     value = _get_vec(prop, time_et)
     if np.isnan(value).any():
         return np.array([np.nan, np.nan, np.nan])
-    return np.array(spiceypy.recgeo(value))
+    return np.array(
+        spiceypy.recgeo(value, prop.vector.target.re, prop.vector.target.f),
+    )
 
 
 def planetographic_scalar(prop: PlanetographicCoordinates, time_et: float) -> np.ndarray:

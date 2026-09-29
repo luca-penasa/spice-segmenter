@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
+- Coordinate transforms (`as_latitudinal`, `as_spherical`, `as_cylindrical`, `as_radec`, `as_geodetic`, `as_planetographic`) returned every angle converted to radians twice (57x too small): they were registered with degree compute units while the SPICE `rec*` routines return radians. Constraints on them (e.g. a latitude or ring opening angle against a degree threshold) were wrong accordingly.
+- `as_geodetic` failed: `recgeo` was called without the body's equatorial radius and flattening.
 - Constraint language: context keys a property does not take (e.g. `target` for `occultation` or the ring-ansa properties) are no longer passed to its constructor, so one context can be shared across all leaves.
 - Vectorised `Occultation` evaluation passes frame names as strings to `cyice.occult_v` (it raised `TypeError: expected bytes, SpiceFrame found`).
 - Test setup uses the quick-spice-manager 0.2 API (`QuickSpiceManager(...).get_tour_config(instrument=None)`); requires quick-spice-manager >= 0.2.0.
