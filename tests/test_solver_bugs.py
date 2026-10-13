@@ -33,6 +33,19 @@ detect direction changes, and only the last interval boundary is found.
 
 Fix: ``is_dec`` must close over ``as_spice_f`` and call
 ``spiceypy.uddc(as_spice_f, t, 1.0)``, ignoring the ``func`` argument.
+
+BUG-3  SpiceEventSolverConfigurator — every ComponentSelector treated as a coordinate
+-------------------------------------------------------------------------------------
+``_get_spice_quantity`` returned ``"coordinate"`` for any ``ComponentSelector``,
+so ``SpiceEventSolver.can_solve`` claimed constraints on components of
+non-coordinate vector properties (e.g.
+``TargetProperties.sub_sc_illumination_angles.incidence``) and
+``set_from_constraint`` then failed with
+``AttributeError: 'SubObserverIlluminationAngles' object has no attribute 'vector'``.
+
+Fix: only components of a coordinate system (Latitudinal, Spherical,
+Cylindrical, Geodetic, Planetographic, RA/DEC) map to the SPICE COORDINATE
+quantity; anything else falls through to the generic solver.
 """
 from __future__ import annotations
 
@@ -249,3 +262,43 @@ class TestBug2GenericScalarSolverIsDecCallback:
                 "BUG-2 precondition: at a decreasing point, uddc(as_spice_f) "
                 "and uddc(udf_stub) should differ. They don't — check the test time."
             )
+
+
+# ===========================================================================
+# BUG-3: ComponentSelector of a non-coordinate property routed to gfevnt
+# ===========================================================================
+
+class TestBug3NonCoordinateComponentSelector:
+    """Constraints on illumination-angle components must use the generic solver."""
+
+    START = "2035-04-01"
+    END = "2035-04-02"
+
+    @staticmethod
+    def _incidence():
+        from spice_segmenter import TargetProperties
+
+        return TargetProperties(TARGET, OBSERVER).sub_sc_illumination_angles.incidence
+
+    def test_not_classified_as_spice_coordinate(self):
+        from spice_segmenter.constraint_solver.constraint_solver import (
+            SpiceEventSolverConfigurator,
+        )
+
+        assert SpiceEventSolverConfigurator._get_spice_quantity(self._incidence()) is None
+
+    def test_incidence_constraint_matches_dense_sampling(self):
+        incidence = self._incidence()
+        with config.override(solver_step="10 min"):
+            result = (incidence < "90 deg").solve(self.START, self.END)
+
+        times = pd.date_range(self.START, self.END, freq="1 min")
+        lit = np.asarray(incidence(times), dtype=float) < 90.0
+        crossings = times[1:][np.diff(lit.astype(int)) != 0]
+        assert len(crossings) >= 2, "test window should contain lit/unlit transitions"
+
+        boundaries = [pd.Timestamp(t) for seg in result for t in (seg.start, seg.end)]
+        inner = [b for b in boundaries if pd.Timestamp(self.START) < b < pd.Timestamp(self.END)]
+        assert len(inner) == len(crossings)
+        for b, c in zip(sorted(inner), crossings):
+            assert abs((b - c).total_seconds()) <= 60

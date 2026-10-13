@@ -230,9 +230,28 @@ class SpiceEventSolverConfigurator:
     def _get_spice_quantity(prop) -> str | None:
         """Return the SPICE gfevnt quantity name for *prop*, or ``None``."""
         from ..properties.component_selector import ComponentSelector
+        from ..properties.coordinates import (
+            CylindricalCoordinates,
+            GeodeticCoordinates,
+            LatitudinalCoordinates,
+            PlanetographicCoordinates,
+            RaDecCoordinates,
+            SphericalCoordinates,
+        )
 
+        # Only components of a coordinate system map to the SPICE "COORDINATE"
+        # quantity; other vector properties (e.g. illumination angles) must fall
+        # through to the generic solver.
+        coordinate_systems = (
+            LatitudinalCoordinates,
+            SphericalCoordinates,
+            CylindricalCoordinates,
+            GeodeticCoordinates,
+            PlanetographicCoordinates,
+            RaDecCoordinates,
+        )
         if isinstance(prop, ComponentSelector):
-            return "coordinate"
+            return "coordinate" if isinstance(prop.vector, coordinate_systems) else None
         name = getattr(prop, "name", None)
         if name and name in SpiceEventSolverConfigurator.known_properties():
             return name
