@@ -1,5 +1,5 @@
 meta:
-  generated: '2026-07-13T12:36:54Z'
+  generated: '2026-10-17T06:27:02Z'
   mk_version: v432_20230505_001
 values:
   juice_janus_callisto_ganymede_occultation: NONE
@@ -34,6 +34,7 @@ values:
   - nan
   - nan
   - nan
+  juice_janus_ganymede_boresight_separation: 87.4788376600285
   juice_janus_ganymede_boresight_slant: nan
   juice_janus_ganymede_boresight_x: nan
   juice_janus_ganymede_boresight_y: nan
@@ -43,12 +44,15 @@ values:
   juice_janus_ganymede_distance_in_target_radii: 338528.1277135579
   juice_janus_ganymede_europa_occultation: NONE
   juice_janus_ganymede_fov_visibility: false
+  juice_janus_ganymede_groundtrack_angular_rate: 2.986527824483607e-11
   juice_janus_ganymede_io_occultation: NONE
   juice_janus_ganymede_jupiter_occultation: NONE
   juice_janus_ganymede_jupiter_rise: false
   juice_janus_ganymede_jupiter_rise_ratio: -5.323906473843597
   juice_janus_ganymede_jupiter_shine_ideal_condition: false
+  juice_janus_ganymede_pushbroom_repetition_time: 904652439.5112169
   juice_janus_ganymede_relative_speed: 39.59008549038722
+  juice_janus_ganymede_solar_elongation: 2.772935606520412
   juice_janus_ganymede_sub_obs_point_in_daylight: true
   juice_janus_ganymede_sub_observer_emission: 1.3421496679085963e-10
   juice_janus_ganymede_sub_observer_illumination_angles:

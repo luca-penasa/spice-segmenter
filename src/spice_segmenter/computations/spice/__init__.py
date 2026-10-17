@@ -301,6 +301,8 @@ def register_all(engine: SpiceEngine) -> None:
     #              AngularSeparation, SubObserverPointVelocity
     # ------------------------------------------------------------------
     from ...properties.observation_properties import (
+        GroundtrackAngularRate,
+        PushbroomRepetitionTime,
         SubObserverIlluminationAngles,
         SubObserverIsInDaylight,
         SubObserverPointVelocity,
@@ -308,6 +310,8 @@ def register_all(engine: SpiceEngine) -> None:
     from ...properties.visibility_properties import AngularSeparation
     from .observation import (
         angular_separation_scalar,
+        groundtrack_angular_rate_scalar,
+        pushbroom_repetition_time_scalar,
         sub_observer_illumination_angles_scalar,
         sub_observer_is_in_daylight_scalar,
         sub_observer_point_velocity_scalar,
@@ -320,6 +324,16 @@ def register_all(engine: SpiceEngine) -> None:
     engine.register(SubObserverIsInDaylight, scalar_fn=sub_observer_is_in_daylight_scalar, compute_unit="")
     engine.register(AngularSeparation, scalar_fn=angular_separation_scalar, compute_unit="rad")
     engine.register(SubObserverPointVelocity, scalar_fn=sub_observer_point_velocity_scalar, compute_unit="km/s")
+    engine.register(
+        GroundtrackAngularRate,
+        scalar_fn=groundtrack_angular_rate_scalar,
+        compute_unit="rad/s",
+    )
+    engine.register(
+        PushbroomRepetitionTime,
+        scalar_fn=pushbroom_repetition_time_scalar,
+        compute_unit="s",
+    )
 
     # ------------------------------------------------------------------
     # Visibility: AngularSeparation is actually in observation_properties

@@ -1,5 +1,5 @@
 meta:
-  generated: '2026-07-13T12:36:54Z'
+  generated: '2026-10-17T06:27:02Z'
   mk_version: v432_20230505_001
 values:
   juice_janus_callisto_angular_size: 1.0832261340096659e-05
@@ -32,6 +32,7 @@ values:
   - nan
   - nan
   - nan
+  juice_janus_callisto_boresight_separation: 69.85872951097969
   juice_janus_callisto_boresight_slant: nan
   juice_janus_callisto_boresight_x: nan
   juice_janus_callisto_boresight_y: nan
@@ -41,12 +42,15 @@ values:
   juice_janus_callisto_europa_occultation: NONE
   juice_janus_callisto_fov_visibility: false
   juice_janus_callisto_ganymede_occultation: NONE
+  juice_janus_callisto_groundtrack_angular_rate: 2.3625569633340366e-11
   juice_janus_callisto_io_occultation: NONE
   juice_janus_callisto_jupiter_occultation: NONE
   juice_janus_callisto_jupiter_rise: false
   juice_janus_callisto_jupiter_rise_ratio: -5.04226291598071
   juice_janus_callisto_jupiter_shine_ideal_condition: false
+  juice_janus_callisto_pushbroom_repetition_time: 1143578641.2846906
   juice_janus_callisto_relative_speed: 7.728053131480159
+  juice_janus_callisto_solar_elongation: 176.18835396258123
   juice_janus_callisto_sub_obs_point_in_daylight: true
   juice_janus_callisto_sub_observer_emission: 2.0333810773525778e-10
   juice_janus_callisto_sub_observer_illumination_angles:

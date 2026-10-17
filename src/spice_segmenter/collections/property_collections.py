@@ -7,7 +7,9 @@ from spice_segmenter.properties.observation_properties import (
     AngularSize,
     ApproximatedAltitude,
     Distance,
+    GroundtrackAngularRate,
     PhaseAngle,
+    PushbroomRepetitionTime,
     SubObserverIlluminationAngles,
     SubObserverPixelScale,
     SubObserverPointVelocity,
@@ -52,6 +54,16 @@ class TargetProperties:
     @cached_property
     def sub_sc_velocity(self) -> SubObserverPointVelocity:
         return SubObserverPointVelocity(observer=self.observer, target=self.target)
+
+    @cached_property
+    def groundtrack_angular_rate(self) -> GroundtrackAngularRate:
+        """Sub-observer ground speed / altitude (rad/s): mosaic / pushbroom switch."""
+        return GroundtrackAngularRate(observer=self.observer, target=self.target)
+
+    @cached_property
+    def pushbroom_repetition_time(self) -> PushbroomRepetitionTime:
+        """Time for the ground under nadir to advance one frame (long FOV side, 10%)."""
+        return PushbroomRepetitionTime(observer=self.observer, target=self.target)
 
     @cached_property
     def sub_sc_illumination_angles(self) -> SubObserverIlluminationAngles:

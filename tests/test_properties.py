@@ -215,3 +215,103 @@ def test_property_repr() -> None:
     assert len(phase_str) > 0
     assert "Distance" in d_str or "distance" in d_str.lower()
     assert "Phase" in phase_str or "phase" in phase_str.lower()
+
+
+def test_groundtrack_angular_rate() -> None:
+    """GroundtrackAngularRate = sub-observer ground speed / altitude, in rad/s."""
+    from spice_segmenter import TargetProperties
+    from spice_segmenter.properties.observation_properties import (
+        ApproximatedAltitude,
+        GroundtrackAngularRate,
+        SubObserverPointVelocity,
+    )
+
+    rate = GroundtrackAngularRate(tc.spacecraft, "GANYMEDE")
+    v = SubObserverPointVelocity(tc.spacecraft, "GANYMEDE")
+    alt = ApproximatedAltitude(tc.spacecraft, "GANYMEDE")
+
+    assert rate.unit == pint.Unit("rad/s")
+    assert rate(t1) == approx(v(t1) / alt(t1), rel=1e-9)
+    assert rate(t1) > 0
+    assert "angular rate" in repr(rate).lower()
+
+    tp = TargetProperties("GANYMEDE", tc.spacecraft)
+    assert tp.groundtrack_angular_rate(t1) == approx(rate(t1), rel=1e-9)
+
+
+def test_groundtrack_angular_rate_constraint() -> None:
+    """A rate threshold given with units solves, and every solution respects it."""
+    from spice_segmenter.properties.observation_properties import (
+        GroundtrackAngularRate,
+    )
+
+    rate = GroundtrackAngularRate(tc.spacecraft, "GANYMEDE")
+    threshold = 0.5 * rate(t1)  # rad/s; t1 meets the constraint by construction
+    window = (t1 - np.timedelta64(1, "D"), t1 + np.timedelta64(1, "D"))
+    got = (rate > f"{threshold} rad/s").solve(window)
+    assert len(got) > 0
+    assert got.contains(t1)
+    for seg in got:
+        mid = seg.start + (seg.end - seg.start) / 2
+        mid = mid.tz_localize(None) if mid.tzinfo else mid
+        assert rate(mid.to_datetime64()) > threshold
+
+
+def test_pushbroom_repetition_time() -> None:
+    """Repetition time = (1 - overlap) x FOV side / ground-track angular rate."""
+    from spice_segmenter import TargetProperties
+    from spice_segmenter.properties.observation_properties import (
+        GroundtrackAngularRate,
+        PushbroomRepetitionTime,
+    )
+
+    rep = PushbroomRepetitionTime("JUICE_JANUS", "GANYMEDE")
+    rate = GroundtrackAngularRate("JUICE_JANUS", "GANYMEDE")
+    fov = (rep.observer.fov_along_track, rep.observer.fov_cross_track)
+
+    assert rep.unit == pint.Unit("s")
+    assert rep.frame_step_rad == approx(0.9 * max(fov))
+    assert rep(t1) == approx(0.9 * max(fov) / rate(t1), rel=1e-9)
+
+    short = PushbroomRepetitionTime(
+        "JUICE_JANUS", "GANYMEDE", fov_axis="short", overlap=0.2,
+    )
+    assert short(t1) == approx(0.8 * min(fov) / rate(t1), rel=1e-9)
+    assert "repetition time" in repr(rep).lower()
+
+    tp = TargetProperties("GANYMEDE", "JUICE_JANUS")
+    assert tp.pushbroom_repetition_time(t1) == approx(rep(t1), rel=1e-9)
+
+
+def test_pushbroom_repetition_time_validation() -> None:
+    import pytest
+
+    from spice_segmenter.properties.observation_properties import (
+        PushbroomRepetitionTime,
+    )
+
+    with pytest.raises(ValueError, match="fov_axis"):
+        PushbroomRepetitionTime("JUICE_JANUS", "GANYMEDE", fov_axis="diagonal")
+    with pytest.raises(ValueError, match="overlap"):
+        PushbroomRepetitionTime("JUICE_JANUS", "GANYMEDE", overlap=1.0)
+
+
+def test_pushbroom_repetition_time_dsl_and_serialization() -> None:
+    """The DSL finds the property by name (with overrides), and it round-trips."""
+    from spice_segmenter import Constraint, create_property_converter
+    from spice_segmenter.io.dsl import parse
+
+    ctx = {"observer": "JUICE_JANUS", "target": "GANYMEDE"}
+    c = parse("pushbroom_repetition_time < '5.7 min'", context=ctx)
+    assert c.left.overlap == approx(0.10)
+    c2 = parse(
+        "pushbroom_repetition_time > '15.7 s'",
+        context=ctx,
+        overrides={"pushbroom_repetition_time": {"overlap": 0.2}},
+    )
+    assert c2.left.overlap == approx(0.2)
+
+    converter = create_property_converter()
+    back = converter.structure(converter.unstructure(c2), Constraint)
+    assert back.left.overlap == approx(0.2)
+    assert back.left(t1) == approx(c2.left(t1), rel=1e-9)

@@ -141,6 +141,77 @@ class SubObserverPointVelocity(TargetedProperty):
 
 
 @define(repr=False, order=False, eq=False)
+class GroundtrackAngularRate(TargetedProperty):
+    """Ground-track angular rate: sub-observer ground speed / altitude (rad/s).
+
+    The rate at which the surface under nadir sweeps across a nadir-pointed
+    instrument (small-angle approximation): the scene crosses a field of view
+    of angular length ``L`` in ``L / rate`` seconds. It is the natural switch
+    between point-and-stare mosaics and pushbroom imaging, and it sets the
+    frame rate a pushbroom pass needs. Ground speed as
+    :class:`SubObserverPointVelocity`, altitude as
+    :class:`ApproximatedAltitude` (distance - radius).
+    """
+
+    _name = "groundtrack_angular_rate"
+    unit: pint.Unit = field(
+        default=pint.Unit("rad/s"), kw_only=True, converter=_to_pint_unit,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"Ground-track angular rate of the sub-{self.observer} point "
+            f"on {self.target} (ground speed / altitude)."
+        )
+
+
+@define(repr=False, order=False, eq=False)
+class PushbroomRepetitionTime(TargetedProperty):
+    """Time for the surface under nadir to advance by one frame (s).
+
+    The frame repetition time a pushbroom pass needs: one FOV length along
+    track, less the ``overlap`` between consecutive frames, divided by the
+    :class:`GroundtrackAngularRate`. It reads directly against the instrument:
+    a frame whose filters take longer to acquire than this leaves a gap, and
+    when it is longer than the time a point-and-stare mosaic needs per
+    footprint, mosaics cover ground faster than a pushbroom pass.
+
+    The observer must be an instrument (its FOV from the IK). ``fov_axis``
+    selects the FOV side flown along track: ``"long"`` (default) or
+    ``"short"``.
+    """
+
+    _name = "pushbroom_repetition_time"
+    unit: pint.Unit = field(
+        default=pint.Unit("s"), kw_only=True, converter=_to_pint_unit,
+    )
+    overlap: float = field(default=0.10, kw_only=True)
+    fov_axis: str = field(default="long", kw_only=True)
+    FOV_AXES: ClassVar[tuple[str, ...]] = ("long", "short")
+
+    def __attrs_post_init__(self) -> None:
+        if self.fov_axis not in self.FOV_AXES:
+            msg = f"Unknown fov_axis {self.fov_axis!r}. Choose from {self.FOV_AXES}"
+            raise ValueError(msg)
+        if not 0.0 <= self.overlap < 1.0:
+            msg = f"overlap must be in [0, 1), got {self.overlap}"
+            raise ValueError(msg)
+
+    @property
+    def frame_step_rad(self) -> float:
+        """Angular advance between consecutive frames (rad)."""
+        sides = (self.observer.fov_along_track, self.observer.fov_cross_track)
+        side = max(sides) if self.fov_axis == "long" else min(sides)
+        return (1.0 - self.overlap) * float(side)
+
+    def __repr__(self) -> str:
+        return (
+            f"Pushbroom frame repetition time of {self.observer} over {self.target} "
+            f"({self.fov_axis} FOV side along track, {self.overlap:.0%} overlap)."
+        )
+
+
+@define(repr=False, order=False, eq=False)
 class RelativeSpeed(TargetedProperty):
     _name = "relative_speed"
     unit: pint.Unit = field(

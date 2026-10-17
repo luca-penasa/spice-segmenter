@@ -289,6 +289,18 @@ def sub_observer_point_velocity_scalar(prop, time_et: float) -> float:
     return groundtrack_velocity(prop.target, state)
 
 
+def groundtrack_angular_rate_scalar(prop, time_et: float) -> float:
+    """Sub-observer ground speed (km/s) / approximated altitude (km), in rad/s."""
+    speed = sub_observer_point_velocity_scalar(prop, time_et)
+    return speed / approx_altitude_scalar(prop, time_et)
+
+
+def pushbroom_repetition_time_scalar(prop, time_et: float) -> float:
+    """Frame step (rad) / ground-track angular rate (rad/s), in s (inf if still)."""
+    rate = groundtrack_angular_rate_scalar(prop, time_et)
+    return prop.frame_step_rad / rate if rate > 0 else float("inf")
+
+
 def relative_speed_scalar(prop: RelativeSpeed, time_et: float) -> float:
     """Return |v_rel| (km/s) of target w.r.t. observer for each input time."""
 

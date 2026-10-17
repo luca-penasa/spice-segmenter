@@ -1,5 +1,5 @@
 meta:
-  generated: '2026-07-13T12:36:54Z'
+  generated: '2026-10-17T06:27:02Z'
   mk_version: v432_20230505_001
 values:
   juice_janus_callisto_europa_occultation: NONE
@@ -33,6 +33,7 @@ values:
   - nan
   - nan
   - nan
+  juice_janus_europa_boresight_separation: 69.53531105531277
   juice_janus_europa_boresight_slant: nan
   juice_janus_europa_boresight_x: nan
   juice_janus_europa_boresight_y: nan
@@ -42,12 +43,15 @@ values:
   juice_janus_europa_distance_in_target_radii: 285286.64501573564
   juice_janus_europa_fov_visibility: false
   juice_janus_europa_ganymede_occultation: NONE
+  juice_janus_europa_groundtrack_angular_rate: 7.178563989797472e-11
   juice_janus_europa_io_occultation: NONE
   juice_janus_europa_jupiter_occultation: NONE
   juice_janus_europa_jupiter_rise: false
   juice_janus_europa_jupiter_rise_ratio: -1.5499469829528447
   juice_janus_europa_jupiter_shine_ideal_condition: false
+  juice_janus_europa_pushbroom_repetition_time: 376366315.87140685
   juice_janus_europa_relative_speed: 27.77776567888102
+  juice_janus_europa_solar_elongation: 176.49568944941947
   juice_janus_europa_sub_obs_point_in_daylight: true
   juice_janus_europa_sub_observer_emission: 0.02969409062841184
   juice_janus_europa_sub_observer_illumination_angles:
