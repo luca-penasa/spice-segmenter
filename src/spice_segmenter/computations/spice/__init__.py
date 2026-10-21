@@ -48,12 +48,12 @@ def register_all(engine: SpiceEngine) -> None:
         distance_vector,
         phase_angle_scalar,
         phase_angle_vector,
-        relative_speed_scalar,
         solar_elongation_scalar,
         sub_observer_pixel_scale_scalar,
         sub_observer_pixel_scale_vector,
         target_size_on_sensor_scalar,
         target_size_on_sensor_vector,
+        relative_speed_scalar
     )
 
     engine.register(Distance, scalar_fn=distance_scalar, vector_fn=distance_vector, compute_unit="km")
@@ -158,10 +158,10 @@ def register_all(engine: SpiceEngine) -> None:
         boresight_radec_scalar,
         boresight_radec_vector,
         boresight_radius_scalar,
-        boresight_rectangular_scalar,
-        boresight_rectangular_vector,
         boresight_separation_scalar,
         boresight_slant_scalar,
+        boresight_rectangular_scalar,
+        boresight_rectangular_vector,
         boresight_x_scalar,
         boresight_y_scalar,
         boresight_z_scalar,

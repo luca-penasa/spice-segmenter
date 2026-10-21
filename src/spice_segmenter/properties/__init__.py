@@ -19,6 +19,7 @@ from .geometry_properties import (
     BoresightGeoLatitude,
     BoresightGeoLongitude,
     BoresightIncidenceAngle,
+    BoresightPhaseAngleLocal,
     # Boresight intersection geodetic
     BoresightIntersectionGeodetic,
     # Boresight intersection latitudinal
@@ -27,7 +28,6 @@ from .geometry_properties import (
     BoresightIntersectionRectangular,
     BoresightLatitude,
     BoresightLongitude,
-    BoresightPhaseAngleLocal,
     BoresightRA,
     # Boresight RA/Dec
     BoresightRaDec,

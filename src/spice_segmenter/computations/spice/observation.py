@@ -15,12 +15,10 @@ directly rather than round-tripping through the engine for efficiency.
 """
 
 from __future__ import annotations
-
 from os import times
 
 import numpy as np
 import spiceypy
-from planetary_coverage import et
 
 from ...properties.observation_properties import (
     AngularSize,
@@ -28,11 +26,13 @@ from ...properties.observation_properties import (
     Distance,
     DistanceInTargetBodyRadii,
     PhaseAngle,
-    RelativeSpeed,
     SolarElongation,
     SubObserverPixelScale,
     TargetSizeOnSensor,
+    RelativeSpeed,
 )
+
+from planetary_coverage import et
 
 # ---------------------------------------------------------------------------
 # Distance
