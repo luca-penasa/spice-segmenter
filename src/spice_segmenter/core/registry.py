@@ -22,7 +22,7 @@ import textwrap
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
-import attrs
+from spice_segmenter.support.fields import fields, is_model
 
 if TYPE_CHECKING:
     from spice_segmenter.core.property import Property
@@ -34,7 +34,7 @@ _CONTEXT_FIELDS = {"observer", "target", "light_time_correction"}
 def _field_info(cls: type[Property]) -> tuple[list[str], list[str], list[str]]:
     """Return (required, context, optional) parameter name lists for *cls*.
 
-    - **required**: ``init=True`` fields with ``default=NOTHING``
+    - **required**: ``init=True`` fields without a default
     - **context**: ``init=True`` fields whose name is in ``_CONTEXT_FIELDS``
     - **optional**: ``init=True`` fields with any explicit default/factory,
       excluding context fields
@@ -43,19 +43,17 @@ def _field_info(cls: type[Property]) -> tuple[list[str], list[str], list[str]]:
     context: list[str] = []
     optional: list[str] = []
 
-    try:
-        fields = attrs.fields(cls)
-    except attrs.exceptions.NotAnAttrsClassError:
+    if not is_model(cls):
         return required, context, optional
 
-    for f in fields:
+    for f in fields(cls):
         if not f.init:
             continue
         if f.name.startswith("_"):
             continue
         if f.name in _CONTEXT_FIELDS:
             context.append(f.name)
-        elif f.default is attrs.NOTHING:
+        elif not f.has_default:
             required.append(f.name)
         else:
             optional.append(f.name)
@@ -95,15 +93,15 @@ class PropertyRegistry:
     def register(self, name: str, cls: type[Property]) -> type[Property]:
         """Register *cls* under *name*.  Called by ``Property.__init_subclass__``.
 
-        Three cases are handled:
+        Four cases are handled:
 
         1. **No existing entry** — register and return.
         2. **Same class object** — no-op (idempotent re-import).
-        3. **attrs slots-rewrite** — ``attrs`` with ``__slots__`` replaces a
-           class by re-calling ``type(cls.__name__, cls.__bases__, ...)`` which
-           re-fires ``__init_subclass__``.  The pre-slots class (first call)
-           has no ``__attrs_attrs__`` in its own ``__dict__``; the post-slots
-           class (second call) does.  We update the registry to the new object.
+        3. **slots rewrite** — a slotted dataclass replaces a class by
+           re-calling ``type(cls.__name__, cls.__bases__, ...)`` which re-fires
+           ``__init_subclass__``.  The pre-slots class (first call) has no
+           ``__slots__`` in its own ``__dict__``; the post-slots class (second
+           call) does.  We update the registry to the new object.
         4. **Genuine conflict** — two separate class definitions claim the same
            property name.  This causes ``type(a) is type(b)`` to fail for
            values produced by different code paths, and leads to intermittent
@@ -118,12 +116,13 @@ class PropertyRegistry:
             # Case 2: idempotent re-import, nothing to do.
             pass
         elif (
-            "__attrs_attrs__" not in existing.__dict__
-            and "__attrs_attrs__" in cls.__dict__
-            and existing.__qualname__ == cls.__qualname__
+            "__slots__" not in existing.__dict__
+            and "__slots__" in cls.__dict__
+            # the rewritten class loses __qualname__ (``<locals>`` prefix), compare names
+            and existing.__name__ == cls.__name__
             and existing.__module__ == cls.__module__
         ):
-            # Case 3: attrs slots-rewrite — update to the authoritative object.
+            # Case 3: slots rewrite — update to the authoritative object.
             self._store[name] = cls
         else:
             # Case 4: genuine conflict between two different classes.
@@ -136,6 +135,17 @@ class PropertyRegistry:
                 f"or import the existing class instead of redefining it.",
             )
         return cls
+
+    def rebind(self, old: type[Property], new: type[Property]) -> None:
+        """Replace every registration of *old* with *new*.
+
+        Called when a slotted dataclass replaces the class object *old* that
+        registered itself (e.g. a class whose ``_name`` is a field default,
+        which the post-slots class no longer exposes as a string).
+        """
+        for name, cls in self._store.items():
+            if cls is old:
+                self._store[name] = new
 
     # ------------------------------------------------------------------
     # Mapping-like read API

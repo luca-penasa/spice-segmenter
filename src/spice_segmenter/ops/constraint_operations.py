@@ -3,7 +3,6 @@ from typing import Any
 
 import pint
 from anytree import Node
-from attrs import define, field
 from loguru import logger as log
 
 from ..core.constraints import ConstraintBase, ConstraintTypes
@@ -12,12 +11,14 @@ from ..properties.observation_properties import (
     MinMaxConditionTypes,
 )
 from ..support.decorators import vectorize
+from ..support.model import segmenter_dataclass
 from ..support.time_types import TIMES_TYPES
+from ..support.types import PropertyNode
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class WrappedConstraint(ConstraintBase):
-    parent: ConstraintBase
+    parent: PropertyNode
 
     @property
     def name(self) -> str:
@@ -51,7 +52,7 @@ class WrappedConstraint(ConstraintBase):
         return self.parent(time)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class Inverted(WrappedConstraint):
     def __repr__(self) -> str:
         return "NOT " + super().__repr__()
@@ -68,13 +69,13 @@ class Inverted(WrappedConstraint):
         return ~self.parent(time)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class MinMaxConstraint(ConstraintBase):
-    wrapped_property: Property
-    minmax_type: MinMaxConditionTypes = field(converter=MinMaxConditionTypes)
+    wrapped_property: PropertyNode
+    minmax_type: MinMaxConditionTypes
     adjust: float = 0.0  # this should be a pint quantity
 
-    def __attrs_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         if "local" in self.minmax_type.value:
             if self.adjust != 0.0:
                 log.warning(

@@ -5,9 +5,12 @@ Adapted from the original implementation by Klaus-Dieter Matz (DLR), end of 2024
 import numpy as np
 import pint
 import spiceypy
-from attrs import define, field
 from planetary_coverage import et
 from planetary_coverage.spice import SpiceBody
+from pydantic import Field
+
+from spice_segmenter.support.model import segmenter_dataclass
+from spice_segmenter.support.types import SpiceBodyField
 
 from ..core.property import BooleanProperty, Property, PropertyTypes
 from ..properties.component_selector import ComponentSelector
@@ -66,15 +69,15 @@ def pseudo_phase_angle(sc2sub_sc, sub_sc2reflector):
     return np.rad2deg(spiceypy.vsep(-sc2sub_sc, sub_sc2reflector))
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class ShineProperties(TargetedProperty):
     _name = "shine_properties"
     _unit = [pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg"), pint.Unit("deg")]
     _type = PropertyTypes.VECTOR
     _vector_output_shape = "()->(n)"
 
-    reflector = field(converter=SpiceBody, kw_only=True)
-    light_source = field(converter=SpiceBody, default="SUN", kw_only=True)
+    reflector: SpiceBodyField = Field(kw_only=True)
+    light_source: SpiceBodyField = Field(default="SUN", kw_only=True)
 
     def __repr__(self) -> str:
         return f"Shine properties for the sub observer point on {self.target}, illuminated by reflected light of {self.reflector}, as seen from {self.observer}"
@@ -101,7 +104,7 @@ class ShineProperties(TargetedProperty):
         return ComponentSelector(self, 3, "reflector_angular_radius")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class JupiterRise(TargetedPropertyMixin, BooleanProperty):
     _name = "jupiter_rise"
     _unit = pint.Unit("dimensionless")
@@ -111,7 +114,7 @@ class JupiterRise(TargetedPropertyMixin, BooleanProperty):
         return f"Jupiter rise status for the sub-{self.observer} {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class JupiterRiseRatio(TargetedProperty):
     _name = "jupiter_rise_ratio"
     _unit = pint.Unit("dimensionless")
@@ -121,14 +124,14 @@ class JupiterRiseRatio(TargetedProperty):
         return f"Jupiter rise ratio (elevation/apparent jupiter radius) for the sub-{self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class JupiterShineIdealCondition(TargetedPropertyMixin, BooleanProperty):
     _name = "jupiter_shine_ideal_condition"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
 
-    max_apparent_jupiter_phase = field(default=90)  # half disk is illuminated
-    min_rise_ratio = field(default=1)  # half above the sub-observer horizon
+    max_apparent_jupiter_phase: int | float = 90  # half disk is illuminated
+    min_rise_ratio: int | float = 1  # half above the sub-observer horizon
 
     def __repr__(self) -> str:
         return f"Sub-{self.observer} on {self.target} is in ideal condition for Jupiter shine (apparent phase of Jupiter < {self.max_apparent_jupiter_phase} and el/radius of jupiter > {self.min_rise_ratio})"

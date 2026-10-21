@@ -18,6 +18,7 @@ from .search_reporter import (
 )
 from .serialization import (
     create_property_converter,
+    json_schema,
     structure_constraint,
     unstructure_constraint,
 )
@@ -49,6 +50,7 @@ __all__ = [
     "get_current_observer",
     "get_current_target",
     "get_default_reporter_class",
+    "json_schema",
     "structure_constraint",
     "unstructure_constraint",
     "vectorize",

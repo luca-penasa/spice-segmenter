@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import Any
 
 import pandas as pd
-from attr import define, field
 from planetary_coverage import utc
+from pydantic import Field
 from time_segments import TimeSegmentMixin
 
+from ..support.model import segmenter_dataclass
 from ..support.spice_utilities import et
 from ..support.time_types import TIMES_TYPES
+from ..support.types import converted
 
 _POINT_THRESHOLD_S = 1e-6  # 1 µs — any segment shorter than this is a point event
 
@@ -25,7 +28,14 @@ def _to_timestamp(value: object) -> pd.Timestamp:
     return pd.Timestamp(str(value))  # type: ignore[arg-type]
 
 
-@define(frozen=True, repr=False, order=False)
+_Timestamp = converted(
+    _to_timestamp,
+    serializer=lambda t: t.isoformat(),
+    json_schema={"type": "string", "format": "date-time"},
+)
+
+
+@segmenter_dataclass(frozen=True, eq=True)
 class TimeSegment(TimeSegmentMixin):
     """An atomic, immutable time interval with pandas-native timestamps.
 
@@ -36,7 +46,7 @@ class TimeSegment(TimeSegmentMixin):
     .. note::
        The interval is **frozen**: mutating methods inherited from the mixin
        (``set_duration``, ``set_times_from_midpoint``, …) raise
-       ``attrs.exceptions.FrozenInstanceError``.  Use :class:`TimeSegmentsCollection`
+       ``dataclasses.FrozenInstanceError``.  Use :class:`TimeSegmentsCollection`
        to build mutable collections.
 
     A ``TimeSegment`` whose ``start == end`` (within 1 µs) is called a
@@ -69,12 +79,12 @@ class TimeSegment(TimeSegmentMixin):
     True
     """
 
-    start: pd.Timestamp = field(converter=_to_timestamp)
-    end: pd.Timestamp = field(converter=_to_timestamp)
-    label: str = field(default="", kw_only=True)
-    value: float | None = field(default=None, kw_only=True)
-    property_name: str = field(default="", kw_only=True)
-    metadata: dict[str, Any] = field(factory=dict, kw_only=True)
+    start: _Timestamp
+    end: _Timestamp
+    label: str = Field(default="", kw_only=True)
+    value: Any = Field(default=None, kw_only=True)
+    property_name: str = Field(default="", kw_only=True)
+    metadata: dict[str, Any] = Field(default_factory=dict, kw_only=True)
 
     # ------------------------------------------------------------------
     # Point-event helpers
@@ -140,6 +150,25 @@ class TimeSegment(TimeSegmentMixin):
     def to_et(self) -> tuple[float, float]:
         """Return ``(start_et, end_et)`` as SPICE ephemeris time floats."""
         return et(self.start), et(self.end)
+
+    def equals(self, other: TimeSegment, *, exclude: str | list[str] | None = None) -> bool:
+        """Compare with *other*, optionally ignoring the fields named in *exclude*.
+
+        Overrides the ``time_segments`` mixin implementation, which reads
+        attrs fields.
+        """
+        if exclude is None:
+            return self == other
+        exclude_set = {exclude} if isinstance(exclude, str) else set(exclude)
+
+        def as_dict(seg: Any) -> dict[str, Any]:
+            return {
+                f.name: getattr(seg, f.name)
+                for f in dataclasses.fields(seg)
+                if f.compare and f.name not in exclude_set
+            }
+
+        return as_dict(self) == as_dict(other)
 
     def __repr__(self) -> str:
         if self.is_point:

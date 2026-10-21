@@ -3,21 +3,39 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Iterator
+import dataclasses
+import inspect
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import matplotlib
 import numpy as np
 import pandas as pd
-from attr import define, field
 from datetimerange import DateTimeRange
+from pydantic import Field
 from time_segments import SegmentsCollectionMixin
 
+from ..support.model import segmenter_dataclass
 from ..support.time_types import TIMES_TYPES
 from .time_segment import TimeSegment
 
 
-@define(repr=False, order=False, eq=False)
+def _flatten(value: Any, prefix: str, sep: str, depth: int, max_depth: int, out: dict[str, Any]) -> None:
+    """Flatten nested dataclasses / dicts into ``out`` with ``sep``-joined keys."""
+    if depth <= max_depth and dataclasses.is_dataclass(value) and not isinstance(value, type):
+        for f in dataclasses.fields(value):
+            if not f.name.startswith("_"):
+                key = f"{prefix}{sep}{f.name}" if prefix else f.name
+                _flatten(getattr(value, f.name), key, sep, depth + 1, max_depth, out)
+    elif depth <= max_depth and isinstance(value, dict):
+        for k, v in value.items():
+            key = f"{prefix}{sep}{k}" if prefix else str(k)
+            _flatten(v, key, sep, depth + 1, max_depth, out)
+    else:
+        out[prefix] = value
+
+
+@segmenter_dataclass
 class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
     """A mutable, ordered collection of non-overlapping time intervals.
 
@@ -50,7 +68,7 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
     ...     print(iv.start, iv.end, iv.duration)
     """
 
-    _segments_: list[TimeSegment] = field(factory=list, alias="segments")
+    _segments_: list[TimeSegment] = Field(default_factory=list, alias="segments")
 
     # ------------------------------------------------------------------
     # Internal SPICE bridge (not part of the public API)
@@ -275,6 +293,47 @@ class TimeSegmentsCollection(SegmentsCollectionMixin[TimeSegment]):
             tab["start"] = tab["start"].dt.round(round_to)
             tab["end"] = tab["end"].dt.round(round_to)
         return tab
+
+    def as_pandas(
+        self,
+        *,
+        include: list[str] | None = None,
+        exclude: list[str] | None = None,
+        nested_sep: str = ".",
+        max_depth: int = 3,
+        include_properties: bool = False,
+        extra_attrs: list[str] | None = None,
+        extra_fields: dict[str, Callable[[TimeSegment], Any]] | None = None,
+    ) -> pd.DataFrame:
+        """Convert the collection to a DataFrame, one row per segment.
+
+        Same options as :meth:`time_segments.SegmentsCollectionMixin.as_pandas`
+        (whose implementation reads attrs fields): public fields become
+        columns, ``metadata`` dicts are flattened into ``metadata<sep>key``
+        columns, and a ``duration`` column is added unless *extra_fields* is
+        given.
+        """
+        extra_fields = extra_fields or {"duration": lambda seg: seg.duration}
+        exclude_set = set(exclude or [])
+        rows = []
+        for seg in self._segments_:
+            row: dict[str, Any] = {}
+            _flatten(seg, "", nested_sep, 0, max_depth, row)
+            for name, extractor in extra_fields.items():
+                row.setdefault(name, extractor(seg))
+            if include_properties:
+                for name, _ in inspect.getmembers(type(seg), lambda v: isinstance(v, property)):
+                    if not name.startswith("_") and name not in row:
+                        row[name] = getattr(seg, name)
+            for path in extra_attrs or []:
+                if path not in extra_fields:
+                    row[path] = self._resolve_attr(seg, path)
+            if include is not None:
+                row = {k: v for k, v in row.items() if k in include}
+            if exclude_set:
+                row = {k: v for k, v in row.items() if k not in exclude_set}
+            rows.append(row)
+        return pd.DataFrame(rows)
 
     def to_juice_core_csv(
         self,

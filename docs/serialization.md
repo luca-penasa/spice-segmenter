@@ -76,13 +76,13 @@ reconstructed = Constraint.from_json(json_str)
 
 ### `create_property_converter(register_spice_types=True, register_pint=True)`
 
-Creates a configured cattrs converter for Property and Constraint objects.
+Creates a converter for Property and Constraint objects, with `unstructure(obj)` and
+`structure(data, cls)` methods. SPICE references and pint units/quantities are serialized as strings.
 
 **Parameters:**
-- `register_spice_types` (bool): Register unstructure hooks for SpiceBody/SpiceInstrument
-- `register_pint` (bool): Register unstructure hook for pint.Quantity
+- `register_spice_types`, `register_pint`: accepted for compatibility, no effect
 
-**Returns:** Configured `cattrs.Converter` instance
+**Returns:** `PropertyConverter` instance
 
 ### `unstructure_constraint(constraint, converter=None)`
 
@@ -186,13 +186,32 @@ The serialized format uses tagged unions with the `type` field as discriminator:
 }
 ```
 
+Boolean constants are written as JSON booleans (`"_value": true`); the former `"True"` / `"False"`
+strings are still read.
+
+## JSON Schema
+
+`spice_segmenter.support.serialization.json_schema()` returns the JSON Schema (draft 2020-12) of the
+format: one definition per class (its fields, with their constraints, plus a constant `type`), and
+`#/$defs/Node` for any of them. It is built from the classes currently imported, so properties
+registered by plug-in modules are included once their module is loaded.
+
+```python
+import jsonschema
+from spice_segmenter.support.serialization import json_schema
+
+jsonschema.validate(unstructure_constraint(c), json_schema())
+```
+
 ## Technical Details
 
-The serialization module handles the complex type hierarchy of `Property` and `Constraint` objects by:
+Properties and constraints are pydantic dataclasses (`spice_segmenter.support.model.segmenter_dataclass`):
 
-1. Using `cattrs` with tagged union strategy
-2. Registering custom hooks for the `Property | ConstraintBase` union
-3. Building a class registry to map type names to classes
-4. Providing a custom structure function that uses the `type` field
-
-This ensures that nested constraints and all property types are correctly serialized and deserialized while maintaining the complete object hierarchy.
+1. each node is dumped by its pydantic serializer and tagged with its class name under `type`;
+2. nested properties / constraints (`Constraint.left` / `right`, `Inverted.parent`,
+   `ComponentSelector.vector`, ...) are fields of type `PropertyNode`, which serialize and validate
+   through the same tagged form, so a whole tree round-trips;
+3. SPICE references, pint units and quantities are annotated types
+   (`spice_segmenter.support.types`) that convert their input and serialize to strings;
+4. on loading, the `type` tag selects the class among the `Property` subclasses and the remaining
+   keys are passed to its constructor (validated by pydantic).

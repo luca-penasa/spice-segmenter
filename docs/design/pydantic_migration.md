@@ -1,6 +1,28 @@
 # Migrating the core to pydantic: assessment
 
-*Status: investigation, October 2026. Nothing migrated yet.*
+*Status: migrated, October 2026. The core runs on pydantic dataclasses (see "Outcome" below); the rest of this
+note is the assessment that preceded the migration.*
+
+## Outcome
+
+- `support/model.py`: `segmenter_dataclass`, the pydantic dataclass decorator used for every data class
+  (`eq=False`, `repr=False`, `slots=True` by default; `extra="forbid"`, `validate_default`, `validate_assignment`).
+  `Property` itself is unslotted, so instances keep `__weakref__`; its subclasses are slotted, so a field can
+  override a base-class `@property` of the same name (`unit`, the abstract `left` / `right`).
+- `support/types.py`: annotated types replacing the attrs converters (`UnitField`, `QuantityField`,
+  `SpiceRefField`, `SpiceBodyField`, `AsSpiceRefField`, ..., `converted(fn)` for the rest) and `PropertyNode`
+  for nested properties / constraints.
+- `support/fields.py`: `fields(cls)` / `evolve(obj, **changes)` replacing `attrs.fields` / `attrs.evolve` in
+  the registry, the DSL, the YAML I/O and `Property.as_unit`.
+- `support/serialization.py`: tagged-dict serialization on the pydantic serializers, same wire format as cattrs
+  (field names as keys, `"type"` last), plus `json_schema()`.
+- `TimeSegment` overrides `equals()` and `TimeSegmentsCollection` overrides `as_pandas()`, the two
+  `time_segments` mixin methods that read `attrs.fields`.
+- Checked against the attrs implementation on a corpus of every registered property and a set of constraints
+  (serialized dicts and JSON, `repr`, units, `instance_id`, YAML / DSL output, registry table): identical, except
+  for the fixes listed in the changelog.
+- Downstream: jana's obsdefs fingerprint (`attrs.fields(type(obj))`) must move to
+  `spice_segmenter.support.fields.fields`.
 
 ## Recommendation
 

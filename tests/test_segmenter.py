@@ -49,7 +49,7 @@ class TestTimeInterval:
         assert not iv.contains("2032-02-01")
 
     def test_frozen(self):
-        from attrs.exceptions import FrozenInstanceError
+        from dataclasses import FrozenInstanceError
         iv = TimeSegment("2032-01-01", "2032-06-30")
         with pytest.raises(FrozenInstanceError):
             iv.start = Timestamp("2033-01-01")  # type: ignore[misc]

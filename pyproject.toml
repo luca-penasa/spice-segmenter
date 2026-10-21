@@ -24,7 +24,7 @@ dependencies = [
     "importlib-metadata>=8.5.0",
     "loguru>=0.7.2",
     "anytree>=2.8.0",
-    "attrs>20.0.0",
+    "pydantic>=2.11",
     "spiceypy>=5.1.1",
     "planetary-coverage>=1.0.0",
     "pint>=0.20",
@@ -32,7 +32,6 @@ dependencies = [
     "datetimerange>=2.1.0",
     "pandas>=2.0.1",
     "quick-spice-manager>=0.2.0",
-    "cattrs>=23",
     "ptr-editor>=0.4.0",
 ]
 

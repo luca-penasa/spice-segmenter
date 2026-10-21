@@ -2,21 +2,12 @@ from enum import Enum
 from typing import ClassVar
 
 import pint
-from attrs import define, field
-from planetary_coverage.spice import (
-    SpiceBody,
-    SpiceInstrument,
-    SpiceRef,
-    SpiceSpacecraft,
-)
+from pydantic import Field
+
+from spice_segmenter.support.model import segmenter_dataclass
+from spice_segmenter.support.types import SpiceRefField, UnitField
 
 from ..core.property import Property, PropertyTypes
-
-
-def _to_pint_unit(x):
-    """Converter for unit fields."""
-    from ..core.property import _to_pint_unit as _core_to_pint_unit
-    return _core_to_pint_unit(x)
 
 
 class OccultationTypes(Enum):
@@ -47,16 +38,16 @@ class OccultationTypes(Enum):
         return super().__eq__(other)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class Occultation(Property):
     _name: ClassVar[str] = "occultation"
-    unit: pint.Unit = field(default=pint.Unit(""), kw_only=True, converter=_to_pint_unit)
+    unit: UnitField = Field(default=pint.Unit(""), kw_only=True)
     _type: ClassVar[PropertyTypes] = PropertyTypes.DISCRETE
 
-    observer: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
-    front: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
-    back: SpiceSpacecraft | SpiceBody | SpiceInstrument = field(converter=SpiceRef)
-    light_time_correction: str = field(default="NONE")
+    observer: SpiceRefField
+    front: SpiceRefField
+    back: SpiceRefField
+    light_time_correction: str = "NONE"
 
     def __repr__(self) -> str:
         return f"Occultation of {self.back} by {self.front}, as seen by {self.observer}"

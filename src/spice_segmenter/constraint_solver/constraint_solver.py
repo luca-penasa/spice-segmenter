@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
+from typing import Any
 
 import pandas as pd
 import pint
 import spiceypy
-from attr import define, field
 from loguru import logger as log
+from pydantic import Field
 from spiceypy import gfrefn, gfstep
 
 from spice_segmenter.core.constraints import (
@@ -19,23 +20,25 @@ from spice_segmenter.ops.constant_values import BoolConstant, Constant
 from spice_segmenter.ops.constraint_operations import Inverted
 from spice_segmenter.properties.occultation_types import OccultationTypes
 from spice_segmenter.support.config import get_active_config
+from spice_segmenter.support.model import segmenter_dataclass
 from spice_segmenter.support.search_reporter import (
-    NoSearchReporter,
-    SearchReporter,
     get_default_reporter_class,
+)
+from spice_segmenter.support.types import converted
+
+_StepSeconds = converted(
+    lambda x: x if isinstance(x, float | int | None) else pd.Timedelta(x).total_seconds(),
 )
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BaseSolver(ABC):
     """The interface for any ConstraintSolvers"""
 
-    constraint: ConstraintBase | None
-    _step: float | None = field(
-        factory=lambda: get_active_config().solver_step_seconds,
-        converter=lambda x: x
-        if isinstance(x, float | int | None)
-        else pd.Timedelta(x).total_seconds(),
+    constraint: Any
+    _step: _StepSeconds = Field(
+        default_factory=lambda: get_active_config().solver_step_seconds,
+        alias="step",
     )
 
     @property
@@ -60,7 +63,7 @@ class BaseSolver(ABC):
         ...
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SpiceEventSolverConfigurator:
     """Configures the cspice gfevnt solver.
 
@@ -76,11 +79,11 @@ class SpiceEventSolverConfigurator:
                   "RANGE RATE"
     """
 
-    names: list[str] = field(factory=list)
-    strings: list[str] = field(factory=list)
-    floats: list[float] = field(factory=list)
-    integers: list[int] = field(factory=list)
-    booleans: list[bool] = field(factory=list)
+    names: list[str] = Field(default_factory=list)
+    strings: list[str] = Field(default_factory=list)
+    floats: list[float] = Field(default_factory=list)
+    integers: list[int] = Field(default_factory=list)
+    booleans: list[bool] = Field(default_factory=list)
     operator: str = ""
     refval: float = 0.0
     quantity: str = ""
@@ -127,7 +130,6 @@ class SpiceEventSolverConfigurator:
         auxiliary info dict (e.g. ``{"inverted": True}``) for the caller.
         """
         from ..ops.constraint_operations import Inverted
-        from ..properties.component_selector import ComponentSelector
 
         inverted = isinstance(constraint, Inverted)
         # Inverted/WrappedConstraint delegates .left/.right/.operator to the
@@ -416,15 +418,13 @@ class SpiceEventSolverConfigurator:
             return value
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SpiceEventSolver(BaseSolver):
     """Wrapper to the gfevnt solver from spice/spiceypy"""
 
-    config: dict = field(factory=dict)
+    config: dict = Field(default_factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter | NoSearchReporter = field(
-        factory=get_default_reporter_class,
-    )
+    reporter: Any = Field(default_factory=get_default_reporter_class)
 
     def solve(self, window: SpiceWindow) -> SpiceWindow:
         if not len(window):
@@ -503,15 +503,13 @@ class SpiceEventSolver(BaseSolver):
         return False
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SpiceOccultationSolver(BaseSolver):
     """Occultation Solver"""
 
-    config: dict = field(factory=dict)
+    config: dict = Field(default_factory=dict)
     result: SpiceWindow | None = None
-    reporter: SearchReporter | NoSearchReporter = field(
-        factory=get_default_reporter_class,
-    )
+    reporter: Any = Field(default_factory=get_default_reporter_class)
 
     def configure(self) -> None:
         """
@@ -624,7 +622,7 @@ class SpiceOccultationSolver(BaseSolver):
         return False
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SpiceWindowSolver(BaseSolver):
     """Solves a constraints made by two constraints returing SpiceWindow objects"""
 
@@ -684,7 +682,7 @@ class SpiceWindowSolver(BaseSolver):
         return False
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class FovVisibilitySolver(BaseSolver):
     """
     Wrapper for GFTFOV: target body appears in an instrument`s field of view.
@@ -744,7 +742,7 @@ class FovVisibilitySolver(BaseSolver):
         return False
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BooleanPropertySolver(BaseSolver):
     """Solver for boolean properties"""
 
@@ -785,7 +783,7 @@ class BooleanPropertySolver(BaseSolver):
         return result
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class GenericScalarSolver(BaseSolver):
     """Solver for any scalar property"""
 
@@ -888,13 +886,13 @@ class GenericScalarSolver(BaseSolver):
         return result
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class MasterSolver(BaseSolver):
     """Solves any type of constraint by determining the right solver to use."""
 
-    constraint: ConstraintBase | None = None
+    constraint: Any = None
     minimum_interval_size: float = 0.0  # seconds
-    solver_config: dict = {}
+    solver_config: dict = Field(default_factory=dict)
 
     def solve(self, window: TimeSegmentsCollection) -> TimeSegmentsCollection:
         if not self.constraint or not self.can_solve(self.constraint):

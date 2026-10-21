@@ -6,7 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- The data classes (properties, constraints, constants, solvers, `SpiceContext`, `Config`, `TimeSegment`, `TimeSegmentsCollection`, ...) are pydantic dataclasses instead of attrs classes; attrs and cattrs are no longer dependencies, pydantic >= 2.11 is. Construction (positional arguments, operators building constraints) and the JSON / YAML formats are unchanged.
+  - Field introspection goes through `spice_segmenter.support.fields` (`fields(cls)`, `evolve(obj, **changes)`) instead of `attrs.fields` / `attrs.evolve`; code reading `attrs.fields(type(prop))` (e.g. fingerprints in downstream packages) needs the same change.
+  - Invalid or unknown constructor arguments raise `pydantic.ValidationError` (a `ValueError`) instead of `TypeError`.
+  - `TimeSegment` mutation raises `dataclasses.FrozenInstanceError` (still an `AttributeError`) instead of `attrs.exceptions.FrozenInstanceError`.
+  - `create_property_converter()` returns a small converter with the same `unstructure` / `structure` methods instead of a `cattrs.Converter`.
+  - Boolean constants serialize as JSON booleans (`"_value": true`); the former `"True"` / `"False"` strings are still read.
+
+### Added
+
+- `spice_segmenter.support.serialization.json_schema()`: JSON Schema of the serialized property / constraint tree.
+
 ### Fixed
+
+- JSON round trip of `Inverted`, `MinMaxConstraint` and `ComponentSelector` (unit overrides included); they could be written but not read back.
+- `property_registry["component_selector"]` returned a stale, field-less class object left over by the attrs slots rewrite.
+- A `BoolConstant` serialized as `"False"` was read back as `True`.
 
 - Coordinate transforms (`as_latitudinal`, `as_spherical`, `as_cylindrical`, `as_radec`, `as_geodetic`, `as_planetographic`) returned every angle converted to radians twice (57x too small): they were registered with degree compute units while the SPICE `rec*` routines return radians. Constraints on them (e.g. a latitude or ring opening angle against a degree threshold) were wrong accordingly.
 - `as_geodetic` failed: `recgeo` was called without the body's equatorial radius and flattening.

@@ -32,12 +32,15 @@ inside threads for per-thread isolation.
 from __future__ import annotations
 
 import contextvars
+from typing import Any
 
-import attrs
-from attrs import define, field
+from pydantic import Field
+
+from .fields import fields
+from .model import segmenter_dataclass
 
 
-@define
+@segmenter_dataclass(eq=True, repr=True)
 class SpiceContext:
     """Holds default values for SPICE property attributes.
 
@@ -61,10 +64,11 @@ class SpiceContext:
         Default aberration/light-time correction string (default ``"NONE"``).
     """
 
-    target: str | None = field(default=None)
-    observer: str | None = field(default="JUICE_JANUS")
-    light_time_correction: str = field(default="NONE")
-    _token: contextvars.Token[SpiceContext] | None = field(
+    # Any: a name, a NAIF id or a SpiceRef (passed through to the properties).
+    target: Any = None
+    observer: Any = "JUICE_JANUS"
+    light_time_correction: str = "NONE"
+    _token: contextvars.Token[SpiceContext] | None = Field(
         default=None, init=False, repr=False,
     )
 
@@ -91,9 +95,9 @@ class SpiceContext:
                 ...
         """
         current = {
-            a.name: getattr(self, a.name)
-            for a in attrs.fields(SpiceContext)
-            if a.init
+            f.init_name: getattr(self, f.name)
+            for f in fields(SpiceContext)
+            if f.init
         }
         current.update(kwargs)
         return SpiceContext(**current)
@@ -130,7 +134,7 @@ get_context = get_active_context
 
 
 # ---------------------------------------------------------------------------
-# Getter helpers — passed as *factory* arguments to attrs fields
+# Getter helpers — passed as *default_factory* arguments to property fields
 # ---------------------------------------------------------------------------
 
 

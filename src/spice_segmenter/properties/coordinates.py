@@ -2,13 +2,15 @@
 from typing import ClassVar
 
 import pint
-from attr import define, field
-from planetary_coverage import SpiceRef
-from planetary_coverage.spice import (
-    SpiceBody,
-    SpiceFrame,
-    SpiceInstrument,
-    SpiceSpacecraft,
+from pydantic import Field
+
+from spice_segmenter.support.model import segmenter_dataclass
+from spice_segmenter.support.types import (
+    PropertyNode,
+    SpiceBodyField,
+    SpiceFrameField,
+    SpiceInstrumentField,
+    SpiceRefField,
 )
 
 from ..core.property import BooleanProperty, Property, PropertyTypes
@@ -16,10 +18,10 @@ from ..properties.component_selector import ComponentSelector
 from ..support.context import get_current_observer, get_current_target
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class VectorBase(Property):
-    frame: SpiceFrame = field(default="J2000", kw_only=True, converter=SpiceFrame)
-    abcorr: str = field(default="NONE", kw_only=True)
+    frame: SpiceFrameField = Field(default="J2000", kw_only=True)
+    abcorr: str = Field(default="NONE", kw_only=True)
     # Scalar __call__ returns a 3-element array; this enables np.vectorize fallback.
     _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
@@ -76,10 +78,10 @@ class VectorBase(Property):
         )
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class Vector(VectorBase):
-    origin: SpiceBody | SpiceInstrument | SpiceSpacecraft = field(converter=SpiceRef)
-    target: SpiceBody | SpiceInstrument | SpiceSpacecraft= field(converter=SpiceRef)
+    origin: SpiceRefField
+    target: SpiceRefField
 
     def __repr__(self) -> str:
         return f"Vector from {self.origin} to {self.target} in frame {self.frame}"
@@ -111,9 +113,9 @@ class SubObserverPointMethods:
     INTERCEPT = "INTERCEPT/ELLIPSOID"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverPoint(Vector):
-    method = field(default=SubObserverPointMethods.INTERCEPT)
+    method: str = SubObserverPointMethods.INTERCEPT
 
     def __repr__(self) -> str:
         return f"Sub observer ({self.origin}) point on {self.target} in frame {self.frame}, computed using {self.method} method"
@@ -123,9 +125,9 @@ class SubObserverPoint(Vector):
         config["method"] = str(self.method)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class Boresight(VectorBase):
-    instrument = field(converter=SpiceInstrument)
+    instrument: SpiceInstrumentField
 
     @property
     def name(self) -> str:
@@ -139,12 +141,12 @@ class Boresight(VectorBase):
         config["instrument"] = self.instrument.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightIntersection(Boresight):
-    target = field(converter=SpiceBody)
-    boresight = field(default=None, init=False)
+    target: SpiceBodyField
+    boresight: Boresight | None = Field(default=None, init=False)
 
-    def __attrs_post_init__(self):
+    def __post_init__(self):
         self.boresight = Boresight(self.instrument, frame=self.frame)
 
     @property
@@ -159,24 +161,18 @@ class BoresightIntersection(Boresight):
         config["target"] = self.target.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightIntersects(BooleanProperty):
     _name = "boresight_intersects_body"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
 
-    observer = field(
-        factory=get_current_observer,
-        converter=SpiceInstrument,
-    )
-    target = field(
-        factory=get_current_target,
-        converter=SpiceBody,
-    )
+    observer: SpiceInstrumentField = Field(default_factory=get_current_observer)
+    target: SpiceBodyField = Field(default_factory=get_current_target)
 
-    intersection = field(init=False, default=None)
+    intersection: BoresightIntersection | None = Field(init=False, default=None)
 
-    def __attrs_post_init__(self):
+    def __post_init__(self):
         self.intersection = BoresightIntersection(
             target=self.target, instrument=self.observer,
         )
@@ -185,9 +181,9 @@ class BoresightIntersects(BooleanProperty):
         return f"Boresight of {self.observer} intersects {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class LatitudinalCoordinates(Property):
-    vector: Vector
+    vector: PropertyNode
 
     @property
     def type(self) -> PropertyTypes:
@@ -220,9 +216,9 @@ class LatitudinalCoordinates(Property):
         config["coordinate_type"] = self.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SphericalCoordinates(Property):
-    vector: Vector
+    vector: PropertyNode
 
     @property
     def type(self) -> PropertyTypes:
@@ -255,9 +251,9 @@ class SphericalCoordinates(Property):
         config["coordinate_type"] = self.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class CylindricalCoordinates(Property):
-    vector: Vector
+    vector: PropertyNode
 
     @property
     def type(self) -> PropertyTypes:
@@ -290,9 +286,9 @@ class CylindricalCoordinates(Property):
         config["coordinate_type"] = self.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class GeodeticCoordinates(Property):
-    vector: Vector
+    vector: PropertyNode
 
     @property
     def type(self) -> PropertyTypes:
@@ -325,9 +321,9 @@ class GeodeticCoordinates(Property):
         config["coordinate_type"] = self.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class PlanetographicCoordinates(Property):
-    vector: Vector
+    vector: PropertyNode
 
     @property
     def type(self) -> PropertyTypes:
@@ -360,9 +356,9 @@ class PlanetographicCoordinates(Property):
         config["coordinate_type"] = self.name
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class RaDecCoordinates(Property):
-    vector: Vector
+    vector: PropertyNode
 
     @property
     def type(self) -> PropertyTypes:

@@ -7,11 +7,12 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import spiceypy
-from attr import define, field
 from datetimerange import DateTimeRange
 from planetary_coverage import utc
+from pydantic import Field
 from spiceypy import Cell_Double, SpiceCell
 
+from ..support.model import segmenter_dataclass
 from ..support.spice_utilities import et
 from ..support.time_types import TIMES_TYPES
 
@@ -34,18 +35,18 @@ class SpiceWindowIter:
         return win
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SpiceWindow:
     """Represents a collection of intervals in which some conditions apply.
 
     This is a wrapper around the SPICE time window related routines.
     """
 
-    spice_window: SpiceCell = field(default=None)
-    size: int = field(default=None)
-    _default_size: int = field(default=10000, init=False)
+    spice_window: SpiceCell | None = None
+    size: int | None = None
+    _default_size: int = Field(default=10000, init=False)
 
-    def __attrs_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         if not self.spice_window:
             if not self.size:
                 self.size = self._default_size
@@ -106,7 +107,8 @@ class SpiceWindow:
     def __deepcopy__(self, memo: dict) -> SpiceWindow:
         cls = self.__class__
         newobj = cls.__new__(cls)
-        newobj.spice_window = spiceypy.copy(self.spice_window)
+        # bypass assignment validation: the instance is not initialised
+        object.__setattr__(newobj, "spice_window", spiceypy.copy(self.spice_window))
         memo[id(self)] = newobj
         return newobj
 

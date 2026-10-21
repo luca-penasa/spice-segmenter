@@ -15,24 +15,14 @@ import numpy as np
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
-from attrs import define, field
 from loguru import logger as log
+from pydantic import Field
 from spiceypy.utils.callbacks import UDFUNB, UDFUNS
 
-
-def _to_pint_unit(x: pint.Unit | str | tuple | list | None) -> pint.Unit | tuple:
-    """Converter for ``unit`` attrs fields: strings become ``pint.Unit``,
-    tuples/lists are converted element-wise, existing ``pint.Unit`` pass through.
-    """
-    if isinstance(x, (list, tuple)):
-        return tuple(_to_pint_unit(u) for u in x)
-    if isinstance(x, str):
-        return pint.Unit(x)
-    if isinstance(x, pint.Unit):
-        return x
-    if x is None:
-        raise TypeError("unit cannot be None; provide a unit string or pint.Unit")
-    return pint.Unit(str(x))  # fallback for pint-compatible objects
+from ..support.fields import MISSING, fields, is_model
+from ..support.model import segmenter_dataclass
+from ..support.types import UnitField
+from ..support.types import to_pint_unit as _to_pint_unit
 
 
 def _bulk_et(time) -> np.ndarray:
@@ -72,9 +62,15 @@ class PropertyTypes(Enum):
     DISCRETE = auto()
 
 
-@define(repr=False, order=False, eq=False)
+# Unslotted root: instances keep a ``__dict__`` and ``__weakref__`` (as attrs'
+# slotted classes had a ``__weakref__`` slot); subclasses are slotted.
+@segmenter_dataclass(slots=False)
 class Property(ABC):
-    _name: ClassVar[str]
+    if TYPE_CHECKING:
+        # Not declared at runtime: a ClassVar would take the first place among
+        # the dataclass fields of subclasses that redefine ``_name`` as a field
+        # (ComponentSelector), shifting their positional arguments.
+        _name: ClassVar[str]
     _unit: ClassVar[pint.Unit | tuple | None] = None  # For backward compat; instance 'unit' field takes precedence
     _type: ClassVar[PropertyTypes] = PropertyTypes.SCALAR
     # Set to a numpy.vectorize signature string (e.g. "()->(n)") on subclasses
@@ -142,25 +138,15 @@ class Property(ABC):
 
     @property
     def unit(self) -> pint.Unit | tuple:
-        """Property unit: check for instance field first, then fallback to class _unit."""
-        import attrs
+        """Property unit: the ``unit`` field when the class has one, else the class ``_unit``.
 
-        # Check if 'unit' is defined as an attrs field
-        try:
-            fields = attrs.fields(type(self))
-            for attr_field in fields:
-                if attr_field.name == "unit":
-                    # 'unit' is an attrs field; get it from instance variables
-                    instance_vars = vars(self)
-                    if "unit" in instance_vars:
-                        return instance_vars["unit"]
-                    # Not in vars, use the default from field definition
-                    if attr_field.default is not attrs.NOTHING:
-                        return attr_field.default
-                    return pint.Unit("")
-        except (TypeError, AttributeError):
-            # Not an attrs class at all
-            pass
+        A ``unit`` field declared on a (slotted) subclass overrides this
+        property; the lookup below covers unslotted subclasses, whose field
+        value lives in the instance ``__dict__``.
+        """
+        instance_vars = getattr(self, "__dict__", None)
+        if instance_vars and "unit" in instance_vars:
+            return instance_vars["unit"]
 
         # No 'unit' field defined, fallback to class-level _unit ClassVar
         return getattr(type(self), "_unit", pint.Unit(""))
@@ -176,7 +162,7 @@ class Property(ABC):
         Raises ``ValueError`` if *unit* is dimensionally incompatible with the
         property's current unit.
         """
-        import attrs
+        from ..support.fields import evolve
 
         target = _to_pint_unit(unit)
         current = self.unit  # Use the @property which handles fallback
@@ -185,7 +171,7 @@ class Property(ABC):
                 raise ValueError(
                     f"{self!r}: unit {target} is not compatible with current unit {current}",
                 )
-        return attrs.evolve(self, unit=target)
+        return evolve(self, unit=target)
 
     def has_unit(self) -> bool:
         u = self.unit
@@ -197,7 +183,7 @@ class Property(ABC):
     def instance_id(self) -> str:
         """Human-readable, instance-unique identifier for this property.
 
-        Built from the property name and the values of any attrs fields that
+        Built from the property name and the values of any fields that
         carry a meaningful identity (SPICE body/instrument references and plain
         strings).  Fields that are purely computational (default corrections,
         numeric parameters) are included only when they differ from their
@@ -214,8 +200,6 @@ class Property(ABC):
         """
         import re
 
-        import attrs
-
         def _normalise(value: object) -> str | None:
             """Return a slug for *value*, or None to skip it."""
             # SpiceRef-like objects expose a .name attribute
@@ -230,22 +214,17 @@ class Property(ABC):
             return None
 
         parts: list[str] = []
-        try:
-            for f in attrs.fields(type(self)):
-                if not f.init or f.name.startswith("_"):
-                    continue
-                val = getattr(self, f.name)
-                # Skip string fields that are at their default value — they are
-                # method/mode selectors that don't distinguish instances.
-                if isinstance(val, str) and f.default is not attrs.NOTHING:
-                    default = f.default() if callable(f.default) else f.default
-                    if val == default:
-                        continue
-                slug = _normalise(val)
-                if slug:
-                    parts.append(slug)
-        except attrs.exceptions.NotAnAttrsClassError:
-            pass
+        for f in fields(type(self)) if is_model(type(self)) else ():
+            if not f.init or f.name.startswith("_"):
+                continue
+            val = getattr(self, f.name)
+            # Skip string fields that are at their (static) default value —
+            # they are method/mode selectors that don't distinguish instances.
+            if isinstance(val, str) and f.default is not MISSING and val == f.default:
+                continue
+            slug = _normalise(val)
+            if slug:
+                parts.append(slug)
 
         parts.append(re.sub(r"[^a-z0-9]+", "_", self.name.lower()).strip("_"))
         return "_".join(parts)
@@ -364,11 +343,9 @@ class Property(ABC):
         """
         import json
 
-        from ..support.serialization import create_property_converter
+        from ..support.serialization import unstructure_node
 
-        converter = create_property_converter()
-        data = converter.unstructure(self)
-        return json.dumps(data, indent=indent)
+        return json.dumps(unstructure_node(self), indent=indent)
 
     def find_minimum(
         self,
@@ -518,21 +495,17 @@ class Property(ABC):
         """
         import json
 
-        from ..support.serialization import create_property_converter
+        from ..support.serialization import structure_node
 
-        converter = create_property_converter()
-        data = json.loads(json_str)
-        return converter.structure(data, cls)
+        return structure_node(json.loads(json_str), cls)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BooleanProperty(Property):
     # __call__ is NOT abstract — inherited Property.__call__ delegation bridge
     # dispatches through the evaluator for registered properties, and Python
     # MRO ensures subclass overrides are still found first for legacy classes.
-    unit: pint.Unit = field(
-        default=pint.Unit(""), kw_only=True, converter=_to_pint_unit,
-    )
+    unit: UnitField = Field(default=pint.Unit(""), kw_only=True)
 
     @property
     def type(self) -> PropertyTypes:

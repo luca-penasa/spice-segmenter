@@ -4,16 +4,30 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 import pint
-from attrs import define, field
+from pydantic import Field
 
 from ..core.property import Property
 from ..support.decorators import vectorize
+from ..support.model import segmenter_dataclass
+from ..support.types import converted
 
 if TYPE_CHECKING:
     from ..properties.occultation_types import OccultationTypes
     from ..support.time_types import TIMES_TYPES
 
-@define(repr=False, order=False, eq=False)
+# Copy into a new quantity (as the attrs converter did): the unit setter of
+# ScalarConstant mutates it in place.
+_QuantityValue = converted(lambda x: pint.Quantity(x), serializer=str)
+def _to_bool(x: object) -> bool:
+    # Former serializations wrote booleans as "True" / "False".
+    if isinstance(x, str) and x.strip().lower() in ("true", "false"):
+        return x.strip().lower() == "true"
+    return bool(x)
+
+
+_BoolValue = converted(_to_bool)
+
+@segmenter_dataclass
 class Constant(Property):
     @staticmethod
     def from_value(value):
@@ -26,9 +40,9 @@ class Constant(Property):
         raise NotImplementedError
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class ScalarConstant(Constant):
-    _value: pint.Quantity = field(converter=lambda x: pint.Quantity(x))  # type: ignore
+    _value: _QuantityValue = Field(alias="value")
 
     def __repr__(self) -> str:
         val = f"{self.value}"
@@ -63,9 +77,9 @@ class ScalarConstant(Constant):
         config["reference_value_unit"] = str(self.unit)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoolConstant(Constant):
-    _value: pint.Quantity = field(converter=bool)  # type: ignore
+    _value: _BoolValue = Field(alias="value")
 
     def __repr__(self) -> str:
         return f"{self.value}"

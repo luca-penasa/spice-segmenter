@@ -31,18 +31,20 @@ from typing import ClassVar
 import numpy as np
 import pint
 import spiceypy
-from attrs import define, field
 from planetary_coverage import et
 from planetary_coverage.spice import SpiceInstrument
-from spiceypy import NotFoundError
-
-from ..core.property import Property, PropertyTypes
-from ..properties.component_selector import ComponentSelector
-from ..properties.observation_properties import TargetedProperty
 
 # ---------------------------------------------------------------------------
 # Private SPICE helpers (non-vectorised, scalar-time)
 # ---------------------------------------------------------------------------
+from pydantic import Field
+from spiceypy import NotFoundError
+
+from spice_segmenter.support.model import segmenter_dataclass
+
+from ..core.property import Property, PropertyTypes
+from ..properties.component_selector import ComponentSelector
+from ..properties.observation_properties import TargetedProperty
 
 _SUBPNT_METHOD = "INTERCEPT/ELLIPSOID"
 
@@ -199,7 +201,7 @@ def _boresight_radec(time, observer: SpiceInstrument, abcorr: str) -> np.ndarray
 # Sub-observer point — Latitudinal coordinates
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverLatitudinal(TargetedProperty):
     """Sub-observer point expressed in latitudinal (radius, longitude, latitude) coordinates.
 
@@ -218,7 +220,7 @@ class SubObserverLatitudinal(TargetedProperty):
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
     _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return (
@@ -239,40 +241,40 @@ class SubObserverLatitudinal(TargetedProperty):
         return ComponentSelector(self, 2, "sub_sc_latitude")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverRadius(TargetedProperty):
     """Distance from body centre to the sub-observer point (km)."""
 
     _name: ClassVar[str] = "sub_sc_radius"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return f"Sub-observer radius on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverLongitude(TargetedProperty):
     """Planetocentric longitude of the sub-observer point (deg, positive east)."""
 
     _name: ClassVar[str] = "sub_sc_longitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return f"Sub-observer longitude on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverLatitude(TargetedProperty):
     """Planetocentric latitude of the sub-observer point (deg)."""
 
     _name: ClassVar[str] = "sub_sc_latitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return f"Sub-observer latitude on {self.target} from {self.observer}"
@@ -282,7 +284,7 @@ class SubObserverLatitude(TargetedProperty):
 # Sub-observer point — Geodetic coordinates
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverGeodetic(TargetedProperty):
     """Sub-observer point expressed in geodetic (longitude, latitude, altitude) coordinates.
 
@@ -298,7 +300,7 @@ class SubObserverGeodetic(TargetedProperty):
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
     _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return (
@@ -319,40 +321,40 @@ class SubObserverGeodetic(TargetedProperty):
         return ComponentSelector(self, 2, "sub_sc_altitude")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverGeoLongitude(TargetedProperty):
     """Geodetic longitude of the sub-observer point (deg)."""
 
     _name: ClassVar[str] = "sub_sc_geo_longitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return f"Sub-observer geodetic longitude on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverGeoLatitude(TargetedProperty):
     """Geodetic latitude of the sub-observer point (deg)."""
 
     _name: ClassVar[str] = "sub_sc_geo_latitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("deg")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return f"Sub-observer geodetic latitude on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverAltitude(TargetedProperty):
     """Geodetic altitude of the sub-observer point above the reference ellipsoid (km)."""
 
     _name: ClassVar[str] = "sub_sc_altitude"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return f"Sub-observer altitude above {self.target} ellipsoid from {self.observer}"
@@ -362,7 +364,7 @@ class SubObserverAltitude(TargetedProperty):
 # Sub-observer point — Rectangular (body-fixed XYZ)
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverRectangular(TargetedProperty):
     """Sub-observer point expressed in body-fixed rectangular (x, y, z) coordinates (km).
 
@@ -374,7 +376,7 @@ class SubObserverRectangular(TargetedProperty):
     _type: ClassVar[PropertyTypes] = PropertyTypes.VECTOR
     _vector_output_shape: ClassVar[str | None] = "()->(n)"
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
     def __repr__(self) -> str:
         return (
@@ -395,36 +397,36 @@ class SubObserverRectangular(TargetedProperty):
         return ComponentSelector(self, 2, "sub_sc_z")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverX(TargetedProperty):
     """Body-fixed X coordinate of the sub-observer point (km)."""
 
     _name: ClassVar[str] = "sub_sc_x"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverY(TargetedProperty):
     """Body-fixed Y coordinate of the sub-observer point (km)."""
 
     _name: ClassVar[str] = "sub_sc_y"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverZ(TargetedProperty):
     """Body-fixed Z coordinate of the sub-observer point (km)."""
 
     _name: ClassVar[str] = "sub_sc_z"
     _unit: ClassVar[pint.Unit] = pint.Unit("km")
 
-    method: str = field(default=_SUBPNT_METHOD, kw_only=True)
+    method: str = Field(default=_SUBPNT_METHOD, kw_only=True)
 
 
 
@@ -432,7 +434,7 @@ class SubObserverZ(TargetedProperty):
 # Boresight intersection — Latitudinal coordinates
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightIntersectionLatitudinal(TargetedProperty):
     """Boresight–surface intersection in latitudinal coordinates.
 
@@ -465,7 +467,7 @@ class BoresightIntersectionLatitudinal(TargetedProperty):
         return ComponentSelector(self, 2, "boresight_latitude")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightLatitude(TargetedProperty):
     """Planetocentric latitude of the boresight–surface intersection (deg).
 
@@ -479,7 +481,7 @@ class BoresightLatitude(TargetedProperty):
         return f"Boresight latitude of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightLongitude(TargetedProperty):
     """Planetocentric longitude of the boresight–surface intersection (deg, positive east).
 
@@ -493,7 +495,7 @@ class BoresightLongitude(TargetedProperty):
         return f"Boresight longitude of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightRadius(TargetedProperty):
     """Distance from body centre to boresight–surface intersection (km).
 
@@ -507,7 +509,7 @@ class BoresightRadius(TargetedProperty):
         return f"Boresight intersection radius of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightSlantRange(TargetedProperty):
     """Line-of-sight distance from the instrument to the boresight–surface
     intersection point (km).
@@ -530,7 +532,7 @@ class BoresightSlantRange(TargetedProperty):
 # Boresight intersection — Geodetic coordinates
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightIntersectionGeodetic(TargetedProperty):
     """Boresight–surface intersection in geodetic coordinates.
 
@@ -563,7 +565,7 @@ class BoresightIntersectionGeodetic(TargetedProperty):
         return ComponentSelector(self, 2, "boresight_altitude")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightGeoLatitude(TargetedProperty):
     """Geodetic latitude of the boresight–surface intersection (deg).
 
@@ -577,7 +579,7 @@ class BoresightGeoLatitude(TargetedProperty):
         return f"Boresight geodetic latitude of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightGeoLongitude(TargetedProperty):
     """Geodetic longitude of the boresight–surface intersection (deg).
 
@@ -591,7 +593,7 @@ class BoresightGeoLongitude(TargetedProperty):
         return f"Boresight geodetic longitude of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightAltitude(TargetedProperty):
     """Geodetic altitude of the boresight–surface intersection above reference ellipsoid (km).
 
@@ -609,7 +611,7 @@ class BoresightAltitude(TargetedProperty):
 # Boresight intersection — Rectangular body-fixed XYZ
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightIntersectionRectangular(TargetedProperty):
     """Boresight–surface intersection in body-fixed rectangular coordinates (km).
 
@@ -641,7 +643,7 @@ class BoresightIntersectionRectangular(TargetedProperty):
         return ComponentSelector(self, 2, "boresight_z")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightX(TargetedProperty):
     """Body-fixed X coordinate of the boresight–surface intersection (km)."""
 
@@ -652,7 +654,7 @@ class BoresightX(TargetedProperty):
         return f"Boresight X of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightY(TargetedProperty):
     """Body-fixed Y coordinate of the boresight–surface intersection (km)."""
 
@@ -663,7 +665,7 @@ class BoresightY(TargetedProperty):
         return f"Boresight Y of {self.observer} on {self.target}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightZ(TargetedProperty):
     """Body-fixed Z coordinate of the boresight–surface intersection (km)."""
 
@@ -678,7 +680,7 @@ class BoresightZ(TargetedProperty):
 # Target RA/Dec (line-of-sight direction in J2000)
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class TargetRaDec(TargetedProperty):
     """Right ascension and declination of the target as seen from the observer (J2000, deg).
 
@@ -702,7 +704,7 @@ class TargetRaDec(TargetedProperty):
         return ComponentSelector(self, 1, "target_dec")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class TargetRA(TargetedProperty):
     """Right ascension of the target as seen from the observer (J2000, deg)."""
 
@@ -713,7 +715,7 @@ class TargetRA(TargetedProperty):
         return f"RA of {self.target} from {self.observer} (J2000)"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class TargetDec(TargetedProperty):
     """Declination of the target as seen from the observer (J2000, deg)."""
 
@@ -728,7 +730,7 @@ class TargetDec(TargetedProperty):
 # Boresight RA/Dec (instrument pointing direction in J2000)
 # ---------------------------------------------------------------------------
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightRaDec(TargetedProperty):
     """Right ascension and declination of the instrument boresight in J2000 (deg).
 
@@ -753,7 +755,7 @@ class BoresightRaDec(TargetedProperty):
         return ComponentSelector(self, 1, "boresight_dec")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightRA(TargetedProperty):
     """Right ascension of the instrument boresight in J2000 (deg)."""
 
@@ -764,7 +766,7 @@ class BoresightRA(TargetedProperty):
         return f"Boresight RA of {self.observer} (J2000)"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightDec(TargetedProperty):
     """Declination of the instrument boresight in J2000 (deg)."""
 
@@ -789,7 +791,7 @@ def _boresight_separation(time, target, observer: SpiceInstrument, abcorr: str) 
     return np.rad2deg(spiceypy.vsep(boresight, target_pos))
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightSeparation(TargetedProperty):
     """Angular separation between the instrument boresight and a target body (deg).
 
@@ -826,7 +828,7 @@ def _sub_observer_illum(time, target, observer, abcorr: str) -> np.ndarray:
     return np.array([i, e, p])
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverIncidenceAngle(TargetedProperty):
     """Solar incidence angle at the sub-observer point (deg).
 
@@ -840,7 +842,7 @@ class SubObserverIncidenceAngle(TargetedProperty):
         return f"Sub-observer incidence angle on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverEmissionAngle(TargetedProperty):
     """Emission angle at the sub-observer point (deg).
 
@@ -854,7 +856,7 @@ class SubObserverEmissionAngle(TargetedProperty):
         return f"Sub-observer emission angle on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class SubObserverPhaseAngleLocal(TargetedProperty):
     """Local phase angle at the sub-observer point (deg).
 
@@ -884,7 +886,7 @@ def _boresight_illum(time, target, observer, abcorr: str) -> np.ndarray:
     return np.array([i, e, p])
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightIncidenceAngle(TargetedProperty):
     """Solar incidence angle at the boresight surface intersection (deg).
 
@@ -901,7 +903,7 @@ class BoresightIncidenceAngle(TargetedProperty):
         return f"Boresight incidence angle on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightEmissionAngle(TargetedProperty):
     """Emission angle at the boresight surface intersection (deg)."""
 
@@ -912,7 +914,7 @@ class BoresightEmissionAngle(TargetedProperty):
         return f"Boresight emission angle on {self.target} from {self.observer}"
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class BoresightPhaseAngleLocal(TargetedProperty):
     """Local phase angle at the boresight surface intersection (deg)."""
 

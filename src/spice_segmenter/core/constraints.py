@@ -12,11 +12,13 @@ import numpy.typing as npt
 import pandas as pd
 import pint
 from anytree import Node, RenderTree
-from attrs import define, field
 from loguru import logger as log
+from pydantic import Field
 
 from spice_segmenter.properties.observation_properties import MinMaxConditionTypes
 
+from ..support.model import segmenter_dataclass
+from ..support.types import PropertyNode, SecondsField
 from .property import Property, PropertyTypes
 from .time_segments_collection import TimeSegmentsCollection
 
@@ -43,15 +45,9 @@ class ConstraintTypes(Enum):
     MINMAX = auto()
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class ConstraintBase(Property):
-    time_step: float | None = field(
-        default=None,
-        kw_only=True,
-        converter=lambda x: (
-            x if isinstance(x, float | None) else pd.Timedelta(x).total_seconds()
-        ),
-    )  # seconds
+    time_step: SecondsField = Field(default=None, kw_only=True)  # seconds
 
     @property
     @abstractmethod
@@ -289,13 +285,13 @@ class ConstraintBase(Property):
             print(f"{pre}{node.name}")
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class Constraint(ConstraintBase):
-    left: Property | ConstraintBase
-    right: Property | ConstraintBase
-    operator: str = field(default=None)
+    left: PropertyNode
+    right: PropertyNode
+    operator: str | None = None
 
-    def __attrs_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         log.debug("Checking constraint {} for compatibility", self)
         log.debug("Left type is {}", type(self.left))
         log.debug("Right type is {}", type(self.right))

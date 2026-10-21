@@ -2,16 +2,23 @@ from enum import Enum
 
 import numpy as np
 import spiceypy
-from attrs import define, field
-from numpy.typing import ArrayLike
-from planetary_coverage import SpiceRef, et
-from planetary_coverage.spice import SpiceBody
+from planetary_coverage import et
+from pydantic import Field
+
+from spice_segmenter.support.model import segmenter_dataclass
+from spice_segmenter.support.types import SpiceBodyField, SpiceRefField, converted
 
 from ..core.property import Property, PropertyTypes
 from ..support.time_types import TIMES_TYPES
 
+_SurfacePoints = converted(
+    np.atleast_2d,
+    serializer=lambda a: np.asarray(a).tolist(),
+    json_schema={"type": "array", "items": {"type": "array", "items": {"type": "number"}}},
+)
 
-@define(repr=False, order=False, eq=False)
+
+@segmenter_dataclass
 class SurfaceIlluminationAngles(Property):
     """Computes illumination angles for points on the surface of a target body
 
@@ -21,15 +28,15 @@ class SurfaceIlluminationAngles(Property):
     _unit = ["rad", "rad", "rad"]
     _type = PropertyTypes.VECTOR
 
-    target: SpiceBody = field(converter=SpiceBody)
-    surface_points: ArrayLike = field(converter=np.atleast_2d)
-    observer: SpiceRef = field(converter=SpiceRef)
-    frame: str = field(init=False)
+    target: SpiceBodyField
+    surface_points: _SurfacePoints
+    observer: SpiceRefField
+    frame: str = Field(default="", init=False)
 
-    method: str = field(default="ELLIPSOID", kw_only=True)
-    abcorr: str = field(default="NONE", kw_only=True)
+    method: str = Field(default="ELLIPSOID", kw_only=True)
+    abcorr: str = Field(default="NONE", kw_only=True)
 
-    def __attrs_post_init__(self):
+    def __post_init__(self):
         self.frame = self.target.frame.name
 
     # method     I   Computation method.

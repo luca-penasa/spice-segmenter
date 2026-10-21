@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import contextvars
+from typing import Any
 
 import pandas as pd
-from attrs import define, field
+from pydantic import Field
+
+from .fields import fields
+from .model import segmenter_dataclass
+from .types import converted
 
 
 def to_timedelta(value) -> pd.Timedelta:
@@ -19,7 +24,10 @@ def to_timedelta(value) -> pd.Timedelta:
     raise ValueError(f"Cannot convert {value!r} to pd.Timedelta")
 
 
-@define
+_Timedelta = converted(to_timedelta)
+
+
+@segmenter_dataclass(eq=True, repr=True)
 class Config:
     """Configuration for the spice_segmenter module.
 
@@ -34,19 +42,18 @@ class Config:
     :class:`contextvars.ContextVar`.
     """
 
-    show_progressbar: bool = field(default=False)
-    solver_step: pd.Timedelta = field(
-        default=pd.Timedelta(minutes=5), converter=to_timedelta,
-    )
-    start: str | pd.Timestamp | None = field(default=None)
-    end: str | pd.Timestamp | None = field(default=None)
+    show_progressbar: bool = False
+    solver_step: _Timedelta = pd.Timedelta(minutes=5)
+    # Any: str, pd.Timestamp, datetime, ET float, ... (converted when solving)
+    start: Any = None
+    end: Any = None
     # When True (default), array inputs are routed to _call_vector on properties
     # that have overridden it (e.g. with a cyice._v function).  Set to False to
     # force the baseline np.vectorize(_call_scalar) path for all properties —
     # useful for benchmarking, debugging, or environments where cyice is missing.
-    use_vectorized_calls: bool = field(default=True)
+    use_vectorized_calls: bool = True
 
-    _token: contextvars.Token | None = field(
+    _token: contextvars.Token | None = Field(
         default=None, init=False, repr=False,
     )
 
@@ -77,12 +84,10 @@ class Config:
             with get_active_config().override(start="2032-01-01", end="2033-01-01"):
                 lat.find_local_maxima()
         """
-        import attrs
-
         current = {
-            a.name: getattr(self, a.name)
-            for a in attrs.fields(Config)
-            if a.init
+            f.init_name: getattr(self, f.name)
+            for f in fields(Config)
+            if f.init
         }
         current.update(kwargs)
         return Config(**current)

@@ -48,14 +48,13 @@ from __future__ import annotations
 import ast
 from typing import Any
 
-import attrs
-
 from spice_segmenter.core.constraints import Constraint, ConstraintBase
 from spice_segmenter.core.registry import property_registry
 from spice_segmenter.ops.constant_values import BoolConstant, Constant, ScalarConstant
 from spice_segmenter.ops.constraint_operations import Inverted, WrappedConstraint
 from spice_segmenter.properties.component_selector import ComponentSelector
 from spice_segmenter.support.context import SpiceContext
+from spice_segmenter.support.fields import fields, is_model
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -117,7 +116,7 @@ def _make_property(name: str, context: dict[str, Any], overrides: dict[str, Any]
     context:
         Keyword arguments forwarded to :class:`SpiceContext` for fields that
         use context factories (``observer``, ``target``, ``light_time_correction``
-        with ``Factory`` defaults).  For properties whose context-named fields
+        with ``default_factory`` defaults).  For properties whose context-named fields
         have explicit defaults or no default at all (e.g. :class:`Occultation`),
         those values are passed directly to the constructor instead.
     overrides:
@@ -132,16 +131,11 @@ def _make_property(name: str, context: dict[str, Any], overrides: dict[str, Any]
     cls = property_registry[name]
 
     # Determine which context fields this class actually reads from SpiceContext
-    # (i.e. those whose default is an attrs Factory).  Context fields without a
-    # Factory default must be supplied directly to the constructor.
-    try:
-        cls_fields = {f.name: f for f in attrs.fields(cls)}
-    except attrs.exceptions.NotAnAttrsClassError:
-        cls_fields = {}
+    # (i.e. those with a default factory).  Context fields without a factory
+    # default must be supplied directly to the constructor.
+    cls_fields = {f.name: f for f in fields(cls)} if is_model(cls) else {}
 
-    factory_fields = {
-        fname for fname, f in cls_fields.items() if isinstance(f.default, attrs.Factory)
-    }
+    factory_fields = {fname for fname, f in cls_fields.items() if f.has_factory}
     # Context kwargs whose class field uses a factory → delegated to SpiceContext.
     spice_ctx_kwargs = {k: v for k, v in context.items() if k in factory_fields}
     # Context kwargs whose class field does NOT use a factory → pass to constructor,
@@ -516,13 +510,11 @@ def constraint_to_context(
                 )
             context[field_name] = val
 
-        try:
-            fields = attrs.fields(type(prop))
-        except attrs.exceptions.NotAnAttrsClassError:
+        if not is_model(type(prop)):
             continue
 
         prop_overrides: dict[str, Any] = {}
-        for f in fields:
+        for f in fields(type(prop)):
             if not f.init or f.name.startswith("_") or f.name == "unit" or f.name in _CONTEXT_FIELDS:
                 continue
             val = _spice_ref_to_str(getattr(prop, f.name))

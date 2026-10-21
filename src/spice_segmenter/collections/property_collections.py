@@ -1,6 +1,7 @@
 from functools import cached_property
+from typing import Any
 
-from attrs import define, field
+from pydantic import Field
 
 from spice_segmenter.properties import TargetSizeOnSensor
 from spice_segmenter.properties.observation_properties import (
@@ -20,12 +21,17 @@ from spice_segmenter.support.context import (
     get_current_observer,
     get_current_target,
 )
+from spice_segmenter.support.model import segmenter_dataclass
+from spice_segmenter.support.types import converted
+
+_UpperStr = converted(lambda x: str(x).upper())
 
 
-@define
+# Unslotted: cached_property needs an instance __dict__.
+@segmenter_dataclass(eq=True, repr=True, slots=False)
 class TargetProperties:
-    target: str = field(factory=get_current_target, converter=lambda x: str(x).upper())
-    observer: str = field(factory=get_current_observer, converter=lambda x: str(x).upper())
+    target: _UpperStr = Field(default_factory=get_current_target)
+    observer: _UpperStr = Field(default_factory=get_current_observer)
 
     @cached_property
     def distance(self) -> Distance:
@@ -74,7 +80,8 @@ class TargetProperties:
         return JupiterShineIdealCondition(self.observer, self.target)
 
 
-@define
+# Unslotted: cached_property needs an instance __dict__.
+@segmenter_dataclass(eq=True, repr=True, slots=False)
 class OccultationProperties:
     """
     Collection of occultation properties for a target observed from an observer.
@@ -126,17 +133,14 @@ class OccultationProperties:
     ... )
     """
 
-    target: str = field(factory=get_current_target, converter=lambda x: str(x).upper())
-    observer: str = field(factory=get_current_observer, converter=lambda x: str(x).upper())
-    occultors: list[str] = field(
-        factory=lambda: ["JUPITER", "IO", "EUROPA", "GANYMEDE", "CALLISTO"],
+    target: _UpperStr = Field(default_factory=get_current_target)
+    observer: _UpperStr = Field(default_factory=get_current_observer)
+    occultors: list[Any] = Field(
+        default_factory=lambda: ["JUPITER", "IO", "EUROPA", "GANYMEDE", "CALLISTO"],
     )
-    light_time_correction: str = field(
-        default="NONE",
-        converter=lambda x: str(x).upper(),
-    )
+    light_time_correction: _UpperStr = "NONE"
 
-    def __attrs_post_init__(self):
+    def __post_init__(self):
         """Post-initialization to filter out target from occultors."""
         # Use object.__setattr__ to avoid triggering validators
         filtered_occultors = [

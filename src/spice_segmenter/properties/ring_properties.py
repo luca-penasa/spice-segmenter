@@ -4,11 +4,13 @@ import numpy as np
 import pint
 import spiceypy
 import spiceypy.utils.callbacks
-from attrs import define, field
 from planetary_coverage.spice import SpiceBody, SpiceObserver, et
 
 # from jana.toolbox import compute_sun_vector
 from planetary_coverage.spice.toolbox import sun_pos
+
+from spice_segmenter.support.model import segmenter_dataclass
+from spice_segmenter.support.types import SpiceObserverField
 
 from ..core.property import BooleanProperty, PropertyTypes
 from ..support.spice_utilities import et
@@ -118,42 +120,42 @@ def is_ring_ansae_phase_angles_in_between(time, min_angle, max_angle):
     minR, maxR, minL, maxL = min_max_ring_ansae_phase_angle(time)
     return ((minR > min_angle ) and (maxR < max_angle)) | ((minL > min_angle) and (maxL < max_angle))
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class RingAnsaePhaseLowerThan(BooleanProperty):
     _name = "ring_ansae_phase_lower_than"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
 
-    value_deg: float = field()
-    observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)
+    value_deg: float
+    observer: SpiceObserverField = "JUICE_JANUS"
 
     def __repr__(self) -> str:
         return f"The phase angle at the ring ansae are lower than {self.value_deg}° at either ansa of Jupiter's rings, as seen by {self.observer}."
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class RingAnsaePhaseGreaterThan(BooleanProperty):
     _name = "ring_ansae_phase_greater_than"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
 
-    value_deg: float = field()
-    observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)
+    value_deg: float
+    observer: SpiceObserverField = "JUICE_JANUS"
 
     def __repr__(self) -> str:
         return f"The phase angle at the ring ansae are greater than {self.value_deg}° at either ansa of Jupiter's rings, as seen by {self.observer}."
 
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class RingAnsaePhaseWithinRange(BooleanProperty):
     _name = "ring_ansae_phase_within_range"
     _unit = pint.Unit("dimensionless")
     _type = PropertyTypes.BOOLEAN
 
-    lower_deg: float = field()
-    upper_deg: float = field()
-    observer: SpiceObserver = field(default="JUICE_JANUS", converter = SpiceObserver)
+    lower_deg: float
+    upper_deg: float
+    observer: SpiceObserverField = "JUICE_JANUS"
 
     def __repr__(self) -> str:
         return f"The phase angle at the ring ansae is completely within [{self.lower_deg}°, {self.upper_deg}°] at either ansa of Jupiter's rings, as seen by {self.observer}."

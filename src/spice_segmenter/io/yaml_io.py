@@ -55,7 +55,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import attrs
 import yaml
 
 from spice_segmenter.core.constraints import ConstraintBase
@@ -68,6 +67,7 @@ from spice_segmenter.io.dsl import (
     constraint_to_expression,
     parse,
 )
+from spice_segmenter.support.fields import MISSING, FieldSpec, fields, is_model
 
 # ---------------------------------------------------------------------------
 # Constraint deserialization
@@ -275,30 +275,22 @@ def _properties_from_dict(data: dict[str, Any]) -> list[Property]:
 # Property-list: serialization helpers
 # ---------------------------------------------------------------------------
 
-def _get_field_default(cls: type, field: attrs.Attribute) -> Any:
-    """Return the default value of an attrs field, evaluating factories."""
-    if field.default is attrs.NOTHING:
-        return attrs.NOTHING
-    if isinstance(field.default, attrs.Factory):  # type: ignore[arg-type]
-        if field.default.takes_self:  # type: ignore[union-attr]
-            return attrs.NOTHING
-        try:
-            return field.default.factory()  # type: ignore[union-attr]
-        except Exception:
-            return attrs.NOTHING
-    return field.default
+def _get_field_default(cls: type, field: FieldSpec) -> Any:
+    """Return the default value of a field, evaluating factories."""
+    try:
+        return field.get_default()
+    except Exception:
+        return MISSING
 
 
 def _property_to_entry(prop: Property, shared_context: dict[str, Any]) -> dict[str, Any]:
     """Serialize a single property to a YAML entry dict."""
     entry: dict[str, Any] = {"type": prop._name}
 
-    try:
-        fields = attrs.fields(type(prop))
-    except attrs.exceptions.NotAnAttrsClassError:
+    if not is_model(type(prop)):
         return entry
 
-    for f in fields:
+    for f in fields(type(prop)):
         # Skip internal/non-init fields and the 'unit' field (not serialized; always use default).
         if not f.init or f.name.startswith("_") or f.name == "unit":
             continue
@@ -315,10 +307,10 @@ def _property_to_entry(prop: Property, shared_context: dict[str, Any]) -> dict[s
             class_default = _get_field_default(type(prop), f)
             default_str = (
                 _spice_ref_to_str(class_default)
-                if class_default is not attrs.NOTHING
-                else attrs.NOTHING
+                if class_default is not MISSING
+                else MISSING
             )
-            if default_str is attrs.NOTHING or default_str != str_val:
+            if default_str is MISSING or default_str != str_val:
                 entry[f.name] = str_val
 
     return entry

@@ -3,17 +3,19 @@ from collections.abc import Callable
 
 import spiceypy
 import spiceypy.utils.callbacks
-from attr import define, field
 from loguru import logger as log
+from pydantic import Field
 from spiceypy import SpiceCell
 from spiceypy.utils.callbacks import UDREPF, UDREPI, UDREPU
 from tqdm.auto import tqdm
 from tqdm.std import tqdm as std_tqdm
 
+from .model import segmenter_dataclass
 
-@define(repr=False, order=False, eq=False)
+
+@segmenter_dataclass
 class SearchReporter:
-    bar: std_tqdm = field(init=False, default=None)
+    bar: std_tqdm | None = Field(init=False, default=None)
 
     last_value: float = 0.0
     start_time: float = 0.0
@@ -71,7 +73,7 @@ class SearchReporter:
         return spiceypy.utils.callbacks.SpiceUDREPF(self.end_search)
 
 
-@define(repr=False, order=False, eq=False)
+@segmenter_dataclass
 class NoSearchReporter:
     def reset(self) -> None:
         pass

@@ -4,7 +4,7 @@ Two confirmed bugs in the solver layer are documented and pinned here:
 
 BUG-1  BaseSolver._step converter — integer step treated as nanoseconds
 ------------------------------------------------------------------------
-``BaseSolver._step`` has an attrs converter that checks
+``BaseSolver._step`` has a converter that checks
 ``isinstance(x, float | None)``.  When callers pass an ``int`` (e.g.
 ``step=43200``), the guard fails and the value is routed through
 ``pd.Timedelta(43200)`` → 43200 **nanoseconds** = 4.32e-05 s.  With a

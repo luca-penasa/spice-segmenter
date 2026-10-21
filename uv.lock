@@ -3431,8 +3431,6 @@ version = "0.0.6"
 source = { editable = "." }
 dependencies = [
     { name = "anytree" },
-    { name = "attrs" },
-    { name = "cattrs" },
     { name = "datetimerange" },
     { name = "importlib-metadata" },
     { name = "loguru" },
@@ -3440,6 +3438,7 @@ dependencies = [
     { name = "pint" },
     { name = "planetary-coverage" },
     { name = "ptr-editor" },
+    { name = "pydantic" },
     { name = "quick-spice-manager" },
     { name = "spiceypy" },
     { name = "tqdm" },
@@ -3479,9 +3478,7 @@ notebooks = [
 [package.metadata]
 requires-dist = [
     { name = "anytree", specifier = ">=2.8.0" },
-    { name = "attrs", specifier = ">20.0.0" },
     { name = "bump-my-version", marker = "extra == 'dev'", specifier = ">=0.27.0" },
-    { name = "cattrs", specifier = ">=23" },
     { name = "datetimerange", specifier = ">=2.1.0" },
     { name = "importlib-metadata", specifier = ">=8.5.0" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.5" },
@@ -3497,6 +3494,7 @@ requires-dist = [
     { name = "planetary-coverage", specifier = ">=1.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "ptr-editor", specifier = ">=0.4.0" },
+    { name = "pydantic", specifier = ">=2.11" },
     { name = "pymdown-extensions", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
